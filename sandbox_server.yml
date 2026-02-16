@@ -125,22 +125,6 @@ services:
     networks:
       - db_net
 
-  logto:
-    image: svhd/logto
-    entrypoint: ["sh", "-c", "npm run cli db seed -- --swe && npm start"]
-    ports:
-      - 3001:3001
-      - 3002:3002
-    restart: on-failure
-    environment:
-      - TRUST_PROXY_HEADER=1 # to see users' real IP
-
-      - DB_URL=postgresql://${DB_USER}:${DB_PASS}@wireguard_server:5432/logto_db
-      - ENDPOINT=http://${LOGIN_ENDPOINT}:3001
-      - ADMIN_ENDPOINT=http://${LOGIN_ENDPOINT}:3002
-    networks:
-      - db_net
-
 networks:
   jfs_net:
     driver: bridge
