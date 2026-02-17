@@ -2,6 +2,9 @@ services:
 
   gateway:
     image: gateway:latest
+    build:
+      context: ./app/gateway
+      dockerfile: Dockerfile
     ports:
       - 80:443
     volumes:
@@ -16,6 +19,9 @@ services:
     networks:
       - gateway_net
     command: "node hello.js echo8921"
+    deploy:
+      labels:
+        gateway.route: "foo"
 
   echo8922:
     image: approach0/echo-httpd

@@ -67,6 +67,7 @@ local function discover_services()
         local protect_paths, gateway_route, service_port, gateway_limit
         for key in pairs(Labels) do
             local val = Labels[key]
+            print(key, " ", val)
             if key == 'gateway.jwt_port' then
                 local jwt_token, err = http_get(
                     'http://' .. service_name .. ':' .. val
