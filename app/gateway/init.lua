@@ -131,7 +131,7 @@ ngx.timer.at(0, discover_services)
 ngx.timer.every(refresh_interval, discover_services)
 
 -- define prometheus metrics
-local prometheus = require("prometheus").init("metrics")
+prometheus = require("prometheus").init("metrics")
 metric_request_uri = prometheus:counter("request_uri", "Request URI", {"uri", "status"})
 metric_response_bytes = prometheus:counter("response_bytes", "Response Bytes", {"uri"})
 metric_request_timecost = prometheus:counter("request_timecost", "Request Timecost", {"uri"})
