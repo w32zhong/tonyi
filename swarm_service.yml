@@ -14,10 +14,8 @@ services:
     networks:
       - gateway_net
 
-  echo8921:
+  echo1:
     image: approach0/echo-httpd
-    ports:
-      - 8921:8080
     networks:
       - gateway_net
     command: "node hello.js echo8921"
@@ -25,12 +23,10 @@ services:
       labels:
         gateway.route: foo
         gateway.port: 8080
-        gateway.limits: '{"rate": 100, "conn": 1}'
+        gateway.limits: '{"rate": 10, "burst": 10, "conn": 1}'
 
-  echo8922:
+  echo2:
     image: approach0/echo-httpd
-    ports:
-      - 8922:8080
     networks:
       - gateway_net
     command: "node hello.js echo8922"
@@ -38,7 +34,7 @@ services:
       labels:
         gateway.route: bar
         gateway.port: 8080
-        gateway.limits: '{"rate": 1, "conn": 50}'
+        gateway.limits: '{"rate": 1, "conn": 10}'
 
 networks:
   gateway_net:

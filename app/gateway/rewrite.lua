@@ -44,7 +44,7 @@ end
 
 local function rate_limit(route, conn_max, req_rate, req_burst)
     local limit_key = route .. ":" .. (ngx.var.http_x_real_ip or ngx.var.remote_addr)
-    print('key=', limit_key, ', conn=', conn_max, ', rate=', req_rate)
+    print('key=', limit_key, ', conn=', conn_max, ', rate=', req_rate, ', burst=', req_burst)
 
     local lim_req = get_req_limiter("req_store", req_rate, req_burst)
 
