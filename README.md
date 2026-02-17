@@ -89,4 +89,5 @@ Update a service from source:
 docker-compose -f swarm_service.yml build && docker service update --force demo_gateway
 docker service logs -f demo_gateway
 curl -4 -X POST localhost/foo/bar -d '{"key":"value"}' --header "Content-Type: application/json"
+curl --parallel --parallel-immediate -4 localhost/foo/ localhost/foo/ localhost/foo/ # parallel requests
 ```

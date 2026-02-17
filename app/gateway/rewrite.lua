@@ -42,11 +42,10 @@ local function get_conn_limiter(store_name, conn, burst, delay)
     return conn_limiters[cache_key]
 end
 
-local function rate_limit(route, conn_max, req_rate)
+local function rate_limit(route, conn_max, req_rate, req_burst)
     local limit_key = route .. ":" .. (ngx.var.http_x_real_ip or ngx.var.remote_addr)
     print('key=', limit_key, ', conn=', conn_max, ', rate=', req_rate)
 
-    local req_burst = 0
     local lim_req = get_req_limiter("req_store", req_rate, req_burst)
 
     local delay_req, err_req = lim_req:incoming(limit_key, true)
@@ -117,10 +116,10 @@ end
 local route_meta_str = ngx.shared.route_map:get(route)
 if route_meta_str then
     local route_meta = cjson.decode(route_meta_str)
-    rate_limit(route, route_meta.conn, route_meta.rate)
+    rate_limit(route, route_meta.conn, route_meta.rate, route_meta.burst)
     ngx.var.service_addr = round_robin(route, route_meta)
 else
-    rate_limit(route, default_conn_max, default_req_rate)
+    rate_limit(route, default_conn_max, default_req_rate, default_burst)
     print('[route] service for "', route, '" not found, '..
         'fallback to the root.')
 

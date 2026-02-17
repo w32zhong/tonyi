@@ -2,6 +2,7 @@ local refresh_interval = 20 -- timer interval (in seconds)
 local expire_seconds = refresh_interval * 6
 default_conn_max = 1 -- default concurrent requests
 default_req_rate = 2 -- default rate limit (req/sec)
+default_burst = 10   -- default rate burst (req/sec)
 
 cjson = require("cjson") -- global variable (used by rewrite.lua)
 local http = require("resty.http")
@@ -112,6 +113,7 @@ local function discover_services()
 
             -- Set gateway limit
             route_meta['rate'] = (gateway_limits and gateway_limits.rate) or default_req_rate
+            route_meta['burst'] = (gateway_limits and gateway_limits.conn) or default_burst
             route_meta['conn'] = (gateway_limits and gateway_limits.conn) or default_conn_max
 
             -- Any protected path(s)?
