@@ -78,14 +78,15 @@ ssh -N -L 3001:localhost:3001 -L 3002:localhost:3002 user@remotehost
 ```
 
 ## Swarm Service
+Declare stack:
 ```sh
 docker-compose -f swarm_service.yml build
 docker stack deploy --compose-file swarm_service.yml demo --detach=false --resolve-image=never
-curl -4 -X POST localhost:8921/foo/bar -d '{"key":"value"}' --header "Content-Type: application/json"
 ```
 
 Update a service from source:
 ```sh
 docker-compose -f swarm_service.yml build && docker service update --force demo_gateway
 docker service logs -f demo_gateway
+curl -4 -X POST localhost/foo/bar -d '{"key":"value"}' --header "Content-Type: application/json"
 ```

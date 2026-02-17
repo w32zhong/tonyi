@@ -21,7 +21,9 @@ services:
     command: "node hello.js echo8921"
     deploy:
       labels:
-        gateway.route: "foo"
+        gateway.route: foo
+        gateway.port: 8080
+        gateway.limits: '{"rate": 100, "conn": 1}'
 
   echo8922:
     image: approach0/echo-httpd
@@ -30,6 +32,11 @@ services:
     networks:
       - gateway_net
     command: "node hello.js echo8922"
+    deploy:
+      labels:
+        gateway.route: bar
+        gateway.port: 8080
+        gateway.limits: '{"rate": 1, "conn": 50}'
 
 networks:
   gateway_net:

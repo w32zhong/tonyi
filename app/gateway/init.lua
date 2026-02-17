@@ -1,7 +1,10 @@
-local cjson = require("cjson")
-local http = require("resty.http")
-local refresh_interval = 10 -- timer interval (in seconds)
+local refresh_interval = 20 -- timer interval (in seconds)
 local expire_seconds = refresh_interval * 6
+default_conn_max = 1 -- default concurrent requests
+default_req_rate = 2 -- default rate limit (req/sec)
+
+cjson = require("cjson") -- global variable (used by rewrite.lua)
+local http = require("resty.http")
 
 function http_get(url)
     local httpc = http.new()
@@ -67,7 +70,6 @@ local function discover_services()
         local protect_paths, gateway_route, service_port, gateway_limit
         for key in pairs(Labels) do
             local val = Labels[key]
-            print(key, " ", val)
             if key == 'gateway.jwt_port' then
                 local jwt_token, err = http_get(
                     'http://' .. service_name .. ':' .. val
@@ -85,12 +87,8 @@ local function discover_services()
                 gateway_route = val
             elseif key == 'gateway.port' then
                 service_port = val
-            elseif key == 'gateway.limit' then
-                local limits = {}
-                for limit in string.gmatch(val, "[^,]+") do
-                    table.insert(limits, tonumber(limit))
-                end
-                gateway_limits = limits
+            elseif key == 'gateway.limits' then
+                gateway_limits = cjson.decode(val)
             end
         end
 
@@ -113,7 +111,8 @@ local function discover_services()
             route_meta['port'] = service_port
 
             -- Set gateway limit
-            route_meta['limits'] = gateway_limits
+            route_meta['rate'] = (gateway_limits and gateway_limits.rate) or default_req_rate
+            route_meta['conn'] = (gateway_limits and gateway_limits.conn) or default_conn_max
 
             -- Any protected path(s)?
             if protect_paths then
@@ -132,7 +131,6 @@ local function discover_services()
         print('[service] /', gateway_route, ' -> ', route_meta_str)
         ngx.shared.route_map:set(gateway_route, route_meta_str, expire_seconds)
     end
-
     print('=== SERVICE LIST REFRESHED ===')
 end
 
