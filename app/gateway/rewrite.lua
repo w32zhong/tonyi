@@ -6,23 +6,22 @@ local route = ngx.var.service_route
 local limit_req = require "resty.limit.req"
 local limit_conn = require "resty.limit.conn"
 
-local req_limiters = {}
-local conn_limiters = {}
+local limiters = {}
 
 -- Example: limiting the requests under 200 req/sec with a burst of 100 req/sec:
 -- meaning, we delay requests under 300 req/sec and above 200 req/sec, and reject
 -- any requests exceeding 300 req/sec.
 local function get_req_limiter(store_name, rate, burst)
     local cache_key = store_name .. ":" .. rate .. ":" .. burst
-    if not req_limiters[cache_key] then
+    if not limiters[cache_key] then
         local lim, err = limit_req.new(store_name, rate, burst)
         if not lim then
             ngx.log(ngx.ERR, "failed to instantiate a resty.limit.req object: ", err)
             return ngx.exit(500)
         end
-        req_limiters[cache_key] = lim
+        limiters[cache_key] = lim
     end
-    return req_limiters[cache_key]
+    return limiters[cache_key]
 end
 
 -- Example: limit the requests under 200 concurrent requests with
@@ -31,15 +30,15 @@ end
 -- and above 200 connections, and reject extra requests exceeding 300 connections.
 local function get_conn_limiter(store_name, conn, burst, delay)
     local cache_key = store_name .. ":" .. conn .. ":" .. burst .. ":" .. delay
-    if not conn_limiters[cache_key] then
+    if not limiters[cache_key] then
         local lim, err = limit_conn.new(store_name, conn, burst, delay)
         if not lim then
             ngx.log(ngx.ERR, "failed to instantiate a resty.limit.conn object: ", err)
             return ngx.exit(500)
         end
-        conn_limiters[cache_key] = lim
+        limiters[cache_key] = lim
     end
-    return conn_limiters[cache_key]
+    return limiters[cache_key]
 end
 
 local function rate_limit(route, conn_max, req_rate, req_burst)
@@ -47,7 +46,6 @@ local function rate_limit(route, conn_max, req_rate, req_burst)
     print('key=', limit_key, ', conn=', conn_max, ', rate=', req_rate, ', burst=', req_burst)
 
     local lim_req = get_req_limiter("req_store", req_rate, req_burst)
-
     local delay_req, err_req = lim_req:incoming(limit_key, true)
     if not delay_req then
         if err_req == "rejected" then
@@ -56,14 +54,12 @@ local function rate_limit(route, conn_max, req_rate, req_burst)
         ngx.log(ngx.ERR, "failed to limit req: ", err_req)
         return ngx.exit(500)
     end
-
     if delay_req >= 0.001 then
         ngx.sleep(delay_req)
     end
 
     local conn_burst = 0
     local lim_conn = get_conn_limiter("conn_store", conn_max, conn_burst, 0.5)
-
     local delay_conn, err_conn = lim_conn:incoming(limit_key, true)
     if not delay_conn then
         if err_conn == "rejected" then
@@ -72,7 +68,6 @@ local function rate_limit(route, conn_max, req_rate, req_burst)
         ngx.log(ngx.ERR, "failed to limit conn: ", err_conn)
         return ngx.exit(500)
     end
-
     -- to avoid double leaving
     if lim_conn:is_committed() then
         local ctx = ngx.ctx
@@ -80,11 +75,13 @@ local function rate_limit(route, conn_max, req_rate, req_burst)
         ctx.limit_conn_key = limit_key
         ctx.limit_conn_delay = delay_conn
     end
-
     --if delay_conn >= 0.001 then
     --    ngx.sleep(delay_conn)
     --end
 end
+
+-- route-agnostic rate limits
+rate_limit('__all__', default_conn_max, default_req_rate, default_burst)
 
 ------------------
 --- Rewrite ------
@@ -116,10 +113,12 @@ end
 local route_meta_str = ngx.shared.route_map:get(route)
 if route_meta_str then
     local route_meta = cjson.decode(route_meta_str)
+    -- route-specific rate limits
     rate_limit(route, route_meta.conn, route_meta.rate, route_meta.burst)
+
     ngx.var.service_addr = round_robin(route, route_meta)
+
 else
-    rate_limit(route, default_conn_max, default_req_rate, default_burst)
     print('[route] service for "', route, '" not found, '..
         'fallback to the root.')
 

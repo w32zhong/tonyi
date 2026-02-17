@@ -1,8 +1,8 @@
 local refresh_interval = 20 -- timer interval (in seconds)
 local expire_seconds = refresh_interval * 6
-default_conn_max = 1 -- default concurrent requests
-default_req_rate = 3 -- default rate limit (req/sec)
-default_burst = 0   -- default rate burst (req/sec)
+default_conn_max = (tonumber(os.getenv("DEFAULT_CONN_MAX")) or 1) -- default concurrent requests
+default_req_rate = (tonumber(os.getenv("DEFAULT_REQ_RATE")) or 3) -- default rate limit (req/sec)
+default_burst    = (tonumber(os.getenv("DEFAULT_BURST")) or 0)    -- default rate burst (req/sec)
 
 cjson = require("cjson") -- global variable (used by rewrite.lua)
 local http = require("resty.http")
@@ -68,7 +68,7 @@ local function discover_services()
         local Spec = service['Spec']
         local Labels = Spec['Labels']
         local service_name = Spec['Name']
-        local protect_paths, gateway_route, service_port, gateway_limit
+        local protect_paths, gateway_route, service_port, gateway_limits
         for key in pairs(Labels) do
             local val = Labels[key]
             if key == 'gateway.jwt_port' then

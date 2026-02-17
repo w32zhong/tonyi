@@ -1,5 +1,6 @@
 #!/bin/bash
 DOMAIN="$1"
+echo "GATEWAY entrypoint. (domain=$DOMAIN)"
 
 set -m # Enable bkgd job control
 
