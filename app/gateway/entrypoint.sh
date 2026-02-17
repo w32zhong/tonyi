@@ -26,11 +26,11 @@ if [ -n "$DOMAIN" ]; then
         echo "Real certificates exist, use them..."
         bash -c "$UPDATE_CERT"
 
-        # regularly renew touch
+        # regularly renew touch (<<- remove leading tabs)
         crontab <<- EOF
-        23 1 * * * /root/.acme.sh/acme.sh --cron --home /root/.acme.sh > /root/logs/acme.log
-        *  * * * * date > /root/logs/cron.log
-        EOF
+	23 1 * * * /root/.acme.sh/acme.sh --cron --home /root/.acme.sh > /root/logs/acme.log
+	*  * * * * date > /root/logs/cron.log
+	EOF
     else
         pushd ./.acme.sh
         # Verify and issue certificate
