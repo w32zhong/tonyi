@@ -1,52 +1,62 @@
 local limit_req = require "resty.limit.req"
 local limit_conn = require "resty.limit.conn"
 
-local service_rates = {
-    ["login"]   = { rate = 1,  burst = 2 },  -- 登录：每秒 1 次，允许 2 个突发
-    ["api"]     = { rate = 20, burst = 50 }, -- API：每秒 20 次，允许 50 个突发
-    ["static"]  = { rate = 100, burst = 100 }, -- 静态资源：给得很足
-    ["default"] = { rate = 10, burst = 20 }  -- 默认配置
-}
+local req_limiters = {}
+local conn_limiters = {}
 
-local service_name = ngx.var.service_route
-local config = service_rates[service_name] or service_rates["default"]
-
--- 3. 初始化限流器
--- 参数：共享内存名, 速率(r/s), 爆发量(burst)
-local lim, err = limit_req.new("my_limit_req_store", config.rate, config.burst)
-if not lim then
-    ngx.log(ngx.ERR, "初始化限流器失败: ", err)
-    return -- 或者报错退出
-end
-
-local key = ngx.var.binary_remote_addr
-local delay, err = lim:incoming(key, true)
-
-if not delay then
-    if err == "rejected" then
-        ngx.status = 429 -- Too Many Requests
-        ngx.say('{"error": "访问太频繁了，请稍后再试"}')
-        return ngx.exit(429)
+function get_req_limiter(dict_name, rate, burst)
+    local cache_key = dict_name .. ":" .. rate .. ":" .. burst
+    if not req_limiters[cache_key] then
+        -- 只有第一次会执行 new
+        req_limiters[cache_key] = limit_req.new(dict_name, rate, burst)
     end
-    ngx.log(ngx.ERR, "限流执行出错: ", err)
-    return
+    return req_limiters[cache_key]
 end
 
-if not delay then
-    if err == "rejected" then
-        -- 这行就等于 limit_conn_status 503;
-        ngx.status = 503
-        ngx.say('{"msg": "服务器连接数已满 (Too Many Connections)"}')
-        return ngx.exit(503) 
+function get_conn_limiter(dict_name, conn, burst, delay)
+    local cache_key = dict_name .. ":" .. conn .. ":" .. burst .. ":" .. delay
+    if not conn_limiters[cache_key] then
+        conn_limiters[cache_key] = limit_conn.new(dict_name, conn, burst, delay)
     end
+    return conn_limiters[cache_key]
 end
 
--- 5. 处理排队 (delay > 0 表示该请求需要被延迟处理以符合频率限制)
-if delay >= 0.001 then
-    -- 如果你不想要原生 limit_req 那种 nodelay 的效果
-    -- 可以让请求休眠一会儿再往下走
-    ngx.sleep(delay)
+-- test --
+local route_name = "api_user_profile"
+local req_rate, req_burst = 5, 2      -- 频率限制
+local conn_max, conn_burst = 10, 5    -- 并发限制
+local client_ip = ngx.var.binary_remote_addr
+
+local conn_key = route_name .. ":" .. bin_ip
+local lim_conn = get_conn_limiter("conn_store", conn_max, conn_burst, 0.5)
+
+local delay_conn, err_conn = lim_conn:incoming(conn_key, true)
+if not delay_conn then
+    if err_conn == "rejected" then
+        return ngx.exit(503) -- 并发超限
+    end
+    return ngx.exit(500)
 end
+
+ngx.ctx.limit_conn_obj = lim_conn
+ngx.ctx.limit_conn_key = conn_key
+
+local req_key = route_name .. ":" .. bin_ip
+local lim_req = get_req_limiter("req_store", req_rate, req_burst)
+
+local delay_req, err_req = lim_req:incoming(req_key, true)
+if not delay_req then
+    if err_req == "rejected" then
+        return ngx.exit(429) -- 频率超限
+    end
+    return ngx.exit(500)
+end
+
+if delay_req >= 0.001 then
+    ngx.sleep(delay_req)
+end
+
+
 
 
 local route = ngx.var.service_route
@@ -58,16 +68,6 @@ local full_req_uri = ngx.var.request_uri
 -- to ensure correct relative path for micro-services.
 if route ~= '_root_' and modified_uri == '' then
     ngx.redirect('/' .. route .. '/' .. query_params)
-end
-
--- Handle GeoIP information
-local success, geo_info = geo_lookup(ngx.var.remote_addr)
-if success then
-    ngx.var.geo_city = geo_info.city
-    ngx.var.geo_subd = geo_info.region
-    ngx.var.geo_ctry = geo_info.country
-    ngx.var.geo_longitude = geo_info.longitude
-    ngx.var.geo_latitude  = geo_info.latitude
 end
 
 -- Handle proxy host rewriting
