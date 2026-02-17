@@ -64,7 +64,7 @@ local function discover_services()
         local Spec = service['Spec']
         local Labels = Spec['Labels']
         local service_name = Spec['Name']
-        local gateway_route, service_port, protect_paths
+        local protect_paths, gateway_route, service_port, gateway_limit
         for key in pairs(Labels) do
             local val = Labels[key]
             if key == 'gateway.jwt_port' then
@@ -84,6 +84,12 @@ local function discover_services()
                 gateway_route = val
             elseif key == 'gateway.port' then
                 service_port = val
+            elseif key == 'gateway.limit' then
+                local limits = {}
+                for limit in string.gmatch(val, "[^,]+") do
+                    table.insert(limits, tonumber(limit))
+                end
+                gateway_limits = limits
             end
         end
 
@@ -104,6 +110,9 @@ local function discover_services()
 
             -- Set service port
             route_meta['port'] = service_port
+
+            -- Set gateway limit
+            route_meta['limits'] = gateway_limits
 
             -- Any protected path(s)?
             if protect_paths then

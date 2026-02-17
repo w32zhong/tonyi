@@ -1,3 +1,8 @@
+local route = ngx.var.service_route
+
+------------------
+--- Rate Limit ---
+------------------
 local limit_req = require "resty.limit.req"
 local limit_conn = require "resty.limit.conn"
 
@@ -32,61 +37,58 @@ function get_conn_limiter(store_name, conn, burst, delay)
             ngx.log(ngx.ERR, "failed to instantiate a resty.limit.conn object: ", err)
             return ngx.exit(500)
         end
-        conn_limiters[cache_key]
+        conn_limiters[cache_key] = lim
     end
     return conn_limiters[cache_key]
 end
 
--- test --
-local route_name = "api_user_profile"
-local req_rate, req_burst = 5, 2      -- 频率限制
-local conn_max, conn_burst = 10, 5    -- 并发限制
-local client_ip = ngx.var.binary_remote_addr
+function rate_limit(route, conn_max, req_rate)
+    local req_burst = 0
+    local lim_req = get_req_limiter("req_store", req_rate, req_burst)
 
-local conn_key = route_name .. ":" .. bin_ip
-local lim_conn = get_conn_limiter("conn_store", conn_max, conn_burst, 0.5)
-
-local delay_conn, err_conn = lim_conn:incoming(conn_key, true)
-if not delay_conn then
-    if err_conn == "rejected" then
-        return ngx.exit(503) -- Service Unavailable
+    local req_key = route .. ":" .. ngx.var.binary_remote_addr
+    local delay_req, err_req = lim_req:incoming(req_key, true)
+    if not delay_req then
+        if err_req == "rejected" then
+            return ngx.exit(429) -- Too Many Requests
+        end
+        ngx.log(ngx.ERR, "failed to limit req: ", err_req)
+        return ngx.exit(500)
     end
-    ngx.log(ngx.ERR, "failed to limit conn: ", err_conn)
-    return ngx.exit(500)
-end
 
--- to avoid double leaving
-if lim_conn:is_committed() then
-    local ctx = ngx.ctx
-    ctx.limit_conn = lim_conn
-    ctx.limit_conn_key = conn_key
-    ctx.limit_conn_delay = delay_conn
-end
+    --if delay_req >= 0.001 then
+    --    ngx.sleep(delay_req)
+    --end
 
---if delay_conn >= 0.001 then
---    ngx.sleep(delay_conn)
---end
+    local conn_burst = 0
+    local lim_conn = get_conn_limiter("conn_store", conn_max, conn_burst, 0)
 
-local req_key = route_name .. ":" .. bin_ip
-local lim_req = get_req_limiter("req_store", req_rate, req_burst)
-
-local delay_req, err_req = lim_req:incoming(req_key, true)
-if not delay_req then
-    if err_req == "rejected" then
-        return ngx.exit(429) -- Too Many Requests
+    local conn_key = route .. ":" .. ngx.var.binary_remote_addr
+    local delay_conn, err_conn = lim_conn:incoming(conn_key, true)
+    if not delay_conn then
+        if err_conn == "rejected" then
+            return ngx.exit(503) -- Service Unavailable
+        end
+        ngx.log(ngx.ERR, "failed to limit conn: ", err_conn)
+        return ngx.exit(500)
     end
-    ngx.log(ngx.ERR, "failed to limit req: ", err_req)
-    return ngx.exit(500)
+
+    -- to avoid double leaving
+    if lim_conn:is_committed() then
+        local ctx = ngx.ctx
+        ctx.limit_conn = lim_conn
+        ctx.limit_conn_key = conn_key
+        ctx.limit_conn_delay = delay_conn
+    end
+
+    --if delay_conn >= 0.001 then
+    --    ngx.sleep(delay_conn)
+    --end
 end
 
---if delay_req >= 0.001 then
---    ngx.sleep(delay_req)
---end
-
-
-
-
-local route = ngx.var.service_route
+------------------
+--- Rewrite ------
+------------------
 local modified_uri = ngx.var.modified_uri
 local query_params = ngx.var.is_args .. (ngx.var.args or '')
 local full_req_uri = ngx.var.request_uri
@@ -97,7 +99,6 @@ if route ~= '_root_' and modified_uri == '' then
     ngx.redirect('/' .. route .. '/' .. query_params)
 end
 
--- Handle proxy host rewriting
 local function round_robin(route, route_meta)
     local services = route_meta['services']
     local service_port = route_meta['port']
@@ -116,6 +117,8 @@ end
 local route_meta_str = ngx.shared.route_map:get(route)
 if route_meta_str then
     local route_meta = cjson.decode(route_meta_str)
+    local limits = route_meta['limit'] or {}
+    rate_limit(route, limits[1] or 10, limits[2] or 100)
     ngx.var.service_addr = round_robin(route, route_meta)
 else
     print('[route] service for "', route, '" not found, '..
@@ -139,7 +142,9 @@ else
     end
 end
 
--- Handle route JWT verification
+------------------
+--- JWT verify ---
+------------------
 local jwt = require "resty.jwt"
 local validators = require "resty.jwt-validators"
 local sub_route = string.match(modified_uri, '[^/]+') or ''
