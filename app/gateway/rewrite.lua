@@ -4,19 +4,28 @@ local limit_conn = require "resty.limit.conn"
 local req_limiters = {}
 local conn_limiters = {}
 
-function get_req_limiter(dict_name, rate, burst)
-    local cache_key = dict_name .. ":" .. rate .. ":" .. burst
+function get_req_limiter(store_name, rate, burst)
+    local cache_key = store_name .. ":" .. rate .. ":" .. burst
     if not req_limiters[cache_key] then
-        -- 只有第一次会执行 new
-        req_limiters[cache_key] = limit_req.new(dict_name, rate, burst)
+        local lim, err = limit_req.new(store_name, rate, burst)
+        if not lim then
+            ngx.log(ngx.ERR, "failed to instantiate a resty.limit.req object: ", err)
+            return ngx.exit(500)
+        end
+        req_limiters[cache_key] = lim
     end
     return req_limiters[cache_key]
 end
 
-function get_conn_limiter(dict_name, conn, burst, delay)
-    local cache_key = dict_name .. ":" .. conn .. ":" .. burst .. ":" .. delay
+function get_conn_limiter(store_name, conn, burst, delay)
+    local cache_key = store_name .. ":" .. conn .. ":" .. burst .. ":" .. delay
     if not conn_limiters[cache_key] then
-        conn_limiters[cache_key] = limit_conn.new(dict_name, conn, burst, delay)
+        local lim, err = limit_conn.new(store_name, conn, burst, delay)
+        if not lim then
+            ngx.log(ngx.ERR, "failed to instantiate a resty.limit.conn object: ", err)
+            return ngx.exit(500)
+        end
+        conn_limiters[cache_key]
     end
     return conn_limiters[cache_key]
 end

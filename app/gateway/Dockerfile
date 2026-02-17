@@ -6,7 +6,7 @@ RUN mkdir -p logs/ http_root/
 # install Lua/openresty dependencies
 RUN opm install ledgetech/lua-resty-http
 RUN opm install SkyLothar/lua-resty-jwt
-RUN opm install openresty/lua-resty-limit-traffic
+#RUN opm install openresty/lua-resty-limit-traffic (built-in in OpenResty 1.11.2.2+)
 RUN opm install knyar/nginx-lua-prometheus
 
 # setup LetsEncrypt, and get ready for the /.well-known/acme-challenge.
