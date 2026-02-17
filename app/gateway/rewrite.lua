@@ -98,7 +98,7 @@ if route ~= '_root_' and modified_uri == '' then
 end
 
 -- Handle proxy host rewriting
-local function get_service_addr(route, route_meta)
+local function round_robin(route, route_meta)
     local services = route_meta['services']
     local service_port = route_meta['port']
 
@@ -116,11 +116,10 @@ end
 local route_meta_str = ngx.shared.route_map:get(route)
 if route_meta_str then
     local route_meta = cjson.decode(route_meta_str)
-    -- Output service address for proxy_pass
-    ngx.var.service_addr = get_service_addr(route, route_meta)
+    ngx.var.service_addr = round_robin(route, route_meta)
 else
     print('[route] service for "', route, '" not found, '..
-        'fall through to the root.')
+        'fallback to the root.')
 
     local root_meta_str = ngx.shared.route_map:get('_root_')
     if not root_meta_str then
@@ -133,9 +132,9 @@ else
         ]])
         ngx.exit(ngx.HTTP_OK)
     else
-        -- Pass to _root_ service
+        -- Pass to the _root_ service
         local root_meta = cjson.decode(root_meta_str)
-        ngx.var.service_addr = get_service_addr('_root_', root_meta)
+        ngx.var.service_addr = round_robin('_root_', root_meta)
         ngx.var.modified_uri = full_req_uri
     end
 end
@@ -147,11 +146,10 @@ local sub_route = string.match(modified_uri, '[^/]+') or ''
 for _, test_path in pairs({route .. '/', route .. '/' .. sub_route}) do
     local protected = ngx.shared.protected:get(test_path)
     if protected then
-        print('[route] ', test_path, ' is under protection.')
         local jwt_secret = ngx.shared.JWT:get('secret')
-        local jwt_token = ngx.var.cookie_latticejwt
-        local claim_spec = { exp = validators.is_not_expired() }
+        local jwt_token = ngx.var.cookie_gatewayjwt
         if jwt_secret and jwt_token then
+            local claim_spec = { exp = validators.is_not_expired() }
             local jwt_res = jwt:verify(jwt_secret, jwt_token, claim_spec)
             if jwt_res.valid and jwt_res.verified then
                 print('[JWT] verified, will expire@: ', jwt_res.payload.exp)
@@ -161,10 +159,9 @@ for _, test_path in pairs({route .. '/', route .. '/' .. sub_route}) do
             end
         end
 
-        -- Redirect client to login
+        -- Redirect to /login/?next=...
         local qry = ngx.encode_args({["next"] = full_req_uri})
-        -- ngx.redirect("/lattice/login?" .. qry) -- for DEBUG
-        ngx.redirect("/login/?" .. qry) -- for PRODUCTION
+        ngx.redirect("/login/?" .. qry)
     end
 end
 
