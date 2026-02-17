@@ -76,3 +76,10 @@ but the localhost does not have a browser, set up an SSH tunnel:
 ```sh
 ssh -N -L 3001:localhost:3001 -L 3002:localhost:3002 user@remotehost
 ```
+
+## Swarm Service
+```sh
+docker build -f Dockerfile . -t gateway
+docker stack deploy --compose-file swarm_service.yml stack --detach=false
+curl -4 -X POST localhost:8921/foo/bar -d '{"key":"value"}' --header "Content-Type: application/json"
+```

@@ -1,0 +1,31 @@
+services:
+
+  gateway:
+    image: gateway:latest
+    ports:
+      - 80:443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - gateway_net
+
+  echo8921:
+    image: approach0/echo-httpd
+    ports:
+      - 8921:8080
+    networks:
+      - gateway_net
+    command: "node hello.js echo8921"
+
+  echo8922:
+    image: approach0/echo-httpd
+    ports:
+      - 8922:8080
+    networks:
+      - gateway_net
+    command: "node hello.js echo8922"
+
+networks:
+  gateway_net:
+    driver: overlay
+    attachable: true
