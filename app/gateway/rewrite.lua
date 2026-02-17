@@ -4,6 +4,9 @@ local limit_conn = require "resty.limit.conn"
 local req_limiters = {}
 local conn_limiters = {}
 
+-- Example: limiting the requests under 200 req/sec with a burst of 100 req/sec:
+-- meaning, we delay requests under 300 req/sec and above 200 req/sec, and reject
+-- any requests exceeding 300 req/sec.
 function get_req_limiter(store_name, rate, burst)
     local cache_key = store_name .. ":" .. rate .. ":" .. burst
     if not req_limiters[cache_key] then
@@ -17,6 +20,10 @@ function get_req_limiter(store_name, rate, burst)
     return req_limiters[cache_key]
 end
 
+-- Example: limit the requests under 200 concurrent requests with
+-- a burst of 100 extra concurrent requests, with a default delay of 0.5:
+-- meaning, we delay 0.5s for requests under 300 concurrent connections
+-- and above 200 connections, and reject extra requests exceeding 300 connections.
 function get_conn_limiter(store_name, conn, burst, delay)
     local cache_key = store_name .. ":" .. conn .. ":" .. burst .. ":" .. delay
     if not conn_limiters[cache_key] then
@@ -42,13 +49,23 @@ local lim_conn = get_conn_limiter("conn_store", conn_max, conn_burst, 0.5)
 local delay_conn, err_conn = lim_conn:incoming(conn_key, true)
 if not delay_conn then
     if err_conn == "rejected" then
-        return ngx.exit(503) -- 并发超限
+        return ngx.exit(503) -- Service Unavailable
     end
+    ngx.log(ngx.ERR, "failed to limit conn: ", err_conn)
     return ngx.exit(500)
 end
 
-ngx.ctx.limit_conn_obj = lim_conn
-ngx.ctx.limit_conn_key = conn_key
+-- to avoid double leaving
+if lim_conn:is_committed() then
+    local ctx = ngx.ctx
+    ctx.limit_conn = lim_conn
+    ctx.limit_conn_key = conn_key
+    ctx.limit_conn_delay = delay_conn
+end
+
+--if delay_conn >= 0.001 then
+--    ngx.sleep(delay_conn)
+--end
 
 local req_key = route_name .. ":" .. bin_ip
 local lim_req = get_req_limiter("req_store", req_rate, req_burst)
@@ -56,14 +73,15 @@ local lim_req = get_req_limiter("req_store", req_rate, req_burst)
 local delay_req, err_req = lim_req:incoming(req_key, true)
 if not delay_req then
     if err_req == "rejected" then
-        return ngx.exit(429) -- 频率超限
+        return ngx.exit(429) -- Too Many Requests
     end
+    ngx.log(ngx.ERR, "failed to limit req: ", err_req)
     return ngx.exit(500)
 end
 
-if delay_req >= 0.001 then
-    ngx.sleep(delay_req)
-end
+--if delay_req >= 0.001 then
+--    ngx.sleep(delay_req)
+--end
 
 
 
