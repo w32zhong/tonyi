@@ -95,22 +95,21 @@ local function discover_services()
             end
             local route_meta = new_route_map[gateway_route]
 
-            -- Set services
+            -- Set service name
             if not route_meta['services'] then
                 route_meta['services'] = {service_name}
-            else
+            else -- multiple load-balancing services
                 table.insert(route_meta['services'], service_name)
             end
 
-            -- Set port
+            -- Set service port
             route_meta['port'] = service_port
 
-            -- Any protected path?
+            -- Any protected path(s)?
             if protect_paths then
                 -- Let's split the protect paths
                 for path in string.gmatch(protect_paths, "[^,]+") do
                     local protected_path = gateway_route .. path
-                    print('[protect] ', protected_path)
                     ngx.shared.protected:set(protected_path, true)
                 end
             end
