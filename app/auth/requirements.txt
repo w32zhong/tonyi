@@ -1,0 +1,6 @@
+sqlmodel
+psycopg2-binary
+argon2-cffi
+pyjwt
+fastapi
+uvicorn[standard]
