@@ -7,6 +7,7 @@ services:
       - DEFAULT_BURST=$GATEWAY_DEFAULT_BURST
       - DEFAULT_CONN_MAX=$GATEWAY_DEFAULT_CONN_MAX
       - DOMAIN=$GATEWAY_DOMAIN
+      - JWT_COOKIE_NAME=gateway_jwt # ngx.var.cookie_* must be lower-case
     build:
       context: ./app/gateway
       dockerfile: Dockerfile
@@ -41,16 +42,6 @@ services:
         gateway.route: bar
         gateway.port: 8080
         gateway.limits: '{"rate": 1, "burst": 0, "conn": 10}'
-
-  #echo3:
-  #  image: approach0/echo-httpd
-  #  networks:
-  #    - gateway_net
-  #  command: "node hello.js echo8922"
-  #  deploy:
-  #    labels:
-  #      gateway.route: baz
-  #      gateway.port: 8080
 
 networks:
   gateway_net:

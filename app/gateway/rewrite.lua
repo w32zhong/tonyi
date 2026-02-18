@@ -62,12 +62,13 @@ end
 ------------------
 local jwt = require "resty.jwt"
 local validators = require "resty.jwt-validators"
+local jwt_cookie_name = os.getenv("JWT_COOKIE_NAME") or "jwt"
 local sub_route = string.match(modified_uri, '[^/]+') or ''
 for _, test_path in pairs({route .. '/', route .. '/' .. sub_route}) do
     local protected = ngx.shared.protected:get(test_path)
     if protected then
         local jwt_secret = ngx.shared.JWT:get('secret')
-        local jwt_token = ngx.var.cookie_gatewayjwt
+        local jwt_token = ngx.var["cookie_" .. jwt_cookie_name]
         if jwt_secret and jwt_token then
             local claim_spec = { exp = validators.is_not_expired() }
             local jwt_res = jwt:verify(jwt_secret, jwt_token, claim_spec)
