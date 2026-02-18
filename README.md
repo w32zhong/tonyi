@@ -81,7 +81,7 @@ ssh -N -L 3001:localhost:3001 -L 3002:localhost:3002 user@remotehost
 Declare stack:
 ```sh
 docker-compose -f swarm_service.yml build
-docker stack deploy --compose-file swarm_service.yml demo --detach=false --resolve-image=never
+docker stack deploy --prune --compose-file swarm_service.yml demo --detach=false
 ```
 
 Update a service from source:

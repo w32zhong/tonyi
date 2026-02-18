@@ -1,12 +1,13 @@
-local refresh_interval = 20 -- timer interval (in seconds)
-local expire_seconds = refresh_interval * 6
-default_conn_max = (tonumber(os.getenv("DEFAULT_CONN_MAX")) or 1) -- default concurrent requests
-default_req_rate = (tonumber(os.getenv("DEFAULT_REQ_RATE")) or 3) -- default rate limit (req/sec)
-default_burst    = (tonumber(os.getenv("DEFAULT_BURST")) or 0)    -- default rate burst (req/sec)
-
--- Global variables (used by nginx.conf and rewrite.lua)
+-- Global jariables (used by nginx.conf and rewrite.lua)
+_G.default_conn_max = (tonumber(os.getenv("DEFAULT_CONN_MAX")) or 1) -- default concurrent requests
+_G.default_req_rate = (tonumber(os.getenv("DEFAULT_REQ_RATE")) or 3) -- default rate limit (req/sec)
+_G.default_burst    = (tonumber(os.getenv("DEFAULT_BURST")) or 0)    -- default rate burst (req/sec)
 _G.rate_limit = require("rate_limit").rate_limit
 _G.cjson = require("cjson")
+
+-- Service discovery
+local refresh_interval = 20 -- timer interval (in seconds)
+local expire_seconds = refresh_interval * 6
 
 local http = require("resty.http")
 
@@ -142,7 +143,7 @@ end
 ngx.timer.at(0, discover_services)
 ngx.timer.every(refresh_interval, discover_services)
 
--- define prometheus metrics
+-- Prometheus metrics
 prometheus = require("prometheus").init("metrics")
 metric_request_uri = prometheus:counter("request_uri", "Request URI", {"uri", "status"})
 metric_response_bytes = prometheus:counter("response_bytes", "Response Bytes", {"uri"})
