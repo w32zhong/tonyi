@@ -18,8 +18,7 @@ services:
     entrypoint: ["/bin/sh", "/entrypoint.sh"]
     restart: unless-stopped
     networks:
-      - jfs_net
-      - db_net
+      - proxy_net
 
   proxy:
     image: gogost/gost
@@ -37,8 +36,9 @@ services:
   redis_srv:
     image: redis
     restart: always
-    ports:
-      - "6379:6379"
+    # expose Redis port only for testing!
+    #ports:
+    #  - 6379:6379
     volumes:
       - ./mnt/redis_dump:/data
     command: >
@@ -51,7 +51,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - jfs_net
+      - proxy_net
 
   jfs_format:
     image: juicedata/mount
@@ -74,7 +74,7 @@ services:
       proxy:
         condition: service_started
     networks:
-      - jfs_net
+      - proxy_net
 
   jfs_mount:
     image: juicedata/mount
@@ -105,29 +105,10 @@ services:
       proxy:
         condition: service_started
     networks:
-      - jfs_net
-
-  backend:
-    build:
-      context: ./app/backend
-      dockerfile: Dockerfile
-    restart: always
-    ports:
-      - 8001:8001
-    environment:
-      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASS}@wireguard_server:5432/backend_db
-      - PYTHONUNBUFFERED=1
-    volumes:
-      - ./app/backend:/app
-    depends_on:
-      proxy:
-        condition: service_started
-    networks:
-      - db_net
+      - proxy_net
 
 networks:
-  jfs_net:
-    driver: bridge
-
-  db_net:
-    driver: bridge
+  proxy_net:
+    name: proxy_net
+    driver: overlay
+    attachable: true

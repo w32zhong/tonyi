@@ -2,15 +2,15 @@ services:
 
   gateway:
     image: gateway:latest
+    build:
+      context: ./app/gateway
+      dockerfile: Dockerfile
     environment:
       - DEFAULT_REQ_RATE=$GATEWAY_DEFAULT_REQ_RATE
       - DEFAULT_BURST=$GATEWAY_DEFAULT_BURST
       - DEFAULT_CONN_MAX=$GATEWAY_DEFAULT_CONN_MAX
       - DOMAIN=$GATEWAY_DOMAIN
       - JWT_COOKIE_NAME=gateway_jwt # ngx.var.cookie_* must be lower-case
-    build:
-      context: ./app/gateway
-      dockerfile: Dockerfile
     ports:
       - target: 443
         published: 80
@@ -43,7 +43,22 @@ services:
         gateway.port: 8080
         gateway.limits: '{"rate": 1, "burst": 0, "conn": 10}'
 
+  auth:
+    image: auth:latest
+    build:
+      context: ./app/auth
+      dockerfile: Dockerfile
+    environment:
+      - DB_URL=postgresql://${DB_USER}:${DB_PASS}@wireguard_server:5432/backend_db
+      - PYTHONUNBUFFERED=1
+    command: "python db.py"
+    networks:
+      - proxy_net
+
 networks:
   gateway_net:
     driver: overlay
     attachable: true
+  proxy_net:
+    external: true
+    name: proxy_net
