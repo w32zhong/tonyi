@@ -1,7 +1,8 @@
 local limit_req = require "resty.limit.req"
 local limit_conn = require "resty.limit.conn"
 
-limiters = {}
+local _M = {}
+local limiters = {}
 
 local function get_req_limiter(store_name, rate, burst)
     local cache_key = store_name .. ":" .. rate .. ":" .. burst
@@ -29,9 +30,9 @@ local function get_conn_limiter(store_name, conn, burst, delay)
     return limiters[cache_key]
 end
 
-local function rate_limit(route, conn_max, req_rate, req_burst)
+function _M.rate_limit(route, conn_max, req_rate, req_burst)
     local limit_key = route .. ":" .. (ngx.var.http_x_real_ip or ngx.var.remote_addr)
-    print('key=', limit_key, ', conn=', conn_max, ', rate=', req_rate, ', burst=', req_burst)
+    -- ngx.log(ngx.NOTICE, "rate_limit(): key=", limit_key, ", conn=", conn_max, ", rate=", req_rate, ", burst=", req_burst)
 
     local lim_req = get_req_limiter("req_store", req_rate, req_burst)
     local delay_req, err_req = lim_req:incoming(limit_key, true)
@@ -59,11 +60,15 @@ local function rate_limit(route, conn_max, req_rate, req_burst)
     -- to avoid double leaving
     if lim_conn:is_committed() then
         local ctx = ngx.ctx
-        ctx.limit_conn = lim_conn
-        ctx.limit_conn_key = limit_key
-        ctx.limit_conn_delay = delay_conn
+        if not ctx.limit_conns then
+            ctx.limit_conns = {}
+        end
+        table.insert(ctx.limit_conns, {
+            lim = lim_conn,
+            key = limit_key,
+            delay = delay_conn
+        })
     end
 end
 
--- Apply default rate limits
-rate_limit('__all__', default_conn_max, default_req_rate, default_burst)
+return _M

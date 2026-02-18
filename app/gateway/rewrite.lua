@@ -1,11 +1,6 @@
 local route = ngx.var.service_route
 
 ------------------
---- Rate Limit ---
-------------------
-dofile('./rate_limit.lua')
-
-------------------
 --- Rewrite ------
 ------------------
 local modified_uri = ngx.var.modified_uri

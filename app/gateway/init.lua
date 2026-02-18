@@ -4,7 +4,10 @@ default_conn_max = (tonumber(os.getenv("DEFAULT_CONN_MAX")) or 1) -- default con
 default_req_rate = (tonumber(os.getenv("DEFAULT_REQ_RATE")) or 3) -- default rate limit (req/sec)
 default_burst    = (tonumber(os.getenv("DEFAULT_BURST")) or 0)    -- default rate burst (req/sec)
 
-cjson = require("cjson") -- global variable (used by rewrite.lua)
+-- Global variables (used by nginx.conf and rewrite.lua)
+_G.rate_limit = require("rate_limit").rate_limit
+_G.cjson = require("cjson")
+
 local http = require("resty.http")
 
 function http_get(url)
