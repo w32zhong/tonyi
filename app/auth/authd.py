@@ -44,23 +44,9 @@ async def get_secret():
     return db.get_jwt_secret()
 
 
-## below are some built-in testing URI handlers
-from middleware.python.middleware import (
-    MiddlewareRedirect,
-    middleware_redirect_handler,
-    jwt_middleware,
-)
-app.add_exception_handler(MiddlewareRedirect, middleware_redirect_handler)
-
-
 @app.get("/")
 async def root():
     return Response(content="<h2>Authd at your service<h2>", media_type="text/html")
-
-
-@app.get("/private")
-async def private(msg: dict = Depends(jwt_middleware)):
-    return Response(content=f"<h2>This is a private place: {msg}<h2>", media_type="text/html")
 
 
 if __name__ == "__main__":

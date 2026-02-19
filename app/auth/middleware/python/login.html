@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: system-ui, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a1a;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 360px;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 0.3rem;
+      color: #444;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 0.55rem 0.75rem;
+      border: 1px solid #d0d5dd;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      margin-bottom: 1rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus { border-color: #4f80ff; }
+
+    button {
+      width: 100%;
+      padding: 0.6rem;
+      background: #4f80ff;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    button:hover { background: #3a6be0; }
+    button:disabled { background: #a0b4f0; cursor: not-allowed; }
+
+    .error {
+      background: #fff0f0;
+      border: 1px solid #ffcccc;
+      color: #cc0000;
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Sign in</h1>
+    <p class="error" id="error"></p>
+    <form id="login-form">
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" autocomplete="username" required autofocus>
+
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" autocomplete="current-password" required>
+
+      <button type="submit" id="btn">Sign in</button>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById("login-form");
+    const errorEl = document.getElementById("error");
+    const btn = document.getElementById("btn");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errorEl.style.display = "none";
+      btn.disabled = true;
+
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
+
+      let result;
+      try {
+        const resp = await fetch("__AUTH_BASE_URL__/authentication", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password }),
+        });
+        result = await resp.json();
+      } catch (err) {
+        errorEl.textContent = "Could not reach auth server.";
+        errorEl.style.display = "block";
+        btn.disabled = false;
+        return;
+      }
+
+      if (!result.pass) {
+        errorEl.textContent = result.msg?.errmsg ?? "Login failed.";
+        errorEl.style.display = "block";
+        btn.disabled = false;
+        return;
+      }
+
+      const next = new URLSearchParams(window.location.search).get("next") || "/";
+      window.location.href = next;
+    });
+  </script>
+</body>
+</html>

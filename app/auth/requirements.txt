@@ -4,3 +4,4 @@ argon2-cffi
 pyjwt
 fastapi
 uvicorn[standard]
+python-multipart
