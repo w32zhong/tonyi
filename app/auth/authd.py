@@ -1,6 +1,8 @@
 import os
 import urllib.parse
+import urllib.request
 from fastapi import FastAPI, Request, Response, Depends
+from fastapi import status as http_status
 from fastapi.responses import JSONResponse, RedirectResponse
 import uvicorn
 
@@ -28,7 +30,7 @@ async def auth_exception_handler(request: Request, exc: MiddlewareException):
                 "pass": False,
                 "redirect": exc.redirect_url
             },
-            status_code=fastapi.status.HTTP_200_OK
+            status_code=http_status.HTTP_200_OK
         )
     else:
         return RedirectResponse(url=exc.redirect_url)
@@ -39,7 +41,26 @@ async def jwt_middleware(request: Request):
     if request.url.query:
         original_url += f"?{request.url.query}"
 
-    # TODO: call /authorization WEB API here
+    # Call /authorization WEB API, forwarding cookies
+    # so the endpoint can read the JWT cookie by itself.
+    base_url = str(request.base_url).rstrip("/")
+    auth_url = f"{base_url}/authorization"
+    cookie_header = request.headers.get("cookie", "")
+    req = urllib.request.Request(
+        auth_url,
+        data=b"",
+        method="POST",
+        headers={"Cookie": cookie_header, "Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req) as resp:
+            import json
+            result = json.loads(resp.read())
+    except Exception:
+        result = {"pass": False}
+
+    if result.get("pass"):
+        return result.get("msg")
 
     encoded_url = urllib.parse.quote(original_url)
     redirect_url = f"/login?next={encoded_url}"
@@ -79,14 +100,16 @@ async def get_secret():
     return db.get_jwt_secret()
 
 
+# test point
 @app.get("/")
 async def root():
     return Response(content="<h2>Authd at your service<h2>", media_type="text/html")
 
 
+# test point
 @app.get("/private")
-async def private(): # TODO: use jwt_middleware here.
-    return Response(content="<h2>Authd at your service<h2>", media_type="text/html")
+async def private(msg: dict = Depends(jwt_middleware)):
+    return Response(content="<h2>This is a private place<h2>", media_type="text/html")
 
 
 if __name__ == "__main__":
