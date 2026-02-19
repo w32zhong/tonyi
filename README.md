@@ -93,8 +93,21 @@ curl --parallel --parallel-immediate --parallel-max 10 --limit-rate 100b -4 \
     localhost/foo/ localhost/foo/ localhost/foo/ # parallel requests
 ```
 
-Testing swarm to backend connection:
+Test swarm to backend connection:
 ```sh
 docker run --rm --network proxy_net postgres:18 psql \
     postgresql://$DB_USER:$DB_PASS@wireguard_server:5432/backend_db -c "\dt"
+```
+
+Test authentication:
+```sh
+# login
+curl http://localhost/auth/login \
+    -H "Content-Type: application/json" \
+    -d '{"username":"admin","password":"changeme!"}'
+
+# verify
+curl http://localhost/auth/verify \
+    -H "Content-Type: application/json" \
+    -b "JWT-Token=xxx" -d '{}'
 ```
