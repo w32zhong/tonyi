@@ -2,7 +2,8 @@ import os
 import argparse
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
-from sqlmodel import Field, SQLModel, create_engine, Session, select
+from sqlmodel import Field, SQLModel, create_engine, Session, select, desc
+import secrets
 
 import hash
 
@@ -74,27 +75,29 @@ def store_login_attempt(ip_address: str, username: str, success: bool):
         session.commit()
 
 
-def get_num_failed_attempts(ip_address: str, username: str, minutes: int) -> int:
-    """Gets the number of failed attempts for a user from an IP within the last N minutes"""
-    since = datetime.now(timezone.utc) - timedelta(minutes=minutes)
+def get_login_attempts(ip_address: str, username: str, max_minutes: int) -> int:
+    """Gets the number of failed attempts for a user from an IP since the last success, up to max_minutes ago."""
+    since = datetime.now(timezone.utc) - timedelta(minutes=max_minutes)
+
     with Session(engine) as session:
         statement = select(Auth_Record).where(
             Auth_Record.username == username,
             Auth_Record.ip_address == ip_address,
-            Auth_Record.successful == False,
             Auth_Record.timestamp >= since
-        )
-        results = session.exec(statement).all()
-        return len(results)
+        ).order_by(desc(Auth_Record.timestamp))
+
+        records = session.exec(statement).all()
+
+        consec_fails = 0
+        for record in records:
+            if record.successful:
+                break
+            consec_fails += 1
+        return consec_fails, records
 
 
-def get_jwt_secret() -> Optional[str]:
-    with Session(engine) as session:
-        item = session.get(JWT_Config, "jwt_secret")
-        return item.value if item else None
-
-
-def rotate_jwt_secret(new_secret: str) -> str:
+def rotate_jwt_secret() -> str:
+    new_secret = secrets.token_hex(2048)
     with Session(engine) as session:
         item = session.get(JWT_Config, "jwt_secret")
         if not item:
@@ -106,14 +109,19 @@ def rotate_jwt_secret(new_secret: str) -> str:
     return new_secret
 
 
+def get_jwt_secret() -> Optional[str]:
+    with Session(engine) as session:
+        item = session.get(JWT_Config, "jwt_secret")
+        return item.value if item else rotate_jwt_secret()
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Lattice Database Management Tool (Python)")
     parser.add_argument("--init", action="store_true", help="Initialize database and create admin user")
     parser.add_argument("--reset", action="store_true", help="Reset the entire database")
     parser.add_argument("--password", help="Pass in the password for the admin user")
     parser.add_argument("--verify", action="store_true", help="Verify admin password")
-    parser.add_argument("--failed", help="Show failed attempts in last N mins")
-    parser.add_argument("--rotate-jwt", action="store_true", help="Rotate and show the JWT secret")
+    parser.add_argument("--rotate-jwt", action="store_true", help="Rotate the JWT secret")
     args = parser.parse_args()
 
     password = args.password or "changeme!"
@@ -128,20 +136,22 @@ if __name__ == "__main__":
 
     elif args.verify:
         admin = get_user('admin')
-        successful = hash.verify_password(admin.password_hash, password)
-        print('verify successful:', successful)
-        store_login_attempt("127.0.0.1", "admin", successful)
+        if admin:
+            successful = hash.verify_password(admin.password_hash, password)
+            print('verify successful:', successful)
+            store_login_attempt("127.0.0.1", "admin", successful)
+        else:
+            print("Admin user not found.")
 
-    elif args.failed:
-        N = int(args.failed)
-        attempts = get_num_failed_attempts("127.0.0.1", "admin", N)
-        print(f"Failed attempts in last 5 mins: {attempts}")
+        N = 5
+        attempts = get_login_attempts("127.0.0.1", "admin", N)
+        print(f"Failed attempts in last {N} mins: {attempts}")
 
     elif args.rotate_jwt:
         new_secret = rotate_jwt_secret("test-secret-12345")
         secret = get_jwt_secret()
         assert new_secret == secret
-        print(f"Stored Secret: {secret}")
+        print(f"Stored Secret: {secret[:5]}...")
 
     else:
         parser.print_help()
