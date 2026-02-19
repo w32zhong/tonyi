@@ -51,10 +51,15 @@ services:
     environment:
       - DB_URL=postgresql://${DB_USER}:${DB_PASS}@wireguard_server:5432/backend_db
       - PYTHONUNBUFFERED=1
-      - JWT_COOKIE_NAME=$JWT_COOKIE_NAME
+      - JWT_COOKIE_NAME=JWT-Token
       - LOGIN_MAX_ATTEMPTS=10
-    command: "python authd.py"
+      - JWT_EXPIRE_DAYS=5
+    deploy:
+      labels:
+        gateway.route: auth
+        gateway.port: 19721
     networks:
+      - gateway_net
       - proxy_net
 
 networks:

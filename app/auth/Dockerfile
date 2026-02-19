@@ -12,5 +12,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Placeholder command until the main web server is implemented
-CMD ["bash"]
+CMD ["python", "authd.py"]

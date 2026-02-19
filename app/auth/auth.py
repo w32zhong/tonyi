@@ -9,6 +9,7 @@ import hash
 
 LOGIN_MAX_ATTEMPTS = int(os.getenv("LOGIN_MAX_ATTEMPTS", "5"))
 LOGIN_MAX_TIMESPAN = int(os.getenv("LOGIN_MAX_TIMESPAN", str(24 * 60)))
+JWT_EXPIRE_DAYS = int(os.getenv("JWT_EXPIRE_DAYS", "1"))
 
 
 def login(ip_address: str, username: str, password: str, debug: bool = False) -> Tuple[bool, Dict[str, Any]]:
@@ -30,7 +31,7 @@ def login(ip_address: str, username: str, password: str, debug: bool = False) ->
         if user and hash.verify_password(user.password_hash, password):
             # Success logic
             now = datetime.now(timezone.utc)
-            duration = timedelta(seconds=10) if debug else timedelta(days=1)
+            duration = timedelta(seconds=10) if debug else timedelta(days=JWT_EXPIRE_DAYS)
 
             exp = now + duration
             info = {
