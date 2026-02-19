@@ -62,6 +62,23 @@ services:
       - gateway_net
       - proxy_net
 
+  auth_test:
+    image: auth:latest
+    build:
+      context: ./app/auth
+      dockerfile: Dockerfile
+    environment:
+      - JWT_COOKIE_NAME=JWT-Token
+      - AUTH_BASE_URL=/auth
+      - REDIRECT_URL_PREFIX=/login?next=
+    command: ["python", "middleware/python/server.py"]
+    deploy:
+      labels:
+        gateway.route: auth-test
+        gateway.port: 18000
+    networks:
+      - gateway_net
+
 networks:
   gateway_net:
     driver: overlay

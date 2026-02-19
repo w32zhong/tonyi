@@ -102,12 +102,12 @@ docker run --rm --network proxy_net postgres:18 psql \
 Test authentication:
 ```sh
 # login
-curl http://localhost/auth/login \
+curl http://localhost/auth/authentication \
     -H "Content-Type: application/json" \
     -d '{"username":"admin","password":"changeme!"}'
 
 # verify
-curl http://localhost/auth/verify \
+curl http://localhost/auth/authorization \
     -H "Content-Type: application/json" \
-    -b "JWT-Token=xxx" -d '{}'
+    -d '{"token":"xxx"}'
 ```

@@ -31,7 +31,7 @@ from middleware import (
 )
 
 TEST_PORT = int(os.getenv("TEST_PORT", "18000"))
-HERE = Path(__file__).parent
+HERE = Path(__file__).resolve().parent
 
 app = FastAPI()
 app.add_exception_handler(MiddlewareRedirect, middleware_redirect_handler)

@@ -38,7 +38,14 @@ async def middleware_redirect_handler(request: Request, exc: Exception):
 async def jwt_middleware(request: Request):
     # authorization via WEB API
     token = request.cookies.get(JWT_COOKIE_NAME, "")
-    auth_url = f"{AUTH_BASE_URL.rstrip('/')}/authorization"
+
+    auth_base = AUTH_BASE_URL.rstrip('/')
+    if auth_base.startswith("/"):
+        domain_base = str(request.base_url).rstrip("/")
+        auth_url = f"{domain_base}{auth_base}/authorization"
+    else:
+        auth_url = f"{auth_base}/authorization"
+
     req = urllib.request.Request(
         auth_url,
         data=json.dumps({"token": token}).encode(),
