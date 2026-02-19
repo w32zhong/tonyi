@@ -1,10 +1,5 @@
-import json
 import os
-import urllib.parse
-import urllib.request
 from fastapi import FastAPI, Request, Response, Depends
-from fastapi import status as http_status
-from fastapi.responses import JSONResponse, RedirectResponse
 
 import auth, db
 
@@ -14,57 +9,6 @@ app = FastAPI()
 # Configuration
 JWT_COOKIE_NAME = os.getenv("JWT_COOKIE_NAME", "jwt")
 PORT = int(os.getenv("PORT", "19721"))
-AUTH_BASE_URL = os.getenv("AUTH_BASE_URL", f"http://localhost:{PORT}")
-REDIRECT_URL_PREFIX = os.getenv("AUTH_REDIRECT_URL_PREFIX", "/login?next=")
-
-
-class MiddlewareRedirect(Exception):
-    def __init__(self, redirect_url: str):
-        self.redirect_url = redirect_url
-
-
-@app.exception_handler(MiddlewareRedirect)
-async def middleware_redirect_handler(request: Request, exc: MiddlewareRedirect):
-    accept = request.headers.get("accept", "")
-    if "application/json" in accept:
-        return JSONResponse(
-            content={
-                "pass": False,
-                "redirect": exc.redirect_url
-            },
-            status_code=http_status.HTTP_200_OK
-        )
-    else:
-        return RedirectResponse(url=exc.redirect_url)
-
-
-def jwt_middleware(request: Request):
-    # authorization via WEB API
-    token = request.cookies.get(JWT_COOKIE_NAME, "")
-    auth_url = f"{AUTH_BASE_URL.rstrip('/')}/authorization"
-    req = urllib.request.Request(
-        auth_url,
-        data=json.dumps({"token": token}).encode(),
-        method="POST",
-        headers={"Content-Type": "application/json"},
-    )
-    try:
-        with urllib.request.urlopen(req) as resp:
-            result = json.loads(resp.read())
-    except Exception as e:
-        result = {"pass": False, "msg": str(e)}
-
-    if result.get("pass", False):
-        # pass the middleware check
-        return result.get("msg")
-    else:
-        # save URL and redirect for authentication
-        original_url = str(request.url.path)
-        if request.url.query:
-            original_url += f"?{request.url.query}"
-        encoded_url = urllib.parse.quote(original_url)
-        redirect_url = f"{REDIRECT_URL_PREFIX}{encoded_url}"
-        raise MiddlewareRedirect(redirect_url=redirect_url)
 
 
 @app.post("/authorization")
@@ -100,13 +44,20 @@ async def get_secret():
     return db.get_jwt_secret()
 
 
-# test point
+## below are some built-in testing URI handlers
+from middleware.python.middleware import (
+    MiddlewareRedirect,
+    middleware_redirect_handler,
+    jwt_middleware,
+)
+app.add_exception_handler(MiddlewareRedirect, middleware_redirect_handler)
+
+
 @app.get("/")
 async def root():
     return Response(content="<h2>Authd at your service<h2>", media_type="text/html")
 
 
-# test point
 @app.get("/private")
 async def private(msg: dict = Depends(jwt_middleware)):
     return Response(content=f"<h2>This is a private place: {msg}<h2>", media_type="text/html")
