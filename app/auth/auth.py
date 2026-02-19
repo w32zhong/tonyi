@@ -61,7 +61,7 @@ def login(ip_address: str, username: str, password: str, debug: bool = False) ->
     return False, {"errmsg": errmsg, "left_chances": left_chances}
 
 
-def verify(token: str, secret: str) -> Tuple[bool, Any]:
+def verify(token: str) -> Tuple[bool, Any]:
     print(f"[verify token] {token[:5]}...")
 
     try:
@@ -91,5 +91,5 @@ if __name__ == "__main__":
     print('[successful?]', successful, result)
 
     if successful:
-        verify_res = verify(result['token'], db.get_jwt_secret())
+        verify_res = verify(result['token'])
         print('[verify]', verify_res)
