@@ -49,7 +49,7 @@ async def login_page(logout: bool = False):
 
 
 @app.get("/private", response_class=HTMLResponse)
-async def private(jwt_payload: dict = Depends(jwt_middleware)):
+async def private_page(jwt_payload: dict = Depends(jwt_middleware)):
     html = (HERE / "private.html").read_text()
     html = html.replace("__PAYLOAD__", json.dumps(jwt_payload, indent=2))
     html = html.replace("__USERNAME__", jwt_payload.get("loggedInAs", "stranger"))
