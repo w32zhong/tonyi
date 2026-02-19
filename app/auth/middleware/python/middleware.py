@@ -63,9 +63,13 @@ async def jwt_middleware(request: Request):
         return result.get("msg")
     else:
         # save URL and redirect for authentication
-        original_url = str(request.url.path)
-        if request.url.query:
-            original_url += f"?{request.url.query}"
+        original_url = request.headers.get("x-original-uri")
+        # In Nginx X-Original-URI, it includes the query string.
+        if not original_url:
+            original_url = str(request.url.path)
+            if request.url.query:
+                original_url += f"?{request.url.query}"
+
         encoded_url = urllib.parse.quote(original_url)
         redirect_url = f"{REDIRECT_URL_PREFIX}{encoded_url}"
         raise MiddlewareRedirect(redirect_url=redirect_url)
