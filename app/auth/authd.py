@@ -1,10 +1,9 @@
+import json
 import os
-import urllib.parse
-import urllib.request
+import urllib
 from fastapi import FastAPI, Request, Response, Depends
 from fastapi import status as http_status
 from fastapi.responses import JSONResponse, RedirectResponse
-import uvicorn
 
 import auth, db
 
@@ -41,20 +40,18 @@ async def jwt_middleware(request: Request):
     if request.url.query:
         original_url += f"?{request.url.query}"
 
-    # Call /authorization WEB API, forwarding cookies
-    # so the endpoint can read the JWT cookie by itself.
+    # Extract only the JWT token from cookies and send it to /authorization.
+    token = request.cookies.get(JWT_COOKIE_NAME, "")
     base_url = str(request.base_url).rstrip("/")
     auth_url = f"{base_url}/authorization"
-    cookie_header = request.headers.get("cookie", "")
     req = urllib.request.Request(
         auth_url,
-        data=b"",
+        data=json.dumps({"token": token}).encode(),
         method="POST",
-        headers={"Cookie": cookie_header, "Content-Type": "application/json"},
+        headers={"Content-Type": "application/json"},
     )
     try:
         with urllib.request.urlopen(req) as resp:
-            import json
             result = json.loads(resp.read())
     except Exception:
         result = {"pass": False}
@@ -70,7 +67,8 @@ async def jwt_middleware(request: Request):
 
 @app.post("/authorization")
 async def authorization(request: Request, response: Response):
-    token = request.cookies.get(JWT_COOKIE_NAME, "")
+    req_json = await request.json()
+    token = req_json.get("token", "")
     pass_check, msg = auth.verify(token)
     return {"pass": pass_check, "msg": msg}
 
@@ -109,9 +107,10 @@ async def root():
 # test point
 @app.get("/private")
 async def private(msg: dict = Depends(jwt_middleware)):
-    return Response(content="<h2>This is a private place<h2>", media_type="text/html")
+    return Response(content=f"<h2>This is a private place: {msg}<h2>", media_type="text/html")
 
 
 if __name__ == "__main__":
+    import uvicorn
     print(f"Starting Auth Server on port {PORT}...")
     uvicorn.run(app, host="0.0.0.0", port=PORT)
