@@ -2,7 +2,7 @@
 Modify `config.env`, and run Portainer:
 ```sh
 source config.env
-docker compose -f portainer-standalone.yml up
+docker compose -f portainer.yml up
 ```
 
 To force restart a container:
