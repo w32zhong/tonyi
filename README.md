@@ -117,3 +117,4 @@ curl http://localhost/auth/authorization \
     -H "Content-Type: application/json" \
     -d '{"token":"xxx"}'
 ```
+alternatively, use your browser to visit the test UI interface `http://yourhost/auth-test/private`.

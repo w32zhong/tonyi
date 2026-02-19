@@ -39,10 +39,13 @@ app.add_exception_handler(MiddlewareRedirect, middleware_redirect_handler)
 
 
 @app.get("/login", response_class=HTMLResponse)
-async def login_page():
+async def login_page(logout: bool = False):
     html = (HERE / "login.html").read_text()
     html = html.replace("__AUTH_BASE_URL__", AUTH_BASE_URL)
-    return HTMLResponse(content=html)
+    response = HTMLResponse(content=html)
+    if logout:
+        response.delete_cookie(JWT_COOKIE_NAME)
+    return response
 
 
 @app.get("/private", response_class=HTMLResponse)
