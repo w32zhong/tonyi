@@ -35,16 +35,11 @@ async def auth_exception_handler(request: Request, exc: MiddlewareException):
 
 
 async def jwt_middleware(request: Request):
-    token = request.cookies.get(JWT_COOKIE_NAME, "")
-    pass_check, msg = auth.verify(token)
-
-    if pass_check:
-        return msg  # Decoded token payload
-
-    # Construct redirect URL
     original_url = str(request.url.path)
     if request.url.query:
         original_url += f"?{request.url.query}"
+
+    # TODO: call /authorization WEB API here
 
     encoded_url = urllib.parse.quote(original_url)
     redirect_url = f"/login?next={encoded_url}"
@@ -52,13 +47,15 @@ async def jwt_middleware(request: Request):
     raise MiddlewareException(redirect_url=redirect_url)
 
 
-@app.post("/verify")
-async def verify_jwt(msg: dict = Depends(jwt_middleware)):
-    return {"pass": True, "msg": msg}
+@app.post("/authorization")
+async def authorization(request: Request, response: Response):
+    token = request.cookies.get(JWT_COOKIE_NAME, "")
+    pass_check, msg = auth.verify(token)
+    return {"pass": pass_check, "msg": msg}
 
 
-@app.post("/login")
-async def post_login(request: Request, response: Response):
+@app.post("/authentication")
+async def authentication(request: Request, response: Response):
     req_json = await request.json()
     username = req_json.get("username", "")
     password = req_json.get("password", "")
@@ -77,16 +74,21 @@ async def post_login(request: Request, response: Response):
     return {"pass": pass_check, "msg": msg}
 
 
-@app.get("/")
-async def root():
-    return Response(content="<h2>Lattice at your service<h2>", media_type="text/html")
-
-
 @app.get("/secret")
 async def get_secret():
     return db.get_jwt_secret()
 
 
+@app.get("/")
+async def root():
+    return Response(content="<h2>Authd at your service<h2>", media_type="text/html")
+
+
+@app.get("/private")
+async def private(): # TODO: use jwt_middleware here.
+    return Response(content="<h2>Authd at your service<h2>", media_type="text/html")
+
+
 if __name__ == "__main__":
-    print(f"Starting Lattice Auth Server on port {PORT}...")
+    print(f"Starting Auth Server on port {PORT}...")
     uvicorn.run(app, host="0.0.0.0", port=PORT)
