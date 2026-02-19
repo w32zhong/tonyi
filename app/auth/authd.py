@@ -1,6 +1,7 @@
 import json
 import os
-import urllib
+import urllib.parse
+import urllib.request
 from fastapi import FastAPI, Request, Response, Depends
 from fastapi import status as http_status
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -13,15 +14,17 @@ app = FastAPI()
 # Configuration
 JWT_COOKIE_NAME = os.getenv("JWT_COOKIE_NAME", "jwt")
 PORT = int(os.getenv("PORT", "19721"))
+AUTH_BASE_URL = os.getenv("AUTH_BASE_URL", f"http://localhost:{PORT}")
+REDIRECT_URL_PREFIX = os.getenv("AUTH_REDIRECT_URL_PREFIX", "/login?next=")
 
 
-class MiddlewareException(Exception):
+class MiddlewareRedirect(Exception):
     def __init__(self, redirect_url: str):
         self.redirect_url = redirect_url
 
 
-@app.exception_handler(MiddlewareException)
-async def auth_exception_handler(request: Request, exc: MiddlewareException):
+@app.exception_handler(MiddlewareRedirect)
+async def middleware_redirect_handler(request: Request, exc: MiddlewareRedirect):
     accept = request.headers.get("accept", "")
     if "application/json" in accept:
         return JSONResponse(
@@ -35,15 +38,10 @@ async def auth_exception_handler(request: Request, exc: MiddlewareException):
         return RedirectResponse(url=exc.redirect_url)
 
 
-async def jwt_middleware(request: Request):
-    original_url = str(request.url.path)
-    if request.url.query:
-        original_url += f"?{request.url.query}"
-
-    # Extract only the JWT token from cookies and send it to /authorization.
+def jwt_middleware(request: Request):
+    # authorization via WEB API
     token = request.cookies.get(JWT_COOKIE_NAME, "")
-    base_url = str(request.base_url).rstrip("/")
-    auth_url = f"{base_url}/authorization"
+    auth_url = f"{AUTH_BASE_URL.rstrip('/')}/authorization"
     req = urllib.request.Request(
         auth_url,
         data=json.dumps({"token": token}).encode(),
@@ -53,16 +51,20 @@ async def jwt_middleware(request: Request):
     try:
         with urllib.request.urlopen(req) as resp:
             result = json.loads(resp.read())
-    except Exception:
-        result = {"pass": False}
+    except Exception as e:
+        result = {"pass": False, "msg": str(e)}
 
-    if result.get("pass"):
+    if result.get("pass", False):
+        # pass the middleware check
         return result.get("msg")
-
-    encoded_url = urllib.parse.quote(original_url)
-    redirect_url = f"/login?next={encoded_url}"
-
-    raise MiddlewareException(redirect_url=redirect_url)
+    else:
+        # save URL and redirect for authentication
+        original_url = str(request.url.path)
+        if request.url.query:
+            original_url += f"?{request.url.query}"
+        encoded_url = urllib.parse.quote(original_url)
+        redirect_url = f"{REDIRECT_URL_PREFIX}{encoded_url}"
+        raise MiddlewareRedirect(redirect_url=redirect_url)
 
 
 @app.post("/authorization")
