@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 JWT_COOKIE_NAME = os.getenv("JWT_COOKIE_NAME", "jwt")
 PORT = os.getenv("PORT", "19721")
 AUTH_BASE_URL = os.getenv("AUTH_BASE_URL", f"http://localhost:{PORT}")
-REDIRECT_URL_PREFIX = os.getenv("AUTH_REDIRECT_URL_PREFIX", "/login?next=")
+REDIRECT_URL_PREFIX = os.getenv("REDIRECT_URL_PREFIX", "/login?next=")
 
 
 class MiddlewareRedirect(Exception):

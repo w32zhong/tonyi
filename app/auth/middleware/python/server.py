@@ -25,6 +25,7 @@ from fastapi.responses import HTMLResponse
 from middleware import (
     AUTH_BASE_URL,
     JWT_COOKIE_NAME,
+    REDIRECT_URL_PREFIX,
     MiddlewareRedirect,
     jwt_middleware,
     middleware_redirect_handler,
@@ -54,6 +55,7 @@ async def private(jwt_payload: dict = Depends(jwt_middleware)):
 
 if __name__ == "__main__":
     print(f"Test server starting on port {TEST_PORT}")
-    print(f"  AUTH_BASE_URL  : {AUTH_BASE_URL}")
-    print(f"  JWT_COOKIE_NAME: {JWT_COOKIE_NAME}")
+    print(f"AUTH_BASE_URL: {AUTH_BASE_URL}")
+    print(f"JWT_COOKIE_NAME: {JWT_COOKIE_NAME}")
+    print(f"REDIRECT_URL_PREFIX: {REDIRECT_URL_PREFIX}")
     uvicorn.run(app, host="0.0.0.0", port=TEST_PORT)

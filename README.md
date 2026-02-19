@@ -88,6 +88,12 @@ Update a service from source:
 ```sh
 docker-compose -f swarm_service.yml build && docker service update --force demo_gateway
 docker service logs -f demo_gateway
+# alternative, use lower-level docker logs discarding the print prefix:
+docker logs -f $(docker ps -q --filter "name=gateway")
+```
+
+Testing gateway rate limits:
+```sh
 curl -4 -X POST localhost/foo/bar -d '{"key":"value"}' --header "Content-Type: application/json"
 curl --parallel --parallel-immediate --parallel-max 10 --limit-rate 100b -4 \
     localhost/foo/ localhost/foo/ localhost/foo/ # parallel requests
