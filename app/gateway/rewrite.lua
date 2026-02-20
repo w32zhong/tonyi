@@ -106,7 +106,7 @@ if protected_mode then
         if not pass then
             -- Redirect to /login/?next=...
             local qry = ngx.encode_args({["next"] = full_req_uri})
-            ngx.redirect("/login/?" .. qry)
+            ngx.redirect("/login/?" .. qry) -- terminate and immediately redirect!
         end
 
     else -- protected_mode = internal
