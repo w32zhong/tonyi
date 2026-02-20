@@ -36,7 +36,12 @@ async def middleware_redirect_handler(request: Request, exc: Exception):
 
 
 async def jwt_middleware(request: Request):
-    # authorization via WEB API
+    # Short-circuit: if X-Remote-User is injected by the Gateway, trust it completely.
+    remote_user = request.headers.get("x-remote-user")
+    if remote_user:
+        return {"loggedInAs": remote_user}
+
+    # Fallback authorization via WEB API (if accessed bypassing gateway)
     token = request.cookies.get(JWT_COOKIE_NAME, "")
 
     auth_base = AUTH_BASE_URL.rstrip('/')

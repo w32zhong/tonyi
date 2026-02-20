@@ -72,15 +72,17 @@ local function discover_services()
         local Spec = service['Spec']
         local Labels = Spec['Labels']
         local service_name = Spec['Name']
-        local protect_paths, gateway_route, service_port, gateway_limits
+        local protect_paths, internal_paths, gateway_route, service_port, gateway_limits
         for key in pairs(Labels) do
             local val = Labels[key]
-            if key == 'gateway.jwt_port' then
+            if key == 'gateway.jwt_secret' then
                 local jwt_token, err = http_get(
-                    'http://' .. service_name .. ':' .. val
+                    'http://' .. service_name .. val
                 )
                 if not err then
                     ngx.shared.JWT:set('secret', jwt_token)
+                    local partial = (jwt_token or ""):sub(1, 5)
+                    print('[JWT] secret loaded: ', partial, '...')
                 else
                     print('[JWT] update error: ', err)
                 end
@@ -88,6 +90,8 @@ local function discover_services()
                 -- val is a string of paths with comma as delimiter
                 -- e.g., "/runjob,/delejob".
                 protect_paths = val
+            elseif key == 'gateway.internal' then
+                internal_paths = val
             elseif key == 'gateway.route' then
                 gateway_route = val
             elseif key == 'gateway.port' then
@@ -125,7 +129,15 @@ local function discover_services()
                 -- Let's split the protect paths
                 for path in string.gmatch(protect_paths, "[^,]+") do
                     local protected_path = gateway_route .. path
-                    ngx.shared.protected:set(protected_path, true)
+                    ngx.shared.protected:set(protected_path, 'jwt')
+                end
+            end
+
+            -- Any internal path(s)?
+            if internal_paths then
+                for path in string.gmatch(internal_paths, "[^,]+") do
+                    local internal_path = gateway_route .. path
+                    ngx.shared.protected:set(internal_path, 'internal')
                 end
             end
         end

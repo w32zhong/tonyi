@@ -3,6 +3,9 @@ local route = ngx.var.service_route
 ------------------
 --- Rewrite ------
 ------------------
+-- Strip any potential spoofed headers from external requests
+ngx.req.clear_header("X-Remote-User")
+
 local modified_uri = ngx.var.modified_uri
 local query_params = ngx.var.is_args .. (ngx.var.args or '')
 local full_req_uri = ngx.var.request_uri
@@ -63,29 +66,57 @@ end
 local jwt = require "resty.jwt"
 local validators = require "resty.jwt-validators"
 local jwt_cookie_name = os.getenv("JWT_COOKIE_NAME") or "jwt"
-local sub_route = string.match(modified_uri, '[^/]+') or ''
-for _, test_path in pairs({route .. '/', route .. '/' .. sub_route}) do
-    local protected = ngx.shared.protected:get(test_path)
-    if protected then
+
+-- find out the longest prefix match to current path (check_path) from protect keys
+local protected_mode = nil
+local longest_match = nil
+for _, key in ipairs(ngx.shared.protected:get_keys()) do
+    -- perform prefix plain (true) match against check_path and key:
+    local check_path = route .. modified_uri
+    if string.find(check_path, key, 1, true) == 1 then
+        -- Find the longest matching prefix (most specific rule wins)
+        if not longest_match or string.len(key) > string.len(longest_match) then
+            longest_match = key
+            protected_mode = ngx.shared.protected:get(key)
+        end
+    end
+end
+
+-- if any, perform block or JWT auth ...
+if protected_mode then
+    if protected_mode == 'jwt' then
         local jwt_secret = ngx.shared.JWT:get('secret')
         local jwt_token = ngx.var["cookie_" .. jwt_cookie_name]
+
+        local pass = false
         if jwt_secret and jwt_token then
+            -- verify signature and check expiration dates
             local claim_spec = { exp = validators.is_not_expired() }
             local jwt_res = jwt:verify(jwt_secret, jwt_token, claim_spec)
+
             if jwt_res.valid and jwt_res.verified then
                 print('[JWT] verified, will expire@: ', jwt_res.payload.exp)
-                break
+                ngx.req.set_header("X-Remote-User", jwt_res.payload.loggedInAs)
+                pass = true
             else
                 print('[JWT] request rejected: ', jwt_res.reason)
             end
         end
 
-        -- Redirect to /login/?next=...
-        local qry = ngx.encode_args({["next"] = full_req_uri})
-        ngx.redirect("/login/?" .. qry)
+        if not pass then
+            -- Redirect to /login/?next=...
+            local qry = ngx.encode_args({["next"] = full_req_uri})
+            ngx.redirect("/login/?" .. qry)
+        end
+
+    else -- protected_mode = internal
+        ngx.log(ngx.WARN, "[Blocked] Blocked access to internal path: ", longest_match)
+        ngx.exit(ngx.HTTP_FORBIDDEN)
     end
 end
 
--- Print final rewriting rule (if no ngx.exit/redirect is called)
+--------------------------
+--- Print Passed Route ---
+--------------------------
 print('[route] pass: ', full_req_uri, ' ==> ',
     ngx.var.service_addr, ngx.var.modified_uri, query_params)

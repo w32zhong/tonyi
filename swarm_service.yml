@@ -58,6 +58,9 @@ services:
       labels:
         gateway.route: auth
         gateway.port: 19721
+        gateway.limits: '{"rate": 1, "burst": 10, "conn": 10}'
+        gateway.jwt_secret: /secret
+        gateway.internal: /secret
     networks:
       - gateway_net
       - proxy_net
