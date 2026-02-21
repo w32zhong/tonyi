@@ -9,7 +9,7 @@
         <!-- Render HTML safely so <span id="n-sec"> works -->
         <p v-html="$t('translation:redirect_message', { count: remainingTime })"></p>
         <p class="redirect-action">
-          <a :href="redirectUrl" class="redirect-link" @click.prevent="redirectNow">{{ $t('translation:redirect_now') }}</a>{{ $t('translation:redirect_suffix') }}
+          {{ $t('translation:redirect_prefix') }}<a :href="redirectUrl" class="redirect-link" @click.prevent="redirectNow">{{ $t('translation:redirect_now') }}</a>{{ $t('translation:redirect_suffix') }}
         </p>
       </div>
 
