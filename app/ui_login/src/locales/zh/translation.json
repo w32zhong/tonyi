@@ -1,13 +1,18 @@
 {
   "login": "登录",
-  "username": "用户名",
+  "username": "邮箱",
   "password": "密码",
   "success_redirect": "欢迎！几秒后重定向...",
   "login_failed": "登录失败",
   "chances_left": "您还有 {{count}} 次机会。",
   "errors": {
-    "empty_username": "请输入您的用户名。",
-    "empty_password": "请输入您的密码。",
+    "invalid_email": "请输入有效的邮箱地址。",
+    "username_too_long": "邮箱不能超过 32 个字符。",
+    "password_too_short": "密码至少需要 8 位。",
+    "password_too_long": "密码不能超过 128 位。",
+    "password_needs_letter": "密码必须包含至少一个字母。",
+    "password_needs_number": "密码必须包含至少一个数字。",
+    "password_needs_special": "密码必须包含至少一个特殊字符。",
     "service_unavailable": "抱歉，我们的服务暂时不可用。"
   }
 }

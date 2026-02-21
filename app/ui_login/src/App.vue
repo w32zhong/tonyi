@@ -2,9 +2,6 @@
   <div class="app-container">
     <!-- Navbar -->
     <Toolbar class="header-glass">
-      <template #start>
-      </template>
-
       <template #end>
         <div class="actions-group">
           <Button
@@ -86,9 +83,6 @@
             </Form>
           </template>
         </Card>
-
-        <!-- Progress -->
-        <ProgressBar v-if="loading" mode="indeterminate" class="progress-bar" />
       </div>
     </main>
   </div>
@@ -98,6 +92,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useTranslation } from 'i18next-vue'
 import axios from 'axios'
+import { z } from 'zod'
 
 // PrimeVue components
 import Toolbar from 'primevue/toolbar'
@@ -107,7 +102,6 @@ import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Message from 'primevue/message'
-import ProgressBar from 'primevue/progressbar'
 import { Form } from '@primevue/forms'
 
 const { i18next, t } = useTranslation()
@@ -137,19 +131,30 @@ const initialValues = reactive({
 })
 
 const resolver = ({ values }) => {
+  const schema = z.object({
+    username: z
+      .string()
+      .email(t('errors.invalid_email'))
+      .max(32, t('errors.username_too_long')),
+    password: z
+      .string()
+      .min(8, t('errors.password_too_short'))
+      .max(128, t('errors.password_too_long'))
+      .regex(/[a-zA-Z]/, t('errors.password_needs_letter'))
+      .regex(/[0-9]/, t('errors.password_needs_number'))
+      .regex(/[^a-zA-Z0-9]/, t('errors.password_needs_special')),
+  })
+
+  const result = schema.safeParse(values)
+  if (result.success) return { errors: {} }
+
   const errors = {}
-
-  if (!values.username) {
-    errors.username = [{ message: t('errors.empty_username') }]
+  for (const issue of result.error.issues) {
+    const field = issue.path[0]
+    if (!errors[field]) errors[field] = []
+    errors[field].push({ message: issue.message })
   }
-
-  if (!values.password) {
-    errors.password = [{ message: t('errors.empty_password') }]
-  }
-
-  return {
-    errors
-  }
+  return { errors }
 }
 
 // Language Menu

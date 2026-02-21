@@ -1,13 +1,18 @@
 {
   "login": "Login",
-  "username": "Username",
+  "username": "Email",
   "password": "Password",
   "success_redirect": "Welcome! Redirecting in a few second(s) ...",
   "login_failed": "Login failed",
   "chances_left": "You have {{count}} chance(s).",
   "errors": {
-    "empty_username": "Please enter your username.",
-    "empty_password": "Please enter your password.",
+    "invalid_email": "Please enter a valid email address.",
+    "username_too_long": "Email must be 32 characters or fewer.",
+    "password_too_short": "Password must be at least 8 characters.",
+    "password_too_long": "Password must be 128 characters or fewer.",
+    "password_needs_letter": "Password must contain at least one letter.",
+    "password_needs_number": "Password must contain at least one number.",
+    "password_needs_special": "Password must contain at least one special character.",
     "service_unavailable": "Sorry. Our service is temporarily unavailable."
   }
 }

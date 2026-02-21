@@ -1,13 +1,18 @@
 {
   "login": "ログイン",
-  "username": "ユーザー名",
+  "username": "メールアドレス",
   "password": "パスワード",
   "success_redirect": "ようこそ！数秒後にリダイレクトします...",
   "login_failed": "ログインに失敗しました",
   "chances_left": "残り {{count}} 回の試行が可能です。",
   "errors": {
-    "empty_username": "ユーザー名を入力してください。",
-    "empty_password": "パスワードを入力してください。",
+    "invalid_email": "有効なメールアドレスを入力してください。",
+    "username_too_long": "メールアドレスは32文字以内にしてください。",
+    "password_too_short": "パスワードは8文字以上にしてください。",
+    "password_too_long": "パスワードは128文字以内にしてください。",
+    "password_needs_letter": "パスワードには少なくとも1つの文字を含めてください。",
+    "password_needs_number": "パスワードには少なくとも1つの数字を含めてください。",
+    "password_needs_special": "パスワードには少なくとも1つの特殊文字を含めてください。",
     "service_unavailable": "申し訳ありません。サービスは一時的に利用できません。"
   }
 }
