@@ -7,6 +7,8 @@ import './main.css'
 
 import enTranslation from './locales/en/translation.json'
 import zhTranslation from './locales/zh/translation.json'
+import frTranslation from './locales/fr/translation.json'
+import jaTranslation from './locales/ja/translation.json'
 
 i18next
   .use(LanguageDetector)
@@ -14,7 +16,9 @@ i18next
     fallbackLng: 'en',
     resources: {
       en: { translation: enTranslation },
-      zh: { translation: zhTranslation }
+      zh: { translation: zhTranslation },
+      fr: { translation: frTranslation },
+      ja: { translation: jaTranslation }
     },
     detection: {
       order: ['querystring', 'cookie', 'localStorage', 'navigator'],

@@ -1,0 +1,7 @@
+{
+  "title": "Page non trouvée",
+  "description": "Désolé, la page que vous recherchez n'existe pas ou a été supprimée.",
+  "redirect_message": "Ne vous inquiétez pas, je vous montrerai le chemin dans seulement <span id=\"n-sec\">{{count}}</span> secondes...",
+  "redirect_now": "Par ici",
+  "redirect_suffix": " si vous voulez y aller directement !"
+}
