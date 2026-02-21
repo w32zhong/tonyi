@@ -118,14 +118,3 @@ curl http://localhost/auth/authorization \
     -d '{"token":"xxx"}'
 ```
 alternatively, use your browser to visit the test UI interface `http://yourhost/auth-test/private`.
-
-## Gateway Labels Convention
-
-When configuring services in Docker Compose/Swarm, the gateway uses labels to dynamically route traffic and enforce security.
-
-**CRITICAL RULE: Trailing Slashes**
-For security labels, you **MUST** include a trailing slash unless you are specifying the exact root path `/`. This strict convention ensures accurate prefix matching without false positives (e.g., matching `/api/v1` won't accidentally catch requests to `/api/v11`).
-
-- `gateway.protect`: Paths requiring JWT validation. (e.g., `gateway.protect="/api/,/admin/"` or `gateway.protect="/"`)
-- `gateway.internal`: Paths blocked from external access, returning 403. (e.g., `gateway.internal="/secret/,/metrics/"`)
-- `gateway.route`: The public prefix for the service. (e.g., `gateway.route="backend"`)

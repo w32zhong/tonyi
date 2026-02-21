@@ -41,7 +41,8 @@ async def authentication(request: Request, response: Response):
 
 @app.get("/secret")
 async def get_secret():
-    return db.get_jwt_secret()
+    # sending plain text here otherwise FastAPI will wrap double quotes
+    return Response(content=db.get_jwt_secret(), media_type="text/plain")
 
 
 @app.get("/")

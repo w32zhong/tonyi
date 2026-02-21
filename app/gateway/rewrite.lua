@@ -7,7 +7,6 @@ local route = ngx.var.service_route
 ngx.req.clear_header("X-Remote-User")
 
 local modified_uri = ngx.var.modified_uri
-local query_params = ngx.var.is_args .. (ngx.var.args or '')
 local full_req_uri = ngx.var.request_uri
 
 -- Anything /non_root will be redirected to /non_root/
@@ -59,6 +58,8 @@ else
         ngx.var.modified_uri = full_req_uri
     end
 end
+
+print(string.format('[route] rewritten: %s => %s', route, ngx.var.modified_uri))
 
 ------------------
 --- JWT verify ---
@@ -118,5 +119,6 @@ end
 --------------------------
 --- Print Passed Route ---
 --------------------------
+local query_params = ngx.var.is_args .. (ngx.var.args or '')
 print('[route] pass: ', full_req_uri, ' ==> ',
     ngx.var.service_addr, ngx.var.modified_uri, query_params)
