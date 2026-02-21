@@ -95,7 +95,9 @@ services:
       - gateway_net
 
   ui_404:
-    image: approach0/ui-404
+    build:
+      context: ./app/ui_404
+      dockerfile: Dockerfile
     deploy:
       labels:
         gateway.route: _404_

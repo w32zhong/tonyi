@@ -1,0 +1,6 @@
+{
+  "title": "页面未找到",
+  "description": "抱歉，您访问的页面不存在或已被移除。",
+  "redirect_message": "{{count}} 秒后自动跳转...",
+  "redirect_now": "立即跳转"
+}
