@@ -94,6 +94,15 @@ services:
     networks:
       - gateway_net
 
+  ui_404:
+    image: approach0/ui-404
+    deploy:
+      labels:
+        gateway.route: _404_
+        gateway.port: 8080
+    networks:
+      - gateway_net
+
 networks:
   gateway_net:
     driver: overlay

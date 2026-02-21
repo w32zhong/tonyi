@@ -10,7 +10,9 @@ local modified_uri = ngx.var.modified_uri
 local full_req_uri = ngx.var.request_uri
 
 -- Anything /non_root will be redirected to /non_root/
--- to ensure correct relative path for micro-services.
+-- to ensure it will be handled by proxied backend services.
+-- for http://demo.local/app
+-- The gateway regex ^/([^/]+)(.*) catches route = "app" and modified_uri = "".
 if route ~= '_root_' and modified_uri == '' then
     ngx.redirect('/' .. route .. '/' .. query_params)
 end
@@ -38,12 +40,11 @@ if route_meta_str then
     ngx.var.service_addr = round_robin(route, route_meta)
 
 else
-    print('[route] service for "', route, '" not found, '..
-        'fallback to the root.')
+    print('[route] service for "', route, '" not found, '.. '404 page.')
 
-    local root_meta_str = ngx.shared.route_map:get('_root_')
+    local root_meta_str = ngx.shared.route_map:get('_404_')
     if not root_meta_str then
-        -- No micro-service for 404 route, use built-in page.
+        -- Use built-in 404 page.
         ngx.status = ngx.HTTP_NOT_FOUND
         ngx.header.content_type = 'text/html; charset=utf-8'
         ngx.print([[
@@ -52,9 +53,9 @@ else
         ]])
         ngx.exit(ngx.HTTP_OK)
     else
-        -- Pass to the _root_ service
+        -- Pass to the dedicated 404 backend service
         local root_meta = cjson.decode(root_meta_str)
-        ngx.var.service_addr = round_robin('_root_', root_meta)
+        ngx.var.service_addr = round_robin('_404_', root_meta)
         ngx.var.modified_uri = full_req_uri
     end
 end
