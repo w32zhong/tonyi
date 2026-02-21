@@ -6,7 +6,7 @@ html, body, #app {
 }
 
 body {
-  background-image: url("./resource/stars.png");
+  background-image: url("/resource/stars.png");
   background-size: cover;
   background-repeat: no-repeat;
   background-position: center;
