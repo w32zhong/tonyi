@@ -109,6 +109,20 @@ services:
     networks:
       - gateway_net
 
+  ui_login:
+    image: ui_login:latest
+    build:
+      context: ./app/ui_login
+      dockerfile: Dockerfile
+      args:
+        - AUTH_BASE_URL=/auth
+    deploy:
+      labels:
+        gateway.route: login
+        gateway.port: 8080
+    networks:
+      - gateway_net
+
 networks:
   gateway_net:
     driver: overlay

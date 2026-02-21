@@ -7,8 +7,8 @@ COPY package*.json ./
 RUN npm install
 
 # Provide environment variables to be baked in at build-time by Vite
-ARG VITE_AUTH_BASE_URL=/auth
-ENV VITE_AUTH_BASE_URL=$VITE_AUTH_BASE_URL
+ARG AUTH_BASE_URL=/auth
+ENV VITE_AUTH_BASE_URL=$AUTH_BASE_URL
 
 # Copy source code and build
 COPY . .
