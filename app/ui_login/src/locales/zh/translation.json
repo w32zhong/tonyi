@@ -1,0 +1,13 @@
+{
+  "login": "登录",
+  "username": "用户名",
+  "password": "密码",
+  "success_redirect": "欢迎！几秒后重定向...",
+  "login_failed": "登录失败",
+  "chances_left": "您还有 {{count}} 次机会。",
+  "errors": {
+    "empty_username": "请输入您的用户名。",
+    "empty_password": "请输入您的密码。",
+    "service_unavailable": "抱歉，我们的服务暂时不可用。"
+  }
+}

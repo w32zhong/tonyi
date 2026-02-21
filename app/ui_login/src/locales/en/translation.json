@@ -1,0 +1,13 @@
+{
+  "login": "Login",
+  "username": "Username",
+  "password": "Password",
+  "success_redirect": "Welcome! Redirecting in a few second(s) ...",
+  "login_failed": "Login failed",
+  "chances_left": "You have {{count}} chance(s).",
+  "errors": {
+    "empty_username": "Please enter your username.",
+    "empty_password": "Please enter your password.",
+    "service_unavailable": "Sorry. Our service is temporarily unavailable."
+  }
+}

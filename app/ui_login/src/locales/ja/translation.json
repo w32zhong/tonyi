@@ -1,0 +1,13 @@
+{
+  "login": "ログイン",
+  "username": "ユーザー名",
+  "password": "パスワード",
+  "success_redirect": "ようこそ！数秒後にリダイレクトします...",
+  "login_failed": "ログインに失敗しました",
+  "chances_left": "残り {{count}} 回の試行が可能です。",
+  "errors": {
+    "empty_username": "ユーザー名を入力してください。",
+    "empty_password": "パスワードを入力してください。",
+    "service_unavailable": "申し訳ありません。サービスは一時的に利用できません。"
+  }
+}
