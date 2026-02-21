@@ -38,10 +38,24 @@ const applyTheme = (dark) => {
 }
 
 onMounted(() => {
-  // Honour the preference saved by ui_login, then fall back to OS preference
-  const savedTheme = localStorage.getItem('theme')
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-  applyTheme(savedTheme === 'dark' || (!savedTheme && prefersDark))
+  // Priority: ?dark_mode= querystring > localStorage (set by ui_login) > OS preference
+  const params = new URLSearchParams(window.location.search)
+  const qsDark = params.get('dark_mode')   // 'true' | 'false' | null
+
+  let isDark
+  if (qsDark === 'true') {
+    isDark = true
+    localStorage.setItem('theme', 'dark')
+  } else if (qsDark === 'false') {
+    isDark = false
+    localStorage.setItem('theme', 'light')
+  } else {
+    const savedTheme = localStorage.getItem('theme')
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    isDark = savedTheme === 'dark' || (!savedTheme && prefersDark)
+  }
+
+  applyTheme(isDark)
 
   // Since translations are bundled, they are available immediately.
   startTimer()
