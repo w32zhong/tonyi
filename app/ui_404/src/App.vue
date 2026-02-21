@@ -1,9 +1,8 @@
 <template>
   <div class="container">
-    <div v-if="!isI18nLoaded" class="loading">Loading...</div>
-    <div v-else class="error-content">
+    <div class="error-content">
       <div class="image-wrapper">
-        <img src="/404-bee.png" alt="404 Page Not Found" class="error-image" />
+        <img :src="beeImage" alt="404 Page Not Found" class="error-image" />
       </div>
 
       <div class="countdown-box">
@@ -21,6 +20,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useTranslation } from 'i18next-vue'
+import beeImage from './assets/404-bee.png'
 
 const { i18next } = useTranslation()
 
@@ -28,20 +28,9 @@ const remainingTime = ref(parseInt(import.meta.env.VITE_REDIRECT_TIMEOUT || '5',
 const redirectUrl = import.meta.env.VITE_REDIRECT_URL || '/'
 let timer = null
 
-const isI18nLoaded = ref(false)
-
-
 onMounted(() => {
-  // Wait for i18next to initialize the translation resources over HTTP
-  if (i18next.isInitialized) {
-    isI18nLoaded.value = true
-    startTimer()
-  } else {
-    i18next.on('initialized', () => {
-      isI18nLoaded.value = true
-      startTimer()
-    })
-  }
+  // Since translations are bundled, they are available immediately.
+  startTimer()
 })
 
 const startTimer = () => {

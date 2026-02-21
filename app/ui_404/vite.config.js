@@ -1,10 +1,12 @@
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import { viteSingleFile } from 'vite-plugin-singlefile'
 
 export default defineConfig({
   plugins: [
-    vue()
+    vue(),
+    viteSingleFile()
   ],
   resolve: {
     alias: {
@@ -12,7 +14,8 @@ export default defineConfig({
     }
   },
   server: {
-    port: 3000
+    port: 3000,
+    host: true
   },
   build: {
     target: 'es2015',
