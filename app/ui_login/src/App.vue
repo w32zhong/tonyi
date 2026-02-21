@@ -3,7 +3,6 @@
     <!-- Navbar -->
     <Toolbar class="header-glass">
       <template #start>
-        <!-- Logo or empty -->
       </template>
 
       <template #end>
@@ -37,8 +36,8 @@
           <img :src="pandaImage" class="panda-img" alt="Panda" />
         </div>
 
-        <!-- Messages -->
-        <div class="message-wrapper">
+        <!-- Messages (Backend errors/success) -->
+        <div class="message-wrapper" v-if="succMsg || errMsg || warnMsg">
           <Message v-if="succMsg" severity="success" closable @close="succMsg = ''">{{ succMsg }}</Message>
           <Message v-if="errMsg" severity="error" closable @close="errMsg = ''">{{ errMsg }}</Message>
           <Message v-if="warnMsg" severity="warn" closable @close="warnMsg = ''">{{ warnMsg }}</Message>
@@ -46,46 +45,46 @@
 
         <!-- Login Card -->
         <Card class="card-glass">
-          <template #title>
-            <span class="card-title">{{ $t('login') }}</span>
-          </template>
-
           <template #content>
-            <div class="form-grid">
-              <div class="input-field">
-                <label for="username">{{ $t('username') }}</label>
+            <div class="card-title-container">
+              <span class="card-title-text">{{ $t('login') }}</span>
+            </div>
+            <Form v-slot="$form" :initialValues="initialValues" :resolver="resolver" :validateOnBlur="true" @submit="onFormSubmit" class="form-grid">
+              <div class="flex flex-col gap-1">
                 <InputText
-                  id="username"
-                  v-model="username"
+                  name="username"
+                  type="text"
                   class="w-full"
+                  :placeholder="$t('username')"
+                  fluid
                   @focus="pandaImage = pandaUsername"
                   @blur="pandaImage = pandaNormal"
-                  @keyup.enter="handleLogin"
                 />
+                <Message v-if="$form.username?.invalid" severity="error" size="small" variant="simple">{{ $form.username.error.message }}</Message>
               </div>
 
-              <div class="input-field">
-                <label for="password">{{ $t('password') }}</label>
-                <InputText
-                  id="password"
-                  type="password"
-                  v-model="password"
-                  class="w-full"
+              <div class="flex flex-col gap-1">
+                <Password
+                  name="password"
+                  :placeholder="$t('password')"
+                  :feedback="false"
+                  toggleMask
+                  fluid
                   @focus="pandaImage = pandaPassword"
                   @blur="pandaImage = pandaNormal"
-                  @keyup.enter="handleLogin"
+                />
+                <Message v-if="$form.password?.invalid" severity="error" size="small" variant="simple">{{ $form.password.error.message }}</Message>
+              </div>
+
+              <div class="footer-actions mt-4">
+                <Button
+                  type="submit"
+                  :label="$t('login')"
+                  class="w-full login-btn"
+                  :loading="loading"
                 />
               </div>
-            </div>
-          </template>
-
-          <template #footer>
-            <Button
-              :label="$t('login')"
-              class="w-full login-btn"
-              @click="handleLogin"
-              :loading="loading"
-            />
+            </Form>
           </template>
         </Card>
 
@@ -97,7 +96,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useTranslation } from 'i18next-vue'
 import axios from 'axios'
 
@@ -107,14 +106,15 @@ import Button from 'primevue/button'
 import Menu from 'primevue/menu'
 import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
+import Password from 'primevue/password'
 import Message from 'primevue/message'
 import ProgressBar from 'primevue/progressbar'
+import { Form } from '@primevue/forms'
 
 const { i18next, t } = useTranslation()
 
 // Assets (Relative Paths)
 const pandaNormal = './resource/panda-normal.png'
-
 const pandaUsername = './resource/panda-username.png'
 const pandaPassword = './resource/panda-password.png'
 
@@ -122,12 +122,31 @@ const pandaImage = ref(pandaNormal)
 
 // State
 const isDark = ref(false)
-const username = ref('')
-const password = ref('')
 const loading = ref(false)
 const succMsg = ref('')
 const errMsg = ref('')
 const warnMsg = ref('')
+
+const initialValues = reactive({
+  username: '',
+  password: ''
+})
+
+const resolver = ({ values }) => {
+  const errors = {}
+
+  if (!values.username) {
+    errors.username = [{ message: t('errors.empty_username') }]
+  }
+
+  if (!values.password) {
+    errors.password = [{ message: t('errors.empty_password') }]
+  }
+
+  return {
+    errors
+  }
+}
 
 // Language Menu
 const langMenu = ref()
@@ -158,21 +177,13 @@ const toggleTheme = () => {
   localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
 }
 
-// Login Logic
-const handleLogin = async () => {
+// Form Submission
+const onFormSubmit = async ({ valid, values }) => {
+  if (!valid) return
+
   succMsg.value = ''
   errMsg.value = ''
   warnMsg.value = ''
-
-  if (!username.value.trim()) {
-    errMsg.value = t('errors.empty_username')
-    return
-  }
-  if (!password.value.trim()) {
-    errMsg.value = t('errors.empty_password')
-    return
-  }
-
   loading.value = true
 
   try {
@@ -180,8 +191,8 @@ const handleLogin = async () => {
     const cleanUrl = authBaseUrl.replace(/\/$/, '')
 
     const response = await axios.post(`${cleanUrl}/authentication`, {
-      username: username.value,
-      password: password.value
+      username: values.username,
+      password: values.password
     })
 
     const data = response.data
@@ -241,7 +252,19 @@ onMounted(() => {
 .actions-group {
   display: flex;
   align-items: center;
-  gap: 1.5rem; /* Requested padding between widgets */
+  gap: 1.5rem;
+}
+
+.card-title-container {
+  margin-bottom: 1.5rem;
+  padding-left: 0.5rem;
+  text-align: left;
+}
+
+.card-title-text {
+  font-weight: 700;
+  font-size: 1.25rem;
+  opacity: 0.8;
 }
 
 /* Main Layout */
@@ -265,8 +288,8 @@ onMounted(() => {
 /* Panda Positioning */
 .panda-wrapper {
   position: absolute;
-  top: -20%;
-  left: 50%;
+  top: -30%;
+  left: 70%;
   transform: translateX(-50%);
   z-index: 2;
   display: flex;
@@ -296,31 +319,11 @@ onMounted(() => {
   background: color-mix(in srgb, var(--p-surface-900) 70%, transparent);
 }
 
-.card-title {
-  display: block;
-  text-align: center;
-  font-weight: 700;
-  font-size: 1.5rem;
-  margin-bottom: 0.5rem;
-}
-
 /* Form Styling */
 .form-grid {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-}
-
-.input-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.input-field label {
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--p-text-secondary-color);
+  gap: 1rem;
 }
 
 .w-full {
