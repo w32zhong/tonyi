@@ -262,16 +262,19 @@ onMounted(() => {
   gap: 0;
 }
 
-/* Panda Animation */
+/* Panda Positioning */
 .panda-wrapper {
+  position: absolute;
+  top: -20%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
   display: flex;
   justify-content: center;
-  margin-bottom: -15px; /* Pull panda closer to card */
-  z-index: 2;
 }
 
 .panda-img {
-  width: 130px;
+  width: 120px;
   height: auto;
   transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
