@@ -76,7 +76,7 @@ const redirectNow = () => {
   padding: 1rem;
 }
 .error-content {
-  background: color-mix(in srgb, var(--p-surface-0) 70%, transparent);
+  background: var(--p-surface-100);
   border: 1px solid color-mix(in srgb, var(--p-surface-200) 20%, transparent);
   backdrop-filter: blur(12px);
   padding: 2rem;
@@ -88,7 +88,7 @@ const redirectNow = () => {
 }
 
 :global(.p-dark) .error-content {
-  background: color-mix(in srgb, var(--p-surface-900) 70%, transparent);
+  background: var(--p-surface-800);
   border-color: color-mix(in srgb, var(--p-surface-700) 30%, transparent);
 }
 
