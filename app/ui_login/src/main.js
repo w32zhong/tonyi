@@ -7,7 +7,7 @@ import LanguageDetector from 'i18next-browser-languagedetector'
 
 import PrimeVue from 'primevue/config'
 import Tooltip from 'primevue/tooltip'
-import Aura from '@primeuix/themes/aura'
+import UsingTheme from '@primeuix/themes/nora'
 import 'primeicons/primeicons.css'
 import './style.css'
 
@@ -39,7 +39,7 @@ app.use(I18NextVue, { i18next })
 app.directive('tooltip', Tooltip)
 app.use(PrimeVue, {
     theme: {
-        preset: Aura,
+        preset: UsingTheme,
         options: {
             darkModeSelector: '.p-dark',
         }

@@ -12,7 +12,6 @@
             text
             rounded
             @click="toggleTheme"
-            v-tooltip="isDark ? 'Light Mode' : 'Dark Mode'"
           />
 
           <Button
@@ -288,7 +287,7 @@ onMounted(() => {
 /* Panda Positioning */
 .panda-wrapper {
   position: absolute;
-  top: -30%;
+  top: -28%;
   left: 70%;
   transform: translateX(-50%);
   z-index: 2;
