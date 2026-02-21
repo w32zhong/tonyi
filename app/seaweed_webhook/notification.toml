@@ -1,4 +1,0 @@
-[notification.webhook]
-enabled = true
-endpoint = "http://seaweed_webhook:5000/webhook"
-event_types = ["create", "delete"]
