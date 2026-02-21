@@ -95,9 +95,13 @@ services:
       - gateway_net
 
   ui_404:
+    image: ui_404:latest
     build:
       context: ./app/ui_404
       dockerfile: Dockerfile
+      args:
+        - REDIRECT_URL=/
+        - REDIRECT_TIMEOUT=10
     deploy:
       labels:
         gateway.route: _404_

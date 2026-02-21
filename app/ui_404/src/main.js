@@ -15,9 +15,10 @@ i18next
       loadPath: '/locales/{{lng}}/{{ns}}.json'
     },
     detection: {
-      order: ['querystring', 'navigator'],
+      order: ['querystring', 'cookie', 'localStorage', 'navigator'],
       lookupQuerystring: 'lang',
-      caches: ['localStorage', 'cookie']
+      caches: ['localStorage', 'cookie'],
+      cookieOptions: { path: '/', sameSite: 'strict' }
     },
     interpolation: {
       escapeValue: false // not needed for vue as it escapes by default
