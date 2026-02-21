@@ -6,9 +6,6 @@ _G.rate_limit = require("rate_limit").rate_limit
 _G.cjson = require("cjson")
 
 -- Service discovery
-local refresh_interval = 20 -- timer interval (in seconds)
-local expire_seconds = refresh_interval * 6
-
 local http = require("resty.http")
 
 function http_get(url)
@@ -75,18 +72,7 @@ local function discover_services()
         local protect_paths, internal_paths, gateway_route, service_port, gateway_limits
         for key in pairs(Labels) do
             local val = Labels[key]
-            if key == 'gateway.jwt_secret' then
-                local jwt_token, err = http_get(
-                    'http://' .. service_name .. val
-                )
-                if not err then
-                    ngx.shared.JWT:set('secret', jwt_token)
-                    local partial = (jwt_token or ""):sub(1, 5)
-                    print('[JWT] secret loaded: ', partial, '...')
-                else
-                    print('[JWT] update error: ', err)
-                end
-            elseif key == 'gateway.protect' then
+            if key == 'gateway.protect' then
                 -- val is a string of paths with comma as delimiter
                 -- e.g., "/runjob,/delejob".
                 protect_paths = val
@@ -152,8 +138,30 @@ local function discover_services()
     print('=== SERVICE LIST REFRESHED ===')
 end
 
-ngx.timer.at(0, discover_services)
-ngx.timer.every(refresh_interval, discover_services)
+-- JWT secret update
+local function update_jwt_secret()
+    local jwt_secret_url = os.getenv("JWT_SECRET_URL") or "jwt_secret"
+    local jwt_token, err = http_get('http://' .. jwt_secret_url)
+    if not err then
+        ngx.shared.JWT:set('secret', jwt_token)
+        local partial = (jwt_token or ""):sub(1, 5)
+        print('[JWT] secret loaded: ', partial, '...')
+    else
+        print('[JWT] secret unavailable: ', err)
+    end
+end
+
+-- refresh reguarly
+local interval = 20 -- timer interval (in seconds)
+local expire_seconds = interval * 6
+
+local function regular_tasks()
+    discover_services()
+    update_jwt_secret()
+end
+
+ngx.timer.at(0, regular_tasks)
+ngx.timer.every(interval, regular_tasks)
 
 -- Prometheus metrics
 prometheus = require("prometheus").init("metrics")
