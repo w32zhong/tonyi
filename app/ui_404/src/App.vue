@@ -2,13 +2,16 @@
   <div class="container">
     <div v-if="!isI18nLoaded" class="loading">Loading...</div>
     <div v-else class="error-content">
-      <h1 class="error-code">404</h1>
-      <h2 class="error-title">{{ $t('translation:title') }}</h2>
-      <p class="error-desc">{{ $t('translation:description') }}</p>
+      <div class="image-wrapper">
+        <img src="/404-bee.png" alt="404 Page Not Found" class="error-image" />
+      </div>
 
       <div class="countdown-box">
-        <p>{{ $t('translation:redirect_message', { count: remainingTime }) }}</p>
-        <button class="redirect-btn" @click="redirectNow">{{ $t('translation:redirect_now') }}</button>
+        <!-- Render HTML safely so <span id="n-sec"> works -->
+        <p v-html="$t('translation:redirect_message', { count: remainingTime })"></p>
+        <p class="redirect-action">
+          <a :href="redirectUrl" class="redirect-link" @click.prevent="redirectNow">{{ $t('translation:redirect_now') }}</a>{{ $t('translation:redirect_suffix') }}
+        </p>
       </div>
 
     </div>
@@ -66,52 +69,70 @@ const redirectNow = () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  min-height: 100vh;
+  padding: 1rem;
 }
 .error-content {
   background: white;
-  padding: 3rem 4rem;
+  padding: 2rem;
   border-radius: 1rem;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-  max-width: 500px;
+  width: 100%;
+  max-width: 600px;
+  text-align: center;
 }
-.error-code {
-  font-size: 6rem;
-  margin: 0;
-  color: #ff4757;
-  font-weight: 800;
-  line-height: 1;
-}
-.error-title {
-  font-size: 1.8rem;
-  margin: 1rem 0;
-  color: #2f3542;
-}
-.error-desc {
-  color: #747d8c;
+
+.image-wrapper {
   margin-bottom: 2rem;
 }
+
+.error-image {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
 .countdown-box {
-  background: #f1f2f6;
-  padding: 1.5rem;
-  border-radius: 0.5rem;
-  margin-bottom: 2rem;
+  padding: 1rem;
 }
 .countdown-box p {
   margin: 0 0 1rem 0;
   font-weight: 500;
   color: #2f3542;
+  font-size: 1.1rem;
 }
-.redirect-btn {
-  background: #3742fa;
-  color: white;
-  border: none;
-  padding: 0.6rem 1.5rem;
-  border-radius: 2rem;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background 0.2s;
+
+.redirect-action {
+  color: #747d8c;
+  font-size: 0.95rem;
 }
-.redirect-btn:hover {
-  background: #5352ed;
+
+.redirect-link {
+  color: #3742fa;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.redirect-link:hover {
+  text-decoration: underline;
+  color: #5352ed;
+}
+
+/* Ensure the injected span has some emphasis */
+:deep(#n-sec) {
+  font-weight: 700;
+  color: #ff4757;
+  font-size: 1.2rem;
+}
+
+@media (max-width: 480px) {
+  .error-content {
+    padding: 1.5rem 1rem;
+  }
+  .countdown-box p {
+    font-size: 1rem;
+  }
 }
 </style>
