@@ -89,10 +89,10 @@ import Message from 'primevue/message'
 
 const { i18next } = useTranslation()
 
-const logo = ref('/resource/logo.png')
-const panda_normal = ref('/resource/panda-normal.png')
-const panda_username = ref('/resource/panda-username.png')
-const panda_password = ref('/resource/panda-password.png')
+const logo = ref('./resource/logo.png')
+const panda_normal = ref('./resource/panda-normal.png')
+const panda_username = ref('./resource/panda-username.png')
+const panda_password = ref('./resource/panda-password.png')
 
 const panda_image = ref(panda_normal.value)
 
