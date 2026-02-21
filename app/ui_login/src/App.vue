@@ -31,7 +31,7 @@
     <main class="login-container">
       <div class="login-box">
         <!-- Cute Panda -->
-        <div class="panda-wrapper">
+        <div class="panda-wrapper" :style="{ top: pandaTop }">
           <img :src="pandaImage" class="panda-img" alt="Panda" />
         </div>
 
@@ -56,8 +56,8 @@
                   class="w-full"
                   :placeholder="$t('username')"
                   fluid
-                  @focus="pandaImage = pandaUsername"
-                  @blur="pandaImage = pandaNormal"
+                  @focus="pandaImage = pandaUsername; pandaTop = pandaUsernameTop"
+                  @blur="pandaImage = pandaNormal; pandaTop = pandaNormalTop"
                 />
                 <Message v-if="$form.username?.invalid" severity="error" size="small" variant="simple">{{ $form.username.error.message }}</Message>
               </div>
@@ -69,8 +69,8 @@
                   :feedback="false"
                   toggleMask
                   fluid
-                  @focus="pandaImage = pandaPassword"
-                  @blur="pandaImage = pandaNormal"
+                  @focus="pandaImage = pandaPassword; pandaTop = pandaPasswordTop"
+                  @blur="pandaImage = pandaNormal; pandaTop = pandaNormalTop"
                 />
                 <Message v-if="$form.password?.invalid" severity="error" size="small" variant="simple">{{ $form.password.error.message }}</Message>
               </div>
@@ -118,6 +118,11 @@ const pandaUsername = './resource/panda-username.png'
 const pandaPassword = './resource/panda-password.png'
 
 const pandaImage = ref(pandaNormal)
+
+const pandaNormalTop = '-80px'
+const pandaTop = ref(pandaNormalTop)
+const pandaUsernameTop = '-85px'
+const pandaPasswordTop = '-70px'
 
 // State
 const isDark = ref(false)
@@ -287,10 +292,9 @@ onMounted(() => {
 /* Panda Positioning */
 .panda-wrapper {
   position: absolute;
-  top: -28%;
   left: 70%;
   transform: translateX(-50%);
-  z-index: 2;
+  z-index: 99;
   display: flex;
   justify-content: center;
 }
