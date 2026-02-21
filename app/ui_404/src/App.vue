@@ -28,7 +28,21 @@ const remainingTime = ref(parseInt(import.meta.env.VITE_REDIRECT_TIMEOUT || '5',
 const redirectUrl = import.meta.env.VITE_REDIRECT_URL || '/'
 let timer = null
 
+// Apply or remove the .p-dark class on <html> to match ui_login behaviour
+const applyTheme = (dark) => {
+  if (dark) {
+    document.documentElement.classList.add('p-dark')
+  } else {
+    document.documentElement.classList.remove('p-dark')
+  }
+}
+
 onMounted(() => {
+  // Honour the preference saved by ui_login, then fall back to OS preference
+  const savedTheme = localStorage.getItem('theme')
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+  applyTheme(savedTheme === 'dark' || (!savedTheme && prefersDark))
+
   // Since translations are bundled, they are available immediately.
   startTimer()
 })
@@ -62,13 +76,20 @@ const redirectNow = () => {
   padding: 1rem;
 }
 .error-content {
-  background: white;
+  background: color-mix(in srgb, var(--p-surface-0) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--p-surface-200) 20%, transparent);
+  backdrop-filter: blur(12px);
   padding: 2rem;
   border-radius: 1rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
   width: 100%;
   max-width: 600px;
   text-align: center;
+}
+
+:global(.p-dark) .error-content {
+  background: color-mix(in srgb, var(--p-surface-900) 70%, transparent);
+  border-color: color-mix(in srgb, var(--p-surface-700) 30%, transparent);
 }
 
 .image-wrapper {
@@ -88,17 +109,25 @@ const redirectNow = () => {
 .countdown-box p {
   margin: 0 0 1rem 0;
   font-weight: 500;
-  color: #2f3542;
+  color: var(--p-surface-900);
   font-size: 1.1rem;
 }
 
+:global(.p-dark) .countdown-box p {
+  color: var(--p-surface-0);
+}
+
 .redirect-action {
-  color: #747d8c;
+  color: var(--p-surface-500);
   font-size: 0.95rem;
 }
 
+:global(.p-dark) .redirect-action {
+  color: var(--p-surface-400);
+}
+
 .redirect-link {
-  color: #3742fa;
+  color: var(--p-primary-color);
   font-weight: 600;
   text-decoration: none;
   transition: color 0.2s;
@@ -106,13 +135,13 @@ const redirectNow = () => {
 
 .redirect-link:hover {
   text-decoration: underline;
-  color: #5352ed;
+  color: var(--p-primary-hover-color);
 }
 
 /* Ensure the injected span has some emphasis */
 :deep(#n-sec) {
   font-weight: 700;
-  color: #ff4757;
+  color: var(--p-red-500);
   font-size: 1.2rem;
 }
 

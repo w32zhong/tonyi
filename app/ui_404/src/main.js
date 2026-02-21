@@ -3,6 +3,10 @@ import i18next from 'i18next'
 import I18NextVue from 'i18next-vue'
 import LanguageDetector from 'i18next-browser-languagedetector'
 import App from './App.vue'
+
+import PrimeVue from 'primevue/config'
+import UsingTheme from '@primeuix/themes/nora'
+import 'primeicons/primeicons.css'
 import './main.css'
 
 import enTranslation from './locales/en/translation.json'
@@ -33,4 +37,12 @@ i18next
 
 const app = createApp(App)
 app.use(I18NextVue, { i18next })
+app.use(PrimeVue, {
+    theme: {
+        preset: UsingTheme,
+        options: {
+            darkModeSelector: '.p-dark',
+        }
+    }
+})
 app.mount('#app')
