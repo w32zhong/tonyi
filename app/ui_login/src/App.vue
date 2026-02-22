@@ -196,12 +196,15 @@ const onFormSubmit = async ({ valid, values }) => {
   warnMsg.value = ''
   loading.value = true
 
+  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || 'admin@admin.me'
+  const username = values.username === adminEmail ? 'admin' : values.username
+
   try {
     const authBaseUrl = import.meta.env.VITE_AUTH_BASE_URL || '/auth'
     const cleanUrl = authBaseUrl.replace(/\/$/, '')
 
     const response = await axios.post(`${cleanUrl}/authentication`, {
-      username: values.username,
+      username,
       password: values.password
     })
 

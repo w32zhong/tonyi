@@ -116,6 +116,7 @@ services:
       dockerfile: Dockerfile
       args:
         - AUTH_BASE_URL=/auth
+        - ADMIN_EMAIL=admin@localhost.me
     deploy:
       labels:
         gateway.route: login

@@ -10,6 +10,9 @@ RUN npm install
 ARG AUTH_BASE_URL=/auth
 ENV VITE_AUTH_BASE_URL=$AUTH_BASE_URL
 
+ARG ADMIN_EMAIL=admin@localhost.me
+ENV VITE_ADMIN_EMAIL=$ADMIN_EMAIL
+
 # Copy source code and build
 COPY . .
 RUN npm run build
