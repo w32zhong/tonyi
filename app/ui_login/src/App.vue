@@ -50,7 +50,7 @@
                   @focus="pandaImage = pandaUsername; pandaTop = pandaUsernameTop"
                   @blur="pandaImage = pandaNormal; pandaTop = pandaNormalTop"
                 />
-                <Message v-if="$form?.username?.invalid" severity="error" size="small" variant="simple">{{ $form?.username?.error?.message }}</Message>
+                <Message v-if="$form?.username?.invalid" severity="error" size="small" variant="simple">{{ $t($form?.username?.error?.message) }}</Message>
               </div>
 
               <div class="flex flex-col gap-1">
@@ -63,7 +63,7 @@
                   @focus="pandaImage = pandaPassword; pandaTop = pandaPasswordTop"
                   @blur="pandaImage = pandaNormal; pandaTop = pandaNormalTop"
                 />
-                <Message v-if="$form?.password?.invalid" severity="error" size="small" variant="simple">{{ $form?.password?.error?.message }}</Message>
+                <Message v-if="$form?.password?.invalid" severity="error" size="small" variant="simple">{{ $t($form?.password?.error?.message) }}</Message>
               </div>
 
               <div class="footer-actions mt-4">
@@ -76,10 +76,9 @@
                 />
               </div>
 
-              <!-- Backend messages (below submit button) -->
               <div class="backend-messages" v-if="succMsg || failMsg">
-                <Message v-if="succMsg" severity="success" closable @close="succMsg = ''">{{ succMsg }}</Message>
-                <Message v-if="failMsg" severity="error" closable @close="failMsg = ''">{{ failMsg }}</Message>
+                <Message v-if="succMsg" severity="success" closable @close="succKey = ''">{{ succMsg }}</Message>
+                <Message v-if="failMsg" severity="error" closable @close="resetFail">{{ failMsg }}</Message>
               </div>
             </Form>
           </template>
@@ -91,7 +90,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useTranslation } from 'i18next-vue'
 import axios from 'axios'
 import { z } from 'zod'
@@ -123,8 +122,23 @@ const pandaPasswordTop = '-70px'
 // State
 const isDark = ref(false)
 const loading = ref(false)
-const succMsg = ref('')
-const failMsg = ref('')
+
+const succKey = ref('')
+const failInfo = ref({ key: '', chances: 0 })
+
+const resetFail = () => {
+  failInfo.value.key = ''
+  failInfo.value.chances = 0
+}
+
+const succMsg = computed(() => succKey.value ? t(succKey.value) : '')
+const failMsg = computed(() => {
+  if (!failInfo.value.key) return ''
+  const base = t(failInfo.value.key)
+  return failInfo.value.chances > 0
+    ? `${base}\n${t('chances_left', { count: failInfo.value.chances })}`
+    : base
+})
 
 const initialValues = reactive({
   username: '',
@@ -135,15 +149,15 @@ const resolver = ({ values }) => {
   const schema = z.object({
     username: z
       .string()
-      .email(t('errors.invalid_email'))
-      .max(32, t('errors.username_too_long')),
+      .email('errors.invalid_email')
+      .max(32, 'errors.username_too_long'),
     password: z
       .string()
-      .min(8, t('errors.password_too_short'))
-      .max(128, t('errors.password_too_long'))
-      .regex(/[a-zA-Z]/, t('errors.password_needs_letter'))
-      .regex(/[0-9]/, t('errors.password_needs_number'))
-      .regex(/[^a-zA-Z0-9]/, t('errors.password_needs_special')),
+      .min(8, 'errors.password_too_short')
+      .max(128, 'errors.password_too_long')
+      .regex(/[a-zA-Z]/, 'errors.password_needs_letter')
+      .regex(/[0-9]/, 'errors.password_needs_number')
+      .regex(/[^a-zA-Z0-9]/, 'errors.password_needs_special'),
   })
 
   const result = schema.safeParse(values)
@@ -191,8 +205,8 @@ const toggleTheme = () => {
 const onFormSubmit = async ({ valid, states }) => {
   if (!valid) return
 
-  succMsg.value = ''
-  failMsg.value = ''
+  succKey.value = ''
+  resetFail()
   loading.value = true
 
   const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || 'admin@localhost.me'
@@ -205,23 +219,26 @@ const onFormSubmit = async ({ valid, states }) => {
     const response = await axios.post(`${cleanUrl}/authentication`, {
       username,
       password: states.password.value
+    }, {
+      timeout: 5000
     })
 
     const data = response.data
     loading.value = false
 
     if (data.pass) {
-      succMsg.value = t('success_redirect')
+      succKey.value = 'success_redirect'
       const next = new URLSearchParams(window.location.search).get('next') || '/'
       setTimeout(() => window.location.assign(next), 1000)
     } else {
-      const err = data.msg?.errmsg || t('login_failed')
-      const warn = data.msg?.left_chances > 0 ? t('chances_left', { count: data.msg.left_chances }) : ''
-      failMsg.value = warn ? err + '\n' + warn : err
+      states.password.value = ''
+      failInfo.value.key = 'login_failed'
+      failInfo.value.chances = data.msg?.left_chances || 0
     }
   } catch (err) {
     loading.value = false
-    failMsg.value = err.message || t('errors.service_unavailable')
+    states.password.value = ''
+    failInfo.value.key = 'errors.service_unavailable'
   }
 }
 
