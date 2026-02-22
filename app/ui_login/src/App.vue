@@ -56,7 +56,7 @@
                   @focus="pandaImage = pandaUsername; pandaTop = pandaUsernameTop"
                   @blur="pandaImage = pandaNormal; pandaTop = pandaNormalTop"
                 />
-                <Message v-if="$form.username?.invalid" severity="error" size="small" variant="simple">{{ $form.username.error.message }}</Message>
+                <Message v-if="$form?.username?.invalid" severity="error" size="small" variant="simple">{{ $form?.username?.error?.message }}</Message>
               </div>
 
               <div class="flex flex-col gap-1">
@@ -69,7 +69,7 @@
                   @focus="pandaImage = pandaPassword; pandaTop = pandaPasswordTop"
                   @blur="pandaImage = pandaNormal; pandaTop = pandaNormalTop"
                 />
-                <Message v-if="$form.password?.invalid" severity="error" size="small" variant="simple">{{ $form.password.error.message }}</Message>
+                <Message v-if="$form?.password?.invalid" severity="error" size="small" variant="simple">{{ $form?.password?.error?.message }}</Message>
               </div>
 
               <div class="footer-actions mt-4">
@@ -78,7 +78,7 @@
                   :label="$t('login')"
                   class="w-full login-btn"
                   :loading="loading"
-                  :disabled="!$form.valid || !$form.username?.value || !$form.password?.value"
+                  :disabled="!$form?.valid || !$form?.username?.value || !$form?.password?.value"
                 />
               </div>
             </Form>
@@ -188,7 +188,7 @@ const toggleTheme = () => {
 }
 
 // Form Submission
-const onFormSubmit = async ({ valid, values }) => {
+const onFormSubmit = async ({ valid, states }) => {
   if (!valid) return
 
   succMsg.value = ''
@@ -196,8 +196,8 @@ const onFormSubmit = async ({ valid, values }) => {
   warnMsg.value = ''
   loading.value = true
 
-  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || 'admin@admin.me'
-  const username = values.username === adminEmail ? 'admin' : values.username
+  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || 'admin@localhost.me'
+  const username = states.username.value === adminEmail ? 'admin' : states.username.value
 
   try {
     const authBaseUrl = import.meta.env.VITE_AUTH_BASE_URL || '/auth'
@@ -205,7 +205,7 @@ const onFormSubmit = async ({ valid, values }) => {
 
     const response = await axios.post(`${cleanUrl}/authentication`, {
       username,
-      password: values.password
+      password: states.password.value
     })
 
     const data = response.data
