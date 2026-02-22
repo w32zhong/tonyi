@@ -16,6 +16,7 @@ class Auth_User(SQLModel, table=True):
     username: str = Field(max_length=63, primary_key=True)
     password_hash: str = Field(max_length=255)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    modified_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class Auth_Record(SQLModel, table=True):
@@ -29,6 +30,7 @@ class Auth_Record(SQLModel, table=True):
 class JWT_Config(SQLModel, table=True):
     key: str = Field(primary_key=True)
     value: str
+    modified_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 def init_db(reset: bool = False):
@@ -68,6 +70,7 @@ def change_password(user: str = "admin", password: str = "changeme!"):
 
         print(f"Changing password for user `{user}`...")
         db_user.password_hash = hash.hash_password(password)
+        db_user.modified_at = datetime.now(timezone.utc)
         session.add(db_user)
         session.commit()
         print("Password updated successfully.")
@@ -119,6 +122,7 @@ def rotate_jwt_secret() -> str:
             item = JWT_Config(key="jwt_secret", value=new_secret)
         else:
             item.value = new_secret
+            item.modified_at = datetime.now(timezone.utc)
         session.add(item)
         session.commit()
     return new_secret
