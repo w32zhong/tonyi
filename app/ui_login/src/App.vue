@@ -230,7 +230,7 @@ const onFormSubmit = async ({ valid, states }) => {
     if (data.pass) {
       succKey.value = 'success_redirect'
       const next = new URLSearchParams(window.location.search).get('next') || '/'
-      setTimeout(() => window.location.assign(next), 1000)
+      setTimeout(() => window.location.assign(next), 5000)
     } else {
       states.password.value = ''
       failInfo.value.key = 'login_failed'

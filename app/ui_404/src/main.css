@@ -1,21 +1,33 @@
 html, body, #app {
-  height: 100%;
   margin: 0;
   padding: 0;
   font-family: var(--p-font-family, system-ui, -apple-system, sans-serif);
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: inherit;
+}
+
+html {
+  background-color: var(--p-sky-300);
+}
+
+html.p-dark {
+  background-color: var(--p-blue-950);
 }
 
 body {
   display: flex;
-  place-items: center;
+  justify-content: center;
+  align-items: center;
   min-width: 320px;
   min-height: 100vh;
-  background-color: var(--p-sky-300);
+  margin: 0;
   color: var(--p-surface-900);
 }
 
 .p-dark body {
-  background-color: var(--p-blue-950);
   color: var(--p-surface-0);
 }
 
