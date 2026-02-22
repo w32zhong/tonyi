@@ -27,16 +27,10 @@
     <!-- Main Content -->
     <main class="login-container">
       <div class="login-box">
+
         <!-- Cute Panda -->
         <div class="panda-wrapper" :style="{ top: pandaTop }">
           <img :src="pandaImage" class="panda-img" alt="Panda" />
-        </div>
-
-        <!-- Messages (Backend errors/success) -->
-        <div class="message-wrapper" v-if="succMsg || errMsg || warnMsg">
-          <Message v-if="succMsg" severity="success" closable @close="succMsg = ''">{{ succMsg }}</Message>
-          <Message v-if="errMsg" severity="error" closable @close="errMsg = ''">{{ errMsg }}</Message>
-          <Message v-if="warnMsg" severity="warn" closable @close="warnMsg = ''">{{ warnMsg }}</Message>
         </div>
 
         <!-- Login Card -->
@@ -81,9 +75,16 @@
                   :disabled="!$form?.valid || !$form?.username?.value || !$form?.password?.value"
                 />
               </div>
+
+              <!-- Backend messages (below submit button) -->
+              <div class="backend-messages" v-if="succMsg || failMsg">
+                <Message v-if="succMsg" severity="success" closable @close="succMsg = ''">{{ succMsg }}</Message>
+                <Message v-if="failMsg" severity="error" closable @close="failMsg = ''">{{ failMsg }}</Message>
+              </div>
             </Form>
           </template>
         </Card>
+
       </div>
     </main>
   </div>
@@ -123,8 +124,7 @@ const pandaPasswordTop = '-70px'
 const isDark = ref(false)
 const loading = ref(false)
 const succMsg = ref('')
-const errMsg = ref('')
-const warnMsg = ref('')
+const failMsg = ref('')
 
 const initialValues = reactive({
   username: '',
@@ -192,8 +192,7 @@ const onFormSubmit = async ({ valid, states }) => {
   if (!valid) return
 
   succMsg.value = ''
-  errMsg.value = ''
-  warnMsg.value = ''
+  failMsg.value = ''
   loading.value = true
 
   const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || 'admin@localhost.me'
@@ -214,16 +213,15 @@ const onFormSubmit = async ({ valid, states }) => {
     if (data.pass) {
       succMsg.value = t('success_redirect')
       const next = new URLSearchParams(window.location.search).get('next') || '/'
-      setTimeout(() => window.location.assign(next), 1500)
+      setTimeout(() => window.location.assign(next), 1000)
     } else {
-      errMsg.value = data.msg?.errmsg || t('login_failed')
-      if (data.msg?.left_chances > 0) {
-        warnMsg.value = t('chances_left', { count: data.msg.left_chances })
-      }
+      const err = data.msg?.errmsg || t('login_failed')
+      const warn = data.msg?.left_chances > 0 ? t('chances_left', { count: data.msg.left_chances }) : ''
+      failMsg.value = warn ? err + '\n' + warn : err
     }
   } catch (err) {
     loading.value = false
-    errMsg.value = err.message || t('errors.service_unavailable')
+    failMsg.value = err.message || t('errors.service_unavailable')
   }
 }
 
@@ -336,6 +334,15 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+/* Backend messages below submit button */
+.backend-messages {
+  margin-top: 1rem;
+}
+
+.backend-messages :deep(.p-message-text) {
+  white-space: pre-line;
 }
 
 .w-full {
