@@ -10,7 +10,8 @@
     "username_too_long": "邮箱不能超过 32 个字符。",
     "password_too_short": "密码至少需要 8 位。",
     "password_too_long": "密码不能超过 128 位。",
-    "password_needs_letter": "密码必须包含至少一个字母。",
+    "password_needs_lowercase": "密码必须包含至少一个小写字母。",
+    "password_needs_uppercase": "密码必须包含至少一个大写字母。",
     "password_needs_number": "密码必须包含至少一个数字。",
     "password_needs_special": "密码必须包含至少一个特殊字符。",
     "service_unavailable": "抱歉，我们的服务暂时不可用。"

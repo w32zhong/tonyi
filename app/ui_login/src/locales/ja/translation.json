@@ -10,7 +10,8 @@
     "username_too_long": "メールアドレスは32文字以内にしてください。",
     "password_too_short": "パスワードは8文字以上にしてください。",
     "password_too_long": "パスワードは128文字以内にしてください。",
-    "password_needs_letter": "パスワードには少なくとも1つの文字を含めてください。",
+    "password_needs_lowercase": "パスワードには少なくとも1つの小文字を含めてください。",
+    "password_needs_uppercase": "パスワードには少なくとも1つの大文字を含めてください。",
     "password_needs_number": "パスワードには少なくとも1つの数字を含めてください。",
     "password_needs_special": "パスワードには少なくとも1つの特殊文字を含めてください。",
     "service_unavailable": "申し訳ありません。サービスは一時的に利用できません。"

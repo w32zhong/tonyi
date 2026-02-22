@@ -10,7 +10,8 @@
     "username_too_long": "L'adresse e-mail ne doit pas dépasser 32 caractères.",
     "password_too_short": "Le mot de passe doit contenir au moins 8 caractères.",
     "password_too_long": "Le mot de passe ne doit pas dépasser 128 caractères.",
-    "password_needs_letter": "Le mot de passe doit contenir au moins une lettre.",
+    "password_needs_lowercase": "Le mot de passe doit contenir au moins une lettre minuscule.",
+    "password_needs_uppercase": "Le mot de passe doit contenir au moins une lettre majuscule.",
     "password_needs_number": "Le mot de passe doit contenir au moins un chiffre.",
     "password_needs_special": "Le mot de passe doit contenir au moins un caractère spécial.",
     "service_unavailable": "Désolé. Notre service est temporairement indisponible."

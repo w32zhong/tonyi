@@ -155,7 +155,8 @@ const resolver = ({ values }) => {
       .string()
       .min(8, 'errors.password_too_short')
       .max(128, 'errors.password_too_long')
-      .regex(/[a-zA-Z]/, 'errors.password_needs_letter')
+      .regex(/[a-z]/, 'errors.password_needs_lowercase')
+      .regex(/[A-Z]/, 'errors.password_needs_uppercase')
       .regex(/[0-9]/, 'errors.password_needs_number')
       .regex(/[^a-zA-Z0-9]/, 'errors.password_needs_special'),
   })
