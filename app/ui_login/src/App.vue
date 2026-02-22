@@ -124,18 +124,18 @@ const isDark = ref(false)
 const loading = ref(false)
 
 const succKey = ref('')
-const failInfo = ref({ key: '', chances: 0 })
+const failInfo = ref({ key: '', chances: -1 })
 
 const resetFail = () => {
   failInfo.value.key = ''
-  failInfo.value.chances = 0
+  failInfo.value.chances = -1
 }
 
 const succMsg = computed(() => succKey.value ? t(succKey.value) : '')
 const failMsg = computed(() => {
   if (!failInfo.value.key) return ''
   const base = t(failInfo.value.key)
-  return failInfo.value.chances > 0
+  return failInfo.value.chances >= 0
     ? `${base}\n${t('chances_left', { count: failInfo.value.chances })}`
     : base
 })
@@ -234,12 +234,13 @@ const onFormSubmit = async ({ valid, states }) => {
     } else {
       states.password.value = ''
       failInfo.value.key = 'login_failed'
-      failInfo.value.chances = data.msg?.left_chances || 0
+      failInfo.value.chances = typeof data.msg?.left_chances === 'number' ? data.msg.left_chances : -1
     }
   } catch (err) {
     loading.value = false
     states.password.value = ''
     failInfo.value.key = 'errors.service_unavailable'
+    failInfo.value.chances = -1
   }
 }
 
