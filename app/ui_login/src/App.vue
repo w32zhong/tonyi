@@ -78,6 +78,7 @@
                   :label="$t('login')"
                   class="w-full login-btn"
                   :loading="loading"
+                  :disabled="!$form.valid || !$form.username?.value || !$form.password?.value"
                 />
               </div>
             </Form>
