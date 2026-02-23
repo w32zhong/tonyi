@@ -40,7 +40,7 @@ app.add_exception_handler(MiddlewareRedirect, middleware_redirect_handler)
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(logout: bool = False):
-    html = (HERE / "login.html").read_text()
+    html = (HERE.parent / "login.html").read_text()
     html = html.replace("__AUTH_BASE_URL__", AUTH_BASE_URL)
     response = HTMLResponse(content=html)
     if logout:
@@ -50,7 +50,7 @@ async def login_page(logout: bool = False):
 
 @app.get("/private", response_class=HTMLResponse)
 async def private_page(jwt_payload: dict = Depends(jwt_middleware)):
-    html = (HERE / "private.html").read_text()
+    html = (HERE.parent / "private.html").read_text()
     html = html.replace("__PAYLOAD__", json.dumps(jwt_payload, indent=2))
     html = html.replace("__USERNAME__", jwt_payload.get("loggedInAs", "stranger"))
     return HTMLResponse(content=html)
