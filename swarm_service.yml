@@ -77,16 +77,15 @@ services:
       - proxy_net
 
   auth_test:
-    image: auth:latest
+    # visit http://hostname/auth-test/private
+    image: auth_test_nodejs_middleware:latest
     build:
-      context: ./app/auth
-      dockerfile: Dockerfile
+      context: ./app/auth/middleware
+      dockerfile: nodejs/Dockerfile
     environment:
-      - PYTHONUNBUFFERED=1 # flush python print immediately
       - JWT_COOKIE_NAME=JWT_Token
       - AUTH_BASE_URL=/auth
       - REDIRECT_URL_PREFIX=/auth-test/login?next=
-    command: ["python", "middleware/python/server.py"]
     deploy:
       labels:
         gateway.route: auth-test
