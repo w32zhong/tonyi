@@ -66,20 +66,25 @@ app.get('/oauth2/google', (req, res, next) => {
   passport.authenticate('google', { scope: ['profile', 'email'], state })(req, res, next);
 });
 
-app.get('/oauth2/google/callback',
-  passport.authenticate('google', { failureRedirect: './#/login' }),
-  (req, res) => {
+app.get('/oauth2/google/callback', (req, res, next) => {
+  passport.authenticate('google', { session: false }, (err, user, info) => {
+    if (err || !user) return res.redirect('./#/login');
+
+    // PLACEHOLDER: CALL YOUR JWT SERVICE HERE
+    // const myToken = myJwtService.issue(user.id);
+    const myToken = "MOCK_TOKEN_FOR_NOW";
+
     // Decode state to get the original action if needed
-    let redirectPath = './#/';
+    let redirectPath = `./#/?token=${myToken}`;
     if (req.query.state) {
       try {
         const state = JSON.parse(Buffer.from(req.query.state, 'base64').toString());
-        if (state.action) redirectPath = `./#/${state.action}`;
+        if (state.action) redirectPath = `./#/${state.action}?token=${myToken}`;
       } catch (e) {}
     }
     res.redirect(redirectPath);
-  }
-);
+  })(req, res, next);
+});
 
 app.get('/oauth2/github', (req, res, next) => {
   console.log('Initiating GitHub OAuth2 for action:', req.query.action);
@@ -88,20 +93,25 @@ app.get('/oauth2/github', (req, res, next) => {
   passport.authenticate('github', { scope: ['user:email'], state })(req, res, next);
 });
 
-app.get('/oauth2/github/callback',
-  passport.authenticate('github', { failureRedirect: './#/login' }),
-  (req, res) => {
+app.get('/oauth2/github/callback', (req, res, next) => {
+  passport.authenticate('github', { session: false }, (err, user, info) => {
+    if (err || !user) return res.redirect('./#/login');
+
+    // PLACEHOLDER: CALL YOUR JWT SERVICE HERE
+    // const myToken = myJwtService.issue(user.id);
+    const myToken = "MOCK_TOKEN_FOR_NOW";
+
     // Decode state to get the original action if needed
-    let redirectPath = './#/';
+    let redirectPath = `./#/?token=${myToken}`;
     if (req.query.state) {
       try {
         const state = JSON.parse(Buffer.from(req.query.state, 'base64').toString());
-        if (state.action) redirectPath = `./#/${state.action}`;
+        if (state.action) redirectPath = `./#/${state.action}?token=${myToken}`;
       } catch (e) {}
     }
     res.redirect(redirectPath);
-  }
-);
+  })(req, res, next);
+});
 
 app.use(express.static(join(__dirname, 'dist')));
 
