@@ -1,9 +1,5 @@
 <template>
   <div class="login-combined-container">
-    <div class="card-title-container">
-      <span class="card-title-text">{{ actionTitle }}</span>
-    </div>
-
     <EmailPassword
       @panda-focus="(f) => $emit('panda-focus', f)"
       @panda-blur="() => $emit('panda-blur')"
@@ -23,21 +19,10 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { useTranslation } from 'i18next-vue'
 import EmailPassword from './EmailPassword.vue'
 import OAuth2 from './OAuth2.vue'
 
-const { t } = useTranslation()
-const route = useRoute()
-
 defineEmits(['panda-focus', 'panda-blur'])
-
-const actionTitle = computed(() => {
-  const action = route.params.action || 'login'
-  return t(action)
-})
 </script>
 
 <style scoped>
@@ -45,18 +30,6 @@ const actionTitle = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-}
-
-.card-title-container {
-  margin-bottom: 1.5rem;
-  padding-left: 0.5rem;
-  text-align: left;
-}
-
-.card-title-text {
-  font-weight: 700;
-  font-size: 1.25rem;
-  opacity: 0.8;
 }
 
 .section-divider {

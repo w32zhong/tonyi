@@ -35,6 +35,9 @@
 
         <!-- Login Card -->
         <Card class="card-glass">
+          <template #title>
+            {{ actionTitle }}
+          </template>
           <template #content>
             <router-view
               @panda-focus="handlePandaFocus"
@@ -48,7 +51,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useTranslation } from 'i18next-vue'
 
 // PrimeVue components
@@ -56,8 +59,10 @@ import Toolbar from 'primevue/toolbar'
 import Button from 'primevue/button'
 import Menu from 'primevue/menu'
 import Card from 'primevue/card'
+import { useRoute } from 'vue-router'
 
-const { i18next } = useTranslation()
+const { i18next, t } = useTranslation()
+const route = useRoute()
 
 // Assets
 const pandaNormal = '/resource/panda-normal.png'
@@ -69,6 +74,12 @@ const pandaNormalTop = '-80px'
 const pandaTop = ref(pandaNormalTop)
 const pandaUsernameTop = '-85px'
 const pandaPasswordTop = '-70px'
+
+const actionTitle = computed(() => {
+  const action = route.params.action || 'login'
+  return t(action)
+})
+
 
 const handlePandaFocus = (field) => {
   if (field === 'username') {

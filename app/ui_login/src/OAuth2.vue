@@ -29,9 +29,11 @@
 
 <script setup>
 import { ref, defineEmits } from 'vue'
+import { useRoute } from 'vue-router'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 
+const route = useRoute()
 defineEmits(['panda-focus', 'panda-blur'])
 
 const loading = ref(false)
@@ -40,25 +42,19 @@ const errorMsg = ref('')
 const handleGoogleLogin = () => {
   loading.value = true
   errorMsg.value = ''
-  console.log('Simulating Google OAuth2 redirect...')
 
-  // Simulation: redirect after 1.5s
-  setTimeout(() => {
-    loading.value = false
-    // In a real app: window.location.href = '...'
-    alert('Simulating redirect to Google Auth...')
-  }, 1500)
+  // Pass the current action (login/signup/bind) to the backend
+  const action = route.params.action || 'login'
+  window.location.href = `/oauth2/google?action=${action}`
 }
 
 const handleGithubLogin = () => {
   loading.value = true
   errorMsg.value = ''
-  console.log('Simulating GitHub OAuth2 redirect...')
 
-  setTimeout(() => {
-    loading.value = false
-    alert('Simulating redirect to GitHub Auth...')
-  }, 1500)
+  // Pass the current action (login/signup/bind) to the backend
+  const action = route.params.action || 'login'
+  window.location.href = `/oauth2/github?action=${action}`
 }
 </script>
 
