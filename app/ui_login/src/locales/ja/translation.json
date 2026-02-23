@@ -1,5 +1,7 @@
 {
   "login": "ログイン",
+  "signup": "新規登録",
+  "bind": "連携",
   "username": "メールアドレス",
   "password": "パスワード",
   "success_redirect": "ようこそ！数秒後にリダイレクトします...",
@@ -15,5 +17,8 @@
     "password_needs_number": "パスワードには少なくとも1つの数字を含めてください。",
     "password_needs_special": "パスワードには少なくとも1つの特殊文字を含めてください。",
     "service_unavailable": "申し訳ありません。サービスは一時的に利用できません。"
-  }
+  },
+  "continue_with_google": "Google で続行",
+  "continue_with_github": "GitHub で続行",
+  "or_continue_with": "または"
 }

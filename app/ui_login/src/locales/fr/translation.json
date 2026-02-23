@@ -1,5 +1,7 @@
 {
   "login": "Connexion",
+  "signup": "S'inscrire",
+  "bind": "Lier",
   "username": "E-mail",
   "password": "Mot de passe",
   "success_redirect": "Bienvenue ! Redirection dans quelques secondes...",
@@ -15,5 +17,8 @@
     "password_needs_number": "Le mot de passe doit contenir au moins un chiffre.",
     "password_needs_special": "Le mot de passe doit contenir au moins un caractère spécial.",
     "service_unavailable": "Désolé. Notre service est temporairement indisponible."
-  }
+  },
+  "continue_with_google": "Continuer avec Google",
+  "continue_with_github": "Continuer avec GitHub",
+  "or_continue_with": "OU"
 }

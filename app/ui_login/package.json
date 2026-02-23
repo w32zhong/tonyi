@@ -20,6 +20,7 @@
     "primeicons": "^7.0.0",
     "primevue": "^4.0.0",
     "vue": "^3.4.21",
+    "vue-router": "^4.6.4",
     "zod": "^4.3.6"
   },
   "devDependencies": {

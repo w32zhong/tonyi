@@ -1,5 +1,7 @@
 {
   "login": "登录",
+  "signup": "注册",
+  "bind": "绑定",
   "username": "邮箱",
   "password": "密码",
   "success_redirect": "欢迎！几秒后重定向...",
@@ -15,5 +17,8 @@
     "password_needs_number": "密码必须包含至少一个数字。",
     "password_needs_special": "密码必须包含至少一个特殊字符。",
     "service_unavailable": "抱歉，我们的服务暂时不可用。"
-  }
+  },
+  "continue_with_google": "使用 Google 继续",
+  "continue_with_github": "使用 GitHub 继续",
+  "or_continue_with": "或者"
 }

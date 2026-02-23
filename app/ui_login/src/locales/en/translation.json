@@ -1,5 +1,7 @@
 {
   "login": "Login",
+  "signup": "Sign Up",
+  "bind": "Bind",
   "username": "Email",
   "password": "Password",
   "success_redirect": "Welcome! Redirecting in a few second(s) ...",
@@ -15,5 +17,8 @@
     "password_needs_number": "Password must contain at least one number.",
     "password_needs_special": "Password must contain at least one special character.",
     "service_unavailable": "Sorry. Our service is temporarily unavailable."
-  }
+  },
+  "continue_with_google": "Continue with Google",
+  "continue_with_github": "Continue with GitHub",
+  "or_continue_with": "OR"
 }
