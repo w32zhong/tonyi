@@ -1,12 +1,95 @@
-const express = require('express');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const jwt = require('jsonwebtoken');
 
 const JWT_COOKIE_NAME = process.env.JWT_COOKIE_NAME || "jwt";
 const PORT = process.env.PORT || "19721";
 const AUTH_BASE_URL = process.env.AUTH_BASE_URL || `http://localhost:${PORT}`;
 const REDIRECT_URL_PREFIX = process.env.REDIRECT_URL_PREFIX || "/login?next=";
+const JWT_SECRET_URL = process.env.JWT_SECRET_URL || `http://auth:${PORT}/secret`;
+
+let cachedSecret = null;
 
 /**
- * Middleware to handle JWT validation and redirection.
+ * Fetches the JWT secret from the auth server.
+ */
+async function getJwtSecret() {
+    if (cachedSecret) return cachedSecret;
+    try {
+        const response = await fetch(JWT_SECRET_URL);
+        const data = await response.json();
+        cachedSecret = data.secret;
+        return cachedSecret;
+    } catch (e) {
+        console.error("Failed to fetch JWT secret:", e.message);
+        return process.env.JWT_SECRET || "fallback-secret";
+    }
+}
+
+/**
+ * Passport Configuration
+ */
+function setupPassport() {
+    passport.use(new GoogleStrategy({
+        clientID: process.env.GOOGLE_CLIENT_ID || 'dummy_id',
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET || 'dummy_secret',
+        callbackURL: "google/callback",
+        proxy: true
+    },
+    (accessToken, refreshToken, profile, done) => {
+        return done(null, profile);
+    }));
+}
+
+/**
+ * Phase 1: Initiation (The "Send Off")
+ * 1. Constructs the Google OAuth URL with clientID, scope, and callbackURL.
+ * 2. Sends a 302 Redirect to the browser to take the user to Google's consent screen.
+ */
+const googleAuthInitiation = passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    session: false
+});
+
+/**
+ * Phase 2: Callback (The "Exchange & Verify")
+ * 1. Detects the 'code' in the URL query string sent back by Google.
+ * 2. Exchanges the 'code' for an 'accessToken' via a background server-to-server request.
+ * 3. Uses the 'accessToken' to fetch the user's profile from Google.
+ * 4. Calls the Strategy's verify callback and populates 'req.user' with the result.
+ */
+async function googleAuthCallback(req, res, next) {
+    // When the browser hits the callback, it doesn't have a token yet, it only has
+    // a temporary "claim check" called a "code".
+    // If Google sent the actual access token in this callback URL instead of a temporary
+    // code, the token key would be dangerously exposed (e.g., by an open Wi-Fi).
+    // Instead, if a hacker gets this "code", they still can't do anything with it.
+    // To exchange that code for an access token, they must also have your Google Oauth2
+    // Client credentials and that secret lives exclusively on your backend server.
+    passport.authenticate('google', { failureRedirect: '../../login', session: false }, async (err, user) => {
+        if (err || !user) return res.redirect('../../login');
+
+        const secret = await getJwtSecret();
+        const token = jwt.sign({
+            id: user.id,
+            displayName: user.displayName,
+            email: user.emails?.[0]?.value,
+            photo: user.photos?.[0]?.value
+        }, secret, { expiresIn: '1h' });
+
+        res.cookie(JWT_COOKIE_NAME, token, {
+            httpOnly: false,
+            secure: true,
+            maxAge: 3600 * 1000
+        });
+
+        const nextPath = req.query.state || '../../private';
+        res.redirect(nextPath);
+    })(req, res, next);
+}
+
+/**
+ * Original Middleware to handle JWT validation and redirection.
  * Replicates the logic of the Python jwt_middleware.
  */
 async function jwtMiddleware(req, res, next) {
@@ -17,14 +100,13 @@ async function jwtMiddleware(req, res, next) {
         return next();
     }
 
-    // 2. Fallback authorization via WEB API
+    // 2. Fallback authorization via WEB API (if accessed bypassing gateway)
     const token = req.cookies[JWT_COOKIE_NAME] || "";
 
     let authUrl;
-    const authBase = AUTH_BASE_URL.replace(/\/$/, ""); // rstrip('/')
+    const authBase = AUTH_BASE_URL.replace(/\/$/, "");
 
     if (authBase.startsWith("/")) {
-        // Construct full URL using request base if it's a relative path
         const protocol = req.headers['x-forwarded-proto'] || req.protocol;
         const host = req.headers['host'];
         authUrl = `${protocol}://${host}${authBase}/authorization`;
@@ -51,6 +133,7 @@ async function jwtMiddleware(req, res, next) {
     } else {
         // Save URL and redirect for authentication
         let originalUrl = req.headers['x-original-uri'];
+        // In Nginx X-Original-URI, it includes the query string.
         if (!originalUrl) {
             originalUrl = req.originalUrl;
         }
@@ -58,13 +141,9 @@ async function jwtMiddleware(req, res, next) {
         const encodedUrl = encodeURIComponent(originalUrl);
         const redirectUrl = `${REDIRECT_URL_PREFIX}${encodedUrl}`;
 
-        // Check if client expects JSON
         const accept = req.headers['accept'] || "";
         if (accept.includes("application/json")) {
-            return res.json({
-                pass: false,
-                redirect: redirectUrl
-            });
+            return res.json({ pass: false, redirect: redirectUrl });
         } else {
             return res.redirect(redirectUrl);
         }
@@ -75,5 +154,8 @@ module.exports = {
     JWT_COOKIE_NAME,
     AUTH_BASE_URL,
     REDIRECT_URL_PREFIX,
-    jwtMiddleware
+    jwtMiddleware,
+    setupPassport,
+    googleAuthInitiation,
+    googleAuthCallback
 };
