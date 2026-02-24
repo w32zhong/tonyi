@@ -69,6 +69,8 @@ print(string.format('[route] rewritten: %s => %s', route, ngx.var.modified_uri))
 local jwt = require "resty.jwt"
 local validators = require "resty.jwt-validators"
 local jwt_cookie_name = os.getenv("JWT_COOKIE_NAME") or "jwt"
+local redirect_url = os.getenv("REDIRECT_URL") or "/login_page"
+local redirect_url_argkey = os.getenv("REDIRECT_URL_ARGKEY") or "next_url"
 
 -- find out the longest prefix match to current path (check_path) from protect keys
 local protected_mode = nil
@@ -107,9 +109,9 @@ if protected_mode then
         end
 
         if not pass then
-            -- Redirect to /login/?next=...
-            local qry = ngx.encode_args({["next"] = full_req_uri})
-            ngx.redirect("/login/?" .. qry) -- terminate and immediately redirect!
+            -- Redirect to, e.g., /login/?next=...
+            local qry = ngx.encode_args({[redirect_url_argkey] = full_req_uri})
+            ngx.redirect(redirect_url .. "?" .. qry) -- terminate and immediately redirect!
         end
 
     else -- protected_mode = internal

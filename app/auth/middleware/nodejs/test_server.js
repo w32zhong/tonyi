@@ -6,7 +6,6 @@ const {
     EnableOAuth2Routes,
     JWT_COOKIE_NAME,
     AUTH_BASE_URL,
-    REDIRECT_URL_PREFIX,
     OAUTH2_CALLBK_PREFIX
 } = require('./middleware');
 
@@ -44,6 +43,5 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`Test server starting on port ${PORT}`);
     console.log(`JWT_COOKIE_NAME: ${JWT_COOKIE_NAME}`);
     console.log(`AUTH_BASE_URL: ${AUTH_BASE_URL}`);
-    console.log(`REDIRECT_URL_PREFIX: ${REDIRECT_URL_PREFIX}`);
     console.log(`OAUTH2_CALLBK_PREFIX: ${OAUTH2_CALLBK_PREFIX}`);
 });

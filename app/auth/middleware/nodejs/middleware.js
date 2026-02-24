@@ -3,7 +3,9 @@ const jwt = require('jsonwebtoken');
 
 const JWT_COOKIE_NAME = process.env.JWT_COOKIE_NAME || "jwt";
 const AUTH_BASE_URL = process.env.AUTH_BASE_URL || `/`;
-const REDIRECT_URL_PREFIX = process.env.REDIRECT_URL_PREFIX || "/login?next=";
+const REDIRECT_URL = process.env.REDIRECT_URL || "/login_page";
+const REDIRECT_URL_ARGKEY = process.env.REDIRECT_URL_ARGKEY || "next_url";
+
 const JWT_SECRET_URL = process.env.JWT_SECRET_URL || `/secret`;
 const OAUTH2_CALLBK_PREFIX = process.env.OAUTH2_CALLBK_PREFIX || `/`;
 const JWT_EXPIRE_DAYS = parseInt(process.env.JWT_EXPIRE_DAYS || "1");
@@ -85,34 +87,48 @@ function EnableOAuth2Routes(app, providers, dev_mode=false) {
                 ...config.authenticateOptions,
                 session: false,
                 callbackURL: getCallbackURL(req),
-                state: req.query.next
+                state: req.query[REDIRECT_URL_ARGKEY] /* save next URL to OAuth2 state */
             })(req, res, next);
         });
 
         app.get(`/oauth2/${provider}/callback`, (req, res, next) => {
             passport.authenticate(provider, {
-                failureRedirect: '/',
                 session: false,
                 callbackURL: getCallbackURL(req)
+            }, async (err, user, info) => {
+                const nextUrl = req.query.state || '/';
+                const encNextUrl = encodeURIComponent(nextUrl);
+                const originUrl = `${REDIRECT_URL}?${REDIRECT_URL_ARGKEY}=${encNextUrl}`;
+                const failureUrl = `${originUrl}&oauth2failure=`;
+
+                if (err || !user) {
+                    console.error(`OAuth2 ${provider} failure:`, err);
+                    return res.redirect(failureUrl + 'provider');
+                }
+
+                try {
+                    const secret = await getJwtSecret();
+                    const expiresIn = dev_mode ? 10 : JWT_EXPIRE_DAYS * 24 * 3600;
+                    const token = jwt.sign(config.mapProfile(user), secret, {
+                        algorithm: 'HS256',
+                        expiresIn: expiresIn
+                    });
+
+                    res.cookie(JWT_COOKIE_NAME, token, {
+                        httpOnly: !dev_mode,
+                        secure: true,
+                        maxAge: expiresIn * 1000
+                    });
+
+                    // Redirect to the original state (unencoded)
+                    res.redirect(nextUrl);
+
+                } catch (e) {
+                    console.error("Token signing error:", e);
+                    return res.redirect(failureUrl + 'jwt');
+                }
+
             })(req, res, next);
-        }, async (req, res) => {
-            const user = req.user;
-            const secret = await getJwtSecret();
-
-            const expiresIn = dev_mode ? 10 : JWT_EXPIRE_DAYS * 24 * 3600;
-            const token = jwt.sign(config.mapProfile(user), secret, {
-                algorithm: 'HS256',
-                expiresIn: expiresIn
-            });
-
-            res.cookie(JWT_COOKIE_NAME, token, {
-                httpOnly: !dev_mode,
-                secure: true,
-                maxAge: expiresIn * 1000
-            });
-
-            const nextPath = req.query.state || '/';
-            res.redirect(nextPath);
         });
     }
 }
@@ -179,7 +195,6 @@ async function jwtMiddleware(req, res, next) {
 module.exports = {
     JWT_COOKIE_NAME,
     AUTH_BASE_URL,
-    REDIRECT_URL_PREFIX,
     OAUTH2_CALLBK_PREFIX,
     jwtMiddleware,
     EnableOAuth2Routes,
