@@ -6,6 +6,7 @@ const AUTH_BASE_URL = process.env.AUTH_BASE_URL || `/`;
 const REDIRECT_URL_PREFIX = process.env.REDIRECT_URL_PREFIX || "/login?next=";
 const JWT_SECRET_URL = process.env.JWT_SECRET_URL || `/secret`;
 const OAUTH2_CALLBK_PREFIX = process.env.OAUTH2_CALLBK_PREFIX || `/`;
+const JWT_EXPIRE_DAYS = parseInt(process.env.JWT_EXPIRE_DAYS || "1");
 
 async function getJwtSecret() {
     try {
@@ -34,6 +35,7 @@ function EnableOAuth2Routes(app, providers, dev_mode=false) {
                 scope: ['profile', 'email']
             },
             mapProfile: (profile) => ({
+                loggedInAs: profile.emails?.[0]?.value || profile.id,
                 id: profile.id,
                 displayName: profile.displayName,
                 email: profile.emails?.[0]?.value,
@@ -51,6 +53,7 @@ function EnableOAuth2Routes(app, providers, dev_mode=false) {
                 scope: ['user:email']
             },
             mapProfile: (profile) => ({
+                loggedInAs: profile.username || profile.id,
                 id: profile.id,
                 displayName: profile.displayName || profile.username,
                 email: profile.emails?.[0]?.value,
@@ -95,12 +98,17 @@ function EnableOAuth2Routes(app, providers, dev_mode=false) {
         }, async (req, res) => {
             const user = req.user;
             const secret = await getJwtSecret();
-            const token = jwt.sign(config.mapProfile(user), secret, { expiresIn: '1h' });
+
+            const expiresIn = dev_mode ? 10 : JWT_EXPIRE_DAYS * 24 * 3600;
+            const token = jwt.sign(config.mapProfile(user), secret, {
+                algorithm: 'HS256',
+                expiresIn: expiresIn
+            });
 
             res.cookie(JWT_COOKIE_NAME, token, {
                 httpOnly: !dev_mode,
                 secure: true,
-                maxAge: 3600 * 1000
+                maxAge: expiresIn * 1000
             });
 
             const nextPath = req.query.state || '/';

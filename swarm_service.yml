@@ -84,6 +84,8 @@ services:
       dockerfile: nodejs/Dockerfile
     environment:
       - JWT_COOKIE_NAME=JWT_Token
+      - LOGIN_MAX_ATTEMPTS=5
+      - JWT_EXPIRE_DAYS=1
       - AUTH_BASE_URL=/auth
       - REDIRECT_URL_PREFIX=/auth-test/login?next=
       - JWT_SECRET_URL=http://auth:19721/secret
