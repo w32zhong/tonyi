@@ -7,18 +7,13 @@ const AUTH_BASE_URL = process.env.AUTH_BASE_URL || `/`;
 const REDIRECT_URL_PREFIX = process.env.REDIRECT_URL_PREFIX || "/login?next=";
 const JWT_SECRET_URL = process.env.JWT_SECRET_URL || `/secret`;
 
-let cachedSecret = null;
-
 /**
  * Fetches the JWT secret from the auth server.
  */
 async function getJwtSecret() {
-    if (cachedSecret) return cachedSecret;
     try {
         const response = await fetch(JWT_SECRET_URL);
-        const data = await response.json();
-        cachedSecret = data.secret;
-        return cachedSecret;
+        return await response.text();
     } catch (e) {
         console.error("Failed to fetch JWT secret:", e.message);
         return process.env.JWT_SECRET || "fallback-secret";
