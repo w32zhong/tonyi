@@ -195,6 +195,8 @@ async function jwtMiddleware(req, res, next) {
 module.exports = {
     JWT_COOKIE_NAME,
     AUTH_BASE_URL,
+    REDIRECT_URL,
+    REDIRECT_URL_ARGKEY,
     OAUTH2_CALLBK_PREFIX,
     jwtMiddleware,
     EnableOAuth2Routes,

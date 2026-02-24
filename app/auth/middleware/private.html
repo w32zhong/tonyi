@@ -2,14 +2,18 @@
 <html>
 <body>
     <h1>Welcome, __USERNAME__</h1>
-    <pre id="out">__PAYLOAD__</pre>
-    <a href="./login?logout=true">Sign out</a>
+    <p>JWT payload:</p><pre>__PAYLOAD__</pre>
+    <p>Raw Cookie:</p><pre id="raw-cookie"></pre>
+    <p>Client-side JWT Payload:</p><pre id="client-payload"></pre>
+    <a href="__REDIRECT_URL__?logout=true">Sign out</a>
     <script>
-        // Minimal way to decode JWT from cookie for learning
         const m = document.cookie.match(/__COOKIE_NAME__=([^;]+)/);
         if (m) {
+            document.getElementById("raw-cookie").textContent = m[0];
             const payload = JSON.parse(atob(m[1].split('.')[1]));
-            console.log("Decoded Token:", payload);
+            document.getElementById("client-payload").textContent = JSON.stringify(payload, null, 2);
+        } else {
+            document.getElementById("raw-cookie").textContent = "No cookie found";
         }
     </script>
 </body>

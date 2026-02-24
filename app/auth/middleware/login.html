@@ -11,7 +11,14 @@
     <button onclick="location.href='./oauth2/google'">Login with Google</button>
     <button onclick="location.href='./oauth2/github'">Login with GitHub</button>
 
+    <div id="message" style="color: green;"></div>
+    <p><a href="./private">Go to Private Page</a></p>
     <script>
+        const params = new URLSearchParams(location.search);
+        if (params.get("logout") === "true") {
+            document.getElementById("message").textContent = "You have been logged out.";
+        }
+
         document.getElementById("login-form").onsubmit = async (e) => {
             e.preventDefault();
             const username = document.getElementById("username").value;

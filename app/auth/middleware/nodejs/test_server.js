@@ -6,6 +6,8 @@ const {
     EnableOAuth2Routes,
     JWT_COOKIE_NAME,
     AUTH_BASE_URL,
+    REDIRECT_URL,
+    REDIRECT_URL_ARGKEY,
     OAUTH2_CALLBK_PREFIX
 } = require('./middleware');
 
@@ -20,6 +22,7 @@ app.get('/login', (req, res) => {
 
     let html = fs.readFileSync(path.join(__dirname, '..', 'login.html'), 'utf8');
     html = html.replace(/__AUTH_BASE_URL__/g, AUTH_BASE_URL);
+    html = html.replace(/__COOKIE_NAME__/g, JWT_COOKIE_NAME);
 
     if (logout) {
         res.clearCookie(JWT_COOKIE_NAME);
@@ -35,6 +38,7 @@ app.get('/private', jwtMiddleware, (req, res) => {
     html = html.replace(/__PAYLOAD__/g, JSON.stringify(jwtPayload, null, 2));
     html = html.replace(/__USERNAME__/g, jwtPayload.loggedInAs || jwtPayload.displayName || "stranger");
     html = html.replace(/__COOKIE_NAME__/g, JWT_COOKIE_NAME);
+    html = html.replace(/__REDIRECT_URL__/g, REDIRECT_URL);
 
     res.send(html);
 });
@@ -43,5 +47,7 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`Test server starting on port ${PORT}`);
     console.log(`JWT_COOKIE_NAME: ${JWT_COOKIE_NAME}`);
     console.log(`AUTH_BASE_URL: ${AUTH_BASE_URL}`);
+    console.log(`REDIRECT_URL: ${REDIRECT_URL}`);
+    console.log(`REDIRECT_URL_ARGKEY: ${REDIRECT_URL_ARGKEY}`);
     console.log(`OAUTH2_CALLBK_PREFIX: ${OAUTH2_CALLBK_PREFIX}`);
 });
