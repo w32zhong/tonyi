@@ -23,6 +23,7 @@
             if (next) {
                 url += `?${REDIRECT_KEY}=${encodeURIComponent(next)}`;
             }
+            console.log('[oauth2 url]', url)
             location.href = url;
         }
 
@@ -32,7 +33,7 @@
         }
 
         document.getElementById("login-form").onsubmit = async (e) => {
-            e.preventDefault();
+            e.preventDefault(); /* avoid browser form submission default behaviour, do AJAX instead. */
             const username = document.getElementById("username").value;
             const password = document.getElementById("password").value;
             const resp = await fetch("__AUTH_BASE_URL__/authentication", {
@@ -41,6 +42,7 @@
                 body: JSON.stringify({ username, password }),
             });
             const result = await resp.json();
+            console.log('[login result]', url)
             if (result.pass) {
                 location.href = new URLSearchParams(location.search).get(REDIRECT_KEY) || "./private";
             } else {
