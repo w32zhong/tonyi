@@ -181,7 +181,7 @@ async function jwtMiddleware(req, res, next) {
         }
 
         const encodedUrl = encodeURIComponent(originalUrl);
-        const redirectUrl = `${REDIRECT_URL_PREFIX}${encodedUrl}`;
+        const redirectUrl = `${REDIRECT_URL}?${REDIRECT_URL_ARGKEY}=${encodedUrl}`;
 
         const accept = req.headers['accept'] || "";
         if (accept.includes("application/json")) {

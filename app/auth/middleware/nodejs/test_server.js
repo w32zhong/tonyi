@@ -23,6 +23,7 @@ app.get('/login', (req, res) => {
     let html = fs.readFileSync(path.join(__dirname, '..', 'login.html'), 'utf8');
     html = html.replace(/__AUTH_BASE_URL__/g, AUTH_BASE_URL);
     html = html.replace(/__COOKIE_NAME__/g, JWT_COOKIE_NAME);
+    html = html.replace(/__REDIRECT_URL_ARGKEY__/g, REDIRECT_URL_ARGKEY);
 
     if (logout) {
         res.clearCookie(JWT_COOKIE_NAME);
