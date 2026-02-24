@@ -10,12 +10,11 @@ const {
     googleAuthCallback,
     AUTH_BASE_URL,
     JWT_COOKIE_NAME,
-    REDIRECT_URL_PREFIX
 } = require('./middleware');
 
-const app = express();
 const TEST_PORT = process.env.TEST_PORT || 18000;
 
+const app = express();
 app.use(cookieParser());
 
 /**
@@ -71,5 +70,4 @@ app.listen(TEST_PORT, '0.0.0.0', () => {
     console.log(`Test server starting on port ${TEST_PORT}`);
     console.log(`AUTH_BASE_URL: ${AUTH_BASE_URL}`);
     console.log(`JWT_COOKIE_NAME: ${JWT_COOKIE_NAME}`);
-    console.log(`REDIRECT_URL_PREFIX: ${REDIRECT_URL_PREFIX}`);
 });

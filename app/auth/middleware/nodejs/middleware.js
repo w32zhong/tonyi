@@ -33,7 +33,6 @@ function setupPassport() {
     passport.use(new GoogleStrategy({
         clientID: process.env.GOOGLE_CLIENT_ID || 'dummy_id',
         clientSecret: process.env.GOOGLE_CLIENT_SECRET || 'dummy_secret',
-        callbackURL: "google/callback",
         proxy: true
     },
     (accessToken, refreshToken, profile, done) => {
@@ -42,23 +41,58 @@ function setupPassport() {
 }
 
 /**
+ * Helper to construct the absolute callback URL based on the Gateway's prefix.
+ * We must force it to be absolute and trust the protocol/host from the Gateway.
+ */
+function getDynamicCallbackURL(req) {
+    let protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.headers['host'];
+
+    // Force HTTPS for non-localhost domains as required by Google
+    if (!host.includes('localhost') && !host.includes('127.0.0.1')) {
+        protocol = 'https';
+    }
+
+    const originalUri = req.headers['x-original-uri'] || req.originalUrl;
+    const path = originalUri.split('?')[0];
+
+    // Construct absolute URL
+    const baseUrl = `${protocol}://${host}${path}`;
+    const fullUrl = baseUrl.endsWith('/') ? `${baseUrl}callback` : `${baseUrl}/callback`;
+    console.log(`DEBUG [v2]: Generated Callback URL: ${fullUrl}`);
+    return fullUrl;
+}
+
+/**
  * Phase 1: Initiation (The "Send Off")
  * 1. Constructs the Google OAuth URL with clientID, scope, and callbackURL.
  * 2. Sends a 302 Redirect to the browser to take the user to Google's consent screen.
  */
-const googleAuthInitiation = passport.authenticate('google', {
-    scope: ['profile', 'email'],
-    session: false
-});
+const googleAuthInitiation = (req, res, next) => {
+    passport.authenticate('google', {
+        scope: ['profile', 'email'],
+        session: false,
+        callbackURL: getDynamicCallbackURL(req)
+    })(req, res, next);
+};
 
 /**
  * Phase 2: Callback (The "Exchange & Verify")
- * 1. Detects the 'code' in the URL query string sent back by Google.
- * 2. Exchanges the 'code' for an 'accessToken' via a background server-to-server request.
- * 3. Uses the 'accessToken' to fetch the user's profile from Google.
- * 4. Calls the Strategy's verify callback and populates 'req.user' with the result.
  */
 async function googleAuthCallback(req, res, next) {
+    let protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.headers['host'];
+
+    // Force HTTPS for non-localhost domains as required by Google
+    if (!host.includes('localhost') && !host.includes('127.0.0.1')) {
+        protocol = 'https';
+    }
+
+    const originalUri = req.headers['x-original-uri'] || req.originalUrl;
+    const currentPath = originalUri.split('?')[0];
+    const absoluteCallbackURL = `${protocol}://${host}${currentPath}`;
+    console.log(`DEBUG [v2]: Callback Verification URL: ${absoluteCallbackURL}`);
+
     // When the browser hits the callback, it doesn't have a token yet, it only has
     // a temporary "claim check" called a "code".
     // If Google sent the actual access token in this callback URL instead of a temporary
@@ -66,7 +100,11 @@ async function googleAuthCallback(req, res, next) {
     // Instead, if a hacker gets this "code", they still can't do anything with it.
     // To exchange that code for an access token, they must also have your Google Oauth2
     // Client credentials and that secret lives exclusively on your backend server.
-    passport.authenticate('google', { failureRedirect: '../../login', session: false }, async (err, user) => {
+    passport.authenticate('google', {
+        failureRedirect: '../../login',
+        session: false,
+        callbackURL: absoluteCallbackURL
+    }, async (err, user) => {
         if (err || !user) return res.redirect('../../login');
 
         const secret = await getJwtSecret();
