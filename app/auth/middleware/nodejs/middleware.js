@@ -22,60 +22,90 @@ function EnableOAuth2Routes(app, providers) {
     app.use(cookieParser());
     app.use(passport.initialize());
 
-    for (const provider of providers) {
-        if (provider === 'google') {
-            const Strategy = require('passport-google-oauth20').Strategy;
-            passport.use(new Strategy({
-                    clientID: process.env.OAUTH2_GOOGLE_CLIENT_ID,
-                    clientSecret: process.env.OAUTH2_GOOGLE_CLIENT_SECRET,
-                    proxy: true
-                },
-                (accessToken, refreshToken, profile, done) => {
-                    return done(null, profile);
-                }
-            ));
+    const configs = {
+        google: {
+            Strategy: require('passport-google-oauth20').Strategy,
+            options: {
+                clientID: process.env.OAUTH2_GOOGLE_CLIENT_ID,
+                clientSecret: process.env.OAUTH2_GOOGLE_CLIENT_SECRET,
+                proxy: true
+            },
+            authenticateOptions: {
+                scope: ['profile', 'email']
+            },
+            mapProfile: (profile) => ({
+                id: profile.id,
+                displayName: profile.displayName,
+                email: profile.emails?.[0]?.value,
+                photo: profile.photos?.[0]?.value
+            })
+        },
+        github: {
+            Strategy: require('passport-github2').Strategy,
+            options: {
+                clientID: process.env.OAUTH2_GITHUB_CLIENT_ID,
+                clientSecret: process.env.OAUTH2_GITHUB_CLIENT_SECRET,
+                proxy: true
+            },
+            authenticateOptions: {
+                scope: ['user:email']
+            },
+            mapProfile: (profile) => ({
+                id: profile.id,
+                displayName: profile.displayName || profile.username,
+                email: profile.emails?.[0]?.value,
+                photo: profile.photos?.[0]?.value
+            })
+        }
+    };
 
-            let callbackURL = `${OAUTH2_CALLBK_PREFIX}/oauth2/${provider}/callback`;
-            app.get(`/oauth2/${provider}`, (req, res, next) => {
-                callbackURL = callbackURL.replace("__REQ_DOMAIN__", req.get('host'));
-                passport.authenticate(provider, {
-                    scope: ['profile', 'email'],
-                    session: false,
-                    callbackURL: callbackURL
-                })(req, res, next);
+    for (const provider of providers) {
+        const config = configs[provider];
+        if (!config) {
+            console.error("Unhandled provider:", provider);
+            continue;
+        }
+
+        passport.use(provider,
+            new config.Strategy(config.options, (accessToken, refreshToken, profile, done) => {
+                return done(null, profile);
+            })
+        );
+
+        const getCallbackURL = (req) => {
+            let url = `${OAUTH2_CALLBK_PREFIX}/oauth2/${provider}/callback`;
+            return url.replace("__REQ_DOMAIN__", req.get('host'));
+        };
+
+        app.get(`/oauth2/${provider}`, (req, res, next) => {
+            passport.authenticate(provider, {
+                ...config.authenticateOptions,
+                session: false,
+                callbackURL: getCallbackURL(req),
+                state: req.query.next
+            })(req, res, next);
+        });
+
+        app.get(`/oauth2/${provider}/callback`, (req, res, next) => {
+            passport.authenticate(provider, {
+                failureRedirect: '/',
+                session: false,
+                callbackURL: getCallbackURL(req)
+            })(req, res, next);
+        }, async (req, res) => {
+            const user = req.user;
+            const secret = await getJwtSecret();
+            const token = jwt.sign(config.mapProfile(user), secret, { expiresIn: '1h' });
+
+            res.cookie(JWT_COOKIE_NAME, token, {
+                httpOnly: false,
+                secure: true,
+                maxAge: 3600 * 1000
             });
 
-            app.get(`/oauth2/${provider}/callback`,
-                passport.authenticate('google', { failureRedirect: '/', session: false }),
-                async (req, res) => {
-                    const user = req.user;
-                    const secret = await getJwtSecret();
-                    const token = jwt.sign({
-                        id: user.id,
-                        displayName: user.displayName,
-                        email: user.emails?.[0]?.value,
-                        photo: user.photos?.[0]?.value
-                    }, secret, { expiresIn: '1h' });
-
-                    res.cookie(JWT_COOKIE_NAME, token, {
-                        httpOnly: false, // Set to false so frontend JS can read it for this learning code
-                        secure: true, // browser will only send the cookie if it is HTTPS, this is true even
-                                      // in dev mode because most OAuth2 providers requires setting an HTTPS
-                                      // Authorized redirect URI to even test the OAuth2 process.
-                        maxAge: 3600 * 1000 // 1hr in Express.js, maxAge is in milliseconds
-                    });
-
-                    const nextPath = req.query.state;
-                    res.redirect(nextPath);
-                }
-            );
-
-        } else if (provider == 'github') {
-            // TODO
-
-        } else {
-            console.error("Unhandled provider:", provider);
-        }
+            const nextPath = req.query.state || '/';
+            res.redirect(nextPath);
+        });
     }
 }
 
