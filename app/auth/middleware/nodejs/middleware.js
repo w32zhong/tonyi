@@ -1,15 +1,12 @@
 const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const jwt = require('jsonwebtoken');
 
 const JWT_COOKIE_NAME = process.env.JWT_COOKIE_NAME || "jwt";
 const AUTH_BASE_URL = process.env.AUTH_BASE_URL || `/`;
 const REDIRECT_URL_PREFIX = process.env.REDIRECT_URL_PREFIX || "/login?next=";
 const JWT_SECRET_URL = process.env.JWT_SECRET_URL || `/secret`;
+const OAUTH2_CALLBK_PREFIX = process.env.OAUTH2_CALLBK_PREFIX || `/`;
 
-/**
- * Fetches the JWT secret from the auth server.
- */
 async function getJwtSecret() {
     try {
         const response = await fetch(JWT_SECRET_URL);
@@ -20,110 +17,68 @@ async function getJwtSecret() {
     }
 }
 
-/**
- * Passport Configuration
- */
-function setupPassport() {
-    passport.use(new GoogleStrategy({
-        clientID: process.env.GOOGLE_CLIENT_ID || 'dummy_id',
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET || 'dummy_secret',
-        proxy: true
-    },
-    (accessToken, refreshToken, profile, done) => {
-        return done(null, profile);
-    }));
-}
+function EnableOAuth2Routes(app, providers) {
+    const cookieParser = require('cookie-parser');
+    app.use(cookieParser());
+    app.use(passport.initialize());
 
-/**
- * Helper to construct the absolute callback URL based on the Gateway's prefix.
- * We must force it to be absolute and trust the protocol/host from the Gateway.
- */
-function getDynamicCallbackURL(req) {
-    let protocol = req.headers['x-forwarded-proto'] || req.protocol;
-    const host = req.headers['x-forwarded-host'] || req.headers['host'];
+    for (const provider of providers) {
+        if (provider === 'google') {
+            const Strategy = require('passport-google-oauth20').Strategy;
+            passport.use(new Strategy({
+                    clientID: process.env.OAUTH2_GOOGLE_CLIENT_ID,
+                    clientSecret: process.env.OAUTH2_GOOGLE_CLIENT_SECRET,
+                    proxy: true
+                },
+                (accessToken, refreshToken, profile, done) => {
+                    return done(null, profile);
+                }
+            ));
 
-    // Force HTTPS for non-localhost domains as required by Google
-    if (!host.includes('localhost') && !host.includes('127.0.0.1')) {
-        protocol = 'https';
+            let callbackURL = `${OAUTH2_CALLBK_PREFIX}/oauth2/${provider}/callback`;
+            app.get(`/oauth2/${provider}`, (req, res, next) => {
+                callbackURL = callbackURL.replace("__REQ_DOMAIN__", req.get('host'));
+                passport.authenticate(provider, {
+                    scope: ['profile', 'email'],
+                    session: false,
+                    callbackURL: callbackURL
+                })(req, res, next);
+            });
+
+            app.get(`/oauth2/${provider}/callback`,
+                passport.authenticate('google', { failureRedirect: '/', session: false }),
+                async (req, res) => {
+                    const user = req.user;
+                    const secret = await getJwtSecret();
+                    const token = jwt.sign({
+                        id: user.id,
+                        displayName: user.displayName,
+                        email: user.emails?.[0]?.value,
+                        photo: user.photos?.[0]?.value
+                    }, secret, { expiresIn: '1h' });
+
+                    res.cookie(JWT_COOKIE_NAME, token, {
+                        httpOnly: false, // Set to false so frontend JS can read it for this learning code
+                        secure: true, // browser will only send the cookie if it is HTTPS, this is true even
+                                      // in dev mode because most OAuth2 providers requires setting an HTTPS
+                                      // Authorized redirect URI to even test the OAuth2 process.
+                        maxAge: 3600 * 1000 // 1hr in Express.js, maxAge is in milliseconds
+                    });
+
+                    const nextPath = req.query.state;
+                    res.redirect(nextPath);
+                }
+            );
+
+        } else if (provider == 'github') {
+            // TODO
+
+        } else {
+            console.error("Unhandled provider:", provider);
+        }
     }
-
-    const originalUri = req.headers['x-original-uri'] || req.originalUrl;
-    const path = originalUri.split('?')[0];
-
-    // Construct absolute URL
-    const baseUrl = `${protocol}://${host}${path}`;
-    const fullUrl = baseUrl.endsWith('/') ? `${baseUrl}callback` : `${baseUrl}/callback`;
-    console.log(`DEBUG [v2]: Generated Callback URL: ${fullUrl}`);
-    return fullUrl;
 }
 
-/**
- * Phase 1: Initiation (The "Send Off")
- * 1. Constructs the Google OAuth URL with clientID, scope, and callbackURL.
- * 2. Sends a 302 Redirect to the browser to take the user to Google's consent screen.
- */
-const googleAuthInitiation = (req, res, next) => {
-    passport.authenticate('google', {
-        scope: ['profile', 'email'],
-        session: false,
-        callbackURL: getDynamicCallbackURL(req)
-    })(req, res, next);
-};
-
-/**
- * Phase 2: Callback (The "Exchange & Verify")
- */
-async function googleAuthCallback(req, res, next) {
-    let protocol = req.headers['x-forwarded-proto'] || req.protocol;
-    const host = req.headers['x-forwarded-host'] || req.headers['host'];
-
-    // Force HTTPS for non-localhost domains as required by Google
-    if (!host.includes('localhost') && !host.includes('127.0.0.1')) {
-        protocol = 'https';
-    }
-
-    const originalUri = req.headers['x-original-uri'] || req.originalUrl;
-    const currentPath = originalUri.split('?')[0];
-    const absoluteCallbackURL = `${protocol}://${host}${currentPath}`;
-    console.log(`DEBUG [v2]: Callback Verification URL: ${absoluteCallbackURL}`);
-
-    // When the browser hits the callback, it doesn't have a token yet, it only has
-    // a temporary "claim check" called a "code".
-    // If Google sent the actual access token in this callback URL instead of a temporary
-    // code, the token key would be dangerously exposed (e.g., by an open Wi-Fi).
-    // Instead, if a hacker gets this "code", they still can't do anything with it.
-    // To exchange that code for an access token, they must also have your Google Oauth2
-    // Client credentials and that secret lives exclusively on your backend server.
-    passport.authenticate('google', {
-        failureRedirect: '../../login',
-        session: false,
-        callbackURL: absoluteCallbackURL
-    }, async (err, user) => {
-        if (err || !user) return res.redirect('../../login');
-
-        const secret = await getJwtSecret();
-        const token = jwt.sign({
-            id: user.id,
-            displayName: user.displayName,
-            email: user.emails?.[0]?.value,
-            photo: user.photos?.[0]?.value
-        }, secret, { expiresIn: '1h' });
-
-        res.cookie(JWT_COOKIE_NAME, token, {
-            httpOnly: false,
-            secure: true,
-            maxAge: 3600 * 1000
-        });
-
-        const nextPath = req.query.state || '../../private';
-        res.redirect(nextPath);
-    })(req, res, next);
-}
-
-/**
- * Original Middleware to handle JWT validation and redirection.
- * Replicates the logic of the Python jwt_middleware.
- */
 async function jwtMiddleware(req, res, next) {
     // 1. Short-circuit: if X-Remote-User is injected by the Gateway, trust it completely.
     const remoteUser = req.headers['x-remote-user'];
@@ -162,6 +117,7 @@ async function jwtMiddleware(req, res, next) {
         // Pass the middleware check
         req.jwtPayload = result.msg;
         return next();
+
     } else {
         // Save URL and redirect for authentication
         let originalUrl = req.headers['x-original-uri'];
@@ -186,8 +142,7 @@ module.exports = {
     JWT_COOKIE_NAME,
     AUTH_BASE_URL,
     REDIRECT_URL_PREFIX,
+    OAUTH2_CALLBK_PREFIX,
     jwtMiddleware,
-    setupPassport,
-    googleAuthInitiation,
-    googleAuthCallback
+    EnableOAuth2Routes,
 };
