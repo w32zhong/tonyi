@@ -17,7 +17,7 @@ async function getJwtSecret() {
     }
 }
 
-function EnableOAuth2Routes(app, providers) {
+function EnableOAuth2Routes(app, providers, dev_mode=false) {
     const cookieParser = require('cookie-parser');
     app.use(cookieParser());
     app.use(passport.initialize());
@@ -98,7 +98,7 @@ function EnableOAuth2Routes(app, providers) {
             const token = jwt.sign(config.mapProfile(user), secret, { expiresIn: '1h' });
 
             res.cookie(JWT_COOKIE_NAME, token, {
-                httpOnly: false,
+                httpOnly: !dev_mode,
                 secure: true,
                 maxAge: 3600 * 1000
             });

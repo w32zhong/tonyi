@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 3000;
 
 const app = express();
 
-EnableOAuth2Routes(app, ["google", "github"]);
+EnableOAuth2Routes(app, ["google", "github"], true);
 
 app.get('/login', (req, res) => {
     const logout = req.query.logout === 'true';
