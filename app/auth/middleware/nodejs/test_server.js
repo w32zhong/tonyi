@@ -12,7 +12,7 @@ const {
     JWT_COOKIE_NAME,
 } = require('./middleware');
 
-const TEST_PORT = process.env.TEST_PORT || 18000;
+const PORT = process.env.PORT || 18000;
 
 const app = express();
 app.use(cookieParser());
@@ -66,8 +66,8 @@ app.get('/private', jwtMiddleware, (req, res) => {
     res.send(html);
 });
 
-app.listen(TEST_PORT, '0.0.0.0', () => {
-    console.log(`Test server starting on port ${TEST_PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Test server starting on port ${PORT}`);
     console.log(`AUTH_BASE_URL: ${AUTH_BASE_URL}`);
     console.log(`JWT_COOKIE_NAME: ${JWT_COOKIE_NAME}`);
 });

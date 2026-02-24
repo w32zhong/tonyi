@@ -3,10 +3,9 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const jwt = require('jsonwebtoken');
 
 const JWT_COOKIE_NAME = process.env.JWT_COOKIE_NAME || "jwt";
-const PORT = process.env.PORT || "19721";
-const AUTH_BASE_URL = process.env.AUTH_BASE_URL || `http://localhost:${PORT}`;
+const AUTH_BASE_URL = process.env.AUTH_BASE_URL || `/`;
 const REDIRECT_URL_PREFIX = process.env.REDIRECT_URL_PREFIX || "/login?next=";
-const JWT_SECRET_URL = process.env.JWT_SECRET_URL || `http://auth:${PORT}/secret`;
+const JWT_SECRET_URL = process.env.JWT_SECRET_URL || `/secret`;
 
 let cachedSecret = null;
 

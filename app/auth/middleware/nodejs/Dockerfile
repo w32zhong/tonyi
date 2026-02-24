@@ -8,7 +8,7 @@ RUN npm install --omit=dev
 
 # Copy middleware code
 COPY nodejs/middleware.js .
-COPY nodejs/server.js .
+COPY nodejs/test_server.js .
 
 # Copy shared HTML templates from parent (assuming build context is app/auth/middleware)
 COPY login.html ../
@@ -16,4 +16,4 @@ COPY private.html ../
 
 EXPOSE 18000
 
-CMD ["node", "server.js"]
+CMD ["node", "test_server.js"]
