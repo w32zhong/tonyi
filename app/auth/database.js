@@ -342,9 +342,11 @@ async function getJwtSecret() {
 
 // Main execution block
 if (require.main === module) {
+  const avail_fields = '[AuthUser.uid, AuthEmail.email, AuthOAuth2.sub]'
   program
     .arguments('[args...]')
     .option('--reset', 'Reset and then initialize database (with an admin)')
+    .option('--lookup-user-by', `Lookup user by any of ${avail_fields}`)
     .option('--bind-or-change-password', 'Bind or change password for user')
     .option('--verify-email-and-password', 'Verify email and password')
     .option('--rotate-jwt', 'Rotate the JWT secret')
@@ -372,6 +374,19 @@ if (require.main === module) {
         await createOrMapUserWithEmail(emailize('no_password_user'));
         /* for test: a user without a password (only through OAuth2) */
         await createOrMapUserWithOauth2('localtest', 'oauth_only_user', {'age': 30});
+
+      } else if (options.lookupUserBy) {
+        const [field, id] = program.args;
+        if (!field || !id) {
+           console.error("Error: Please provide field and ID arguments.");
+           process.exit(1);
+        }
+        const user = await getUserBy(field, id);
+        if (user) {
+          console.log('[found user]', user);
+        } else {
+          console.log("User not found.");
+        }
 
       } else if (options.bindOrChangePassword) {
         const [email, password] = program.args;
