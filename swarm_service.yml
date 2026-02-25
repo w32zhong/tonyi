@@ -68,41 +68,22 @@ services:
       - LOGIN_MAX_ATTEMPTS=10
       - JWT_EXPIRE_DAYS=5
       - JWT_COOKIE_NAME=JWT_Token
-  #  deploy:
-  #    labels:
-  #      gateway.route: auth
-  #      gateway.port: 19721
-  #      gateway.limits: '{"rate": 1, "burst": 10, "conn": 10}'
-  #      gateway.internal: /secret
-  #  networks:
-  #    - gateway_net
-  #    - proxy_net
-
-  #auth_test:
-  #  # visit http://hostname/auth-test/private
-  #  image: auth_test_nodejs_middleware:latest
-  #  build:
-  #    context: ./app/auth/middleware
-  #    dockerfile: nodejs/Dockerfile
-  #  environment:
-  #    - JWT_COOKIE_NAME=JWT_Token
-  #    - LOGIN_MAX_ATTEMPTS=5
-  #    - JWT_EXPIRE_DAYS=1
-  #    - AUTH_BASE_URL=/auth
-  #    - REDIRECT_URL=/auth-test/login
-  #    - REDIRECT_URL_ARGKEY=next
-  #    - JWT_SECRET_URL=http://auth:19721/secret
-  #    - OAUTH2_CALLBK_PREFIX=https://__REQ_DOMAIN__/auth-test
-  #    - OAUTH2_GOOGLE_CLIENT_ID=${OAUTH2_GOOGLE_CLIENT_ID}
-  #    - OAUTH2_GOOGLE_CLIENT_SECRET=${OAUTH2_GOOGLE_CLIENT_SECRET}
-  #    - OAUTH2_GITHUB_CLIENT_ID=${OAUTH2_GITHUB_CLIENT_ID}
-  #    - OAUTH2_GITHUB_CLIENT_SECRET=${OAUTH2_GITHUB_CLIENT_SECRET}
-  #  deploy:
-  #    labels:
-  #      gateway.route: auth-test
-  #      gateway.port: 3000
-  #  networks:
-  #    - gateway_net
+      - REDIRECT_URL=/login
+      - REDIRECT_URL_ARGKEY=next
+      - OAUTH2_CALLBK_PREFIX=https://__REQ_DOMAIN__/auth
+      - OAUTH2_GOOGLE_CLIENT_ID=${OAUTH2_GOOGLE_CLIENT_ID}
+      - OAUTH2_GOOGLE_CLIENT_SECRET=${OAUTH2_GOOGLE_CLIENT_SECRET}
+      - OAUTH2_GITHUB_CLIENT_ID=${OAUTH2_GITHUB_CLIENT_ID}
+      - OAUTH2_GITHUB_CLIENT_SECRET=${OAUTH2_GITHUB_CLIENT_SECRET}
+    deploy:
+      labels:
+        gateway.route: auth
+        gateway.port: 19721
+        gateway.limits: '{"rate": 1, "burst": 10, "conn": 10}'
+        gateway.internal: /secret
+    networks:
+      - gateway_net
+      - proxy_net
 
   ui_404:
     image: ui_404:latest
