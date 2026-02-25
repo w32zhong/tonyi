@@ -419,17 +419,17 @@ if (require.main === module) {
         const [adminUid] = await createOrMapUserWithEmail(emailize('admin'));
         await bindOrChangePassword(adminUid, 'changeme!');
 
-        /* for test: bind email */
-        await bindOrChangeEmail(adminUid, 'admin_alias@admin.local');
-
         /* for test: bind oauth account */
-        await bindOAuth2Account(adminUid, '3rd_party', 'foreign-admin', {'age': 20});
+        await bindOAuth2Account(adminUid, 'local', 'foreign-admin', {'age': 20});
 
         /* for test: a user without a password (only verified email) */
         await createOrMapUserWithEmail(emailize('no_password_user'));
 
         /* for test: a user without a password (only through OAuth2) */
-        await createOrMapUserWithOauth2('localtest', 'oauth_only_user', {'age': 30});
+        const [testUid] = await createOrMapUserWithOauth2('local', 'oauth_only_user', {'age': 30});
+
+        /* for test: bind email */
+        await bindOrChangeEmail(testUid, 'oauth_only_user@bind_mail.local');
 
       } else if (options.lookupUserBy) {
         const [field, id] = program.args;
@@ -487,23 +487,23 @@ if (require.main === module) {
 
         if (user) {
           console.log('[found user]', user)
+          let successful = false;
           if (user.hashed_password) {
-            const successful = await passhash.verifyPassword(user.hashed_password, password);
+            successful = await passhash.verifyPassword(user.hashed_password, password);
             console.log('verify successful?', successful);
-            await storeLoginAttempt("127.0.0.1", user.uid, successful);
           } else {
             console.log("User has no password set (OAuth2 only?)");
-            await storeLoginAttempt("127.0.0.1", null, false);
           }
-
-          const N = 5;
-          const [attempts, records] = await getLoginAttempts("127.0.0.1", N);
-          console.log(`Failed consecutive attempts in last ${N} mins: ${attempts}`);
-          console.log(records)
-
+          await storeLoginAttempt("127.0.0.1", user.uid, successful);
         } else {
+          await storeLoginAttempt("127.0.0.1", null, false);
           console.log("User not found.");
         }
+
+        const N = 5;
+        const [attempts, records] = await getLoginAttempts("127.0.0.1", N);
+        console.log(`Failed consecutive attempts in last ${N} mins: ${attempts}`);
+        console.log(records)
 
       } else if (options.rotateJwt) {
         const newSecret = await rotateJwtSecret();
