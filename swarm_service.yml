@@ -63,6 +63,7 @@ services:
       context: ./app/auth
       dockerfile: Dockerfile
     environment:
+      - NODE_ENV=production
       - DB_URL=postgresql://${DB_USER}:${DB_PASS}@wireguard_server:5432/backend_db
       - LOGIN_MAX_ATTEMPTS=10
       - JWT_EXPIRE_DAYS=5

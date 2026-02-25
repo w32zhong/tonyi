@@ -3,21 +3,25 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const database = require('./database');
 const passhash = require('./passhash');
+const passport = require('passport');
 
-// Configuration
+const PORT = parseInt(process.env.PORT || "19721", 10);
+const REDIRECT_URL = process.env.REDIRECT_URL || "/login_page";
+const REDIRECT_URL_ARGKEY = process.env.REDIRECT_URL_ARGKEY || "next_url";
+const OAUTH2_CALLBK_PREFIX = process.env.OAUTH2_CALLBK_PREFIX || `/`;
+const JWT_COOKIE_NAME = process.env.JWT_COOKIE_NAME || "jwt";
 const LOGIN_MAX_ATTEMPTS = parseInt(process.env.LOGIN_MAX_ATTEMPTS || "5");
 const LOGIN_ATTEMPTS_SPAN = parseInt(process.env.LOGIN_MAX_TIMESPAN || (24 * 60).toString()); // minutes
 const JWT_EXPIRE_DAYS = parseInt(process.env.JWT_EXPIRE_DAYS || "1");
 
 /**
- * Login a user
+ * Login a user via email and password
  * @param {string} ipAddress - The IP address of the requester
  * @param {string} email - The user's email
  * @param {string} password - The password provided
- * @param {boolean} debug - Debug mode flag
  * @returns {Promise<[boolean, Object]>} [success, result/error info]
  */
-async function login_via_email_and_password(ipAddress, email, password, debug = false) {
+async function login_via_email_and_password(ipAddress, email, password) {
   console.log(`[login user] ${email}`);
 
   try {
@@ -53,7 +57,8 @@ async function login_via_email_and_password(ipAddress, email, password, debug = 
     if (user && user.hashed_password && await passhash.verifyPassword(user.hashed_password, password)) {
       // Success logic
       const now = Math.floor(Date.now() / 1000);
-      const durationSeconds = debug ? 10 : JWT_EXPIRE_DAYS * 24 * 60 * 60;
+      const isDev = process.env.NODE_ENV === 'development';
+      const durationSeconds = isDev ? 10 : JWT_EXPIRE_DAYS * 24 * 60 * 60;
 
       const exp = now + durationSeconds;
       const info = {
@@ -116,14 +121,131 @@ async function verify(token) {
   }
 }
 
-// --- HTTP Server (Daemon) ---
+function EnableOAuth2Routes(app, providers) {
+    app.use(passport.initialize());
+    const isDev = process.env.NODE_ENV === 'development';
 
+    const configs = {
+        google: {
+            Strategy: require('passport-google-oauth20').Strategy,
+            options: {
+                clientID: process.env.OAUTH2_GOOGLE_CLIENT_ID,
+                clientSecret: process.env.OAUTH2_GOOGLE_CLIENT_SECRET,
+                proxy: true
+            },
+            authenticateOptions: {
+                scope: ['profile', 'email']
+            },
+            mapProfile: (profile) => ({
+                loggedInAs: profile.emails?.[0]?.value || profile.id,
+                id: profile.id,
+                displayName: profile.displayName,
+                email: profile.emails?.[0]?.value,
+                photo: profile.photos?.[0]?.value
+            })
+        },
+        github: {
+            Strategy: require('passport-github2').Strategy,
+            options: {
+                clientID: process.env.OAUTH2_GITHUB_CLIENT_ID,
+                clientSecret: process.env.OAUTH2_GITHUB_CLIENT_SECRET,
+                proxy: true
+            },
+            authenticateOptions: {
+                scope: ['user:email']
+            },
+            mapProfile: (profile) => ({
+                loggedInAs: profile.username || profile.id,
+                id: profile.id,
+                displayName: profile.displayName || profile.username,
+                email: profile.emails?.[0]?.value,
+                photo: profile.photos?.[0]?.value
+            })
+        }
+    };
+
+    for (const provider of providers) {
+        const config = configs[provider];
+        if (!config) {
+            console.error("Unhandled provider:", provider);
+            continue;
+        }
+
+        passport.use(provider,
+            new config.Strategy(config.options, (accessToken, refreshToken, profile, done) => {
+                return done(null, profile);
+            })
+        );
+
+        const getCallbackURL = (req) => {
+            let url = `${OAUTH2_CALLBK_PREFIX}/oauth2/${provider}/callback`;
+            return url.replace("__REQ_DOMAIN__", req.get('host'));
+        };
+
+        app.get(`/oauth2/${provider}`, (req, res, next) => {
+            passport.authenticate(provider, {
+                ...config.authenticateOptions,
+                session: false,
+                callbackURL: getCallbackURL(req),
+                state: req.query[REDIRECT_URL_ARGKEY] /* save next URL to OAuth2 state */
+            })(req, res, next);
+        });
+
+        app.get(`/oauth2/${provider}/callback`, (req, res, next) => {
+            passport.authenticate(provider, {
+                session: false,
+                callbackURL: getCallbackURL(req)
+            }, async (err, user, info) => {
+                const nextUrl = req.query.state || '/';
+                const encNextUrl = encodeURIComponent(nextUrl);
+                const originUrl = `${REDIRECT_URL}?${REDIRECT_URL_ARGKEY}=${encNextUrl}`;
+                const failureUrl = `${originUrl}&oauth2failure=`;
+
+                if (err || !user) {
+                    console.error(`OAuth2 ${provider} failure:`, err);
+                    return res.redirect(failureUrl + 'provider');
+                }
+
+                try {
+                    // Call the DB directly for the secret instead of HTTP fetching
+                    const secret = await database.getJwtSecret();
+                    const expiresIn = isDev ? 10 : JWT_EXPIRE_DAYS * 24 * 3600;
+
+                    // Note: Here you'd ideally use createOrMapUserWithOauth2
+                    // to ensure they have an internal UID mapping, then put uid in payload.
+                    // For now, mirroring old behavior:
+                    const payload = config.mapProfile(user);
+
+                    const token = jwt.sign(payload, secret, {
+                        algorithm: 'HS256',
+                        expiresIn: expiresIn
+                    });
+
+                    res.cookie(JWT_COOKIE_NAME, token, {
+                        httpOnly: !isDev,
+                        secure: true,
+                        maxAge: expiresIn * 1000
+                    });
+
+                    // Redirect to the original state (unencoded)
+                    res.redirect(nextUrl);
+
+                } catch (e) {
+                    console.error("Token signing error:", e);
+                    return res.redirect(failureUrl + 'jwt');
+                }
+
+            })(req, res, next);
+        });
+    }
+}
+
+// --- HTTP Server ---
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
-const JWT_COOKIE_NAME = process.env.JWT_COOKIE_NAME || "jwt";
-const PORT = parseInt(process.env.PORT || "19721", 10);
+EnableOAuth2Routes(app, ['google', 'github']);
 
 app.post('/authorization', async (req, res) => {
   const token = req.body.token || "";
@@ -134,11 +256,10 @@ app.post('/authorization', async (req, res) => {
 app.post('/authentication', async (req, res) => {
   const username = req.body.username || "";
   const password = req.body.password || "";
-  const debug = req.body.debug || false;
 
   const ip_addr = req.headers['x-real-ip'] || req.ip || "127.0.0.1";
 
-  const [pass_check, msg] = await login_via_email_and_password(ip_addr, username, password, debug);
+  const [pass_check, msg] = await login_via_email_and_password(ip_addr, username, password);
 
   if (pass_check) {
     res.cookie(JWT_COOKIE_NAME, msg.token, {

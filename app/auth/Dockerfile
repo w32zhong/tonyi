@@ -6,6 +6,9 @@ WORKDIR /app
 # Copy package files first for better caching
 COPY package*.json ./
 
+# Explicitly set the environment to production
+ENV NODE_ENV=production
+
 # Install dependencies (production only to keep image small)
 RUN npm ci --only=production
 
