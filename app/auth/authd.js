@@ -61,7 +61,7 @@ async function login_via_email_and_password(ipAddress, email, password) {
       const durationSeconds = isDev ? 10 : JWT_EXPIRE_DAYS * 24 * 60 * 60;
 
       const exp = now + durationSeconds;
-      const info = {
+      const payload = {
         exp: exp,
         maxAge: durationSeconds,
         loggedInAs: email,
@@ -70,12 +70,12 @@ async function login_via_email_and_password(ipAddress, email, password) {
       };
 
       const jwtSecret = await database.getJwtSecret();
-      const token = jwt.sign(info, jwtSecret, { algorithm: "HS256" });
+      const token = jwt.sign(payload, jwtSecret, { algorithm: "HS256" });
 
       await database.storeLoginAttempt(ipAddress, uid, true);
       return [true, {
         pass: true,
-        info: info,
+        payload: payload,
         algorithm: { algorithm: "HS256" },
         token: token
       }];
@@ -121,6 +121,18 @@ async function verify(token) {
   }
 }
 
+/**
+ * Configures and enables OAuth2 authentication routes for the Express application.
+ * It initializes Passport.js strategies, sets up the necessary `/oauth2/:provider` login endpoints,
+ * and handles the `/oauth2/:provider/callback` endpoints to issue JWTs upon successful external authentication.
+ *
+ * Behavior:
+ * - If `NODE_ENV` is 'development', it issues short-lived (10s) tokens without `httpOnly` cookies.
+ * - Otherwise, it issues long-lived tokens securely.
+ *
+ * @param {Object} app - The Express application instance.
+ * @param {Array<string>} providers - A list of supported OAuth2 providers (e.g., ['google', 'github']).
+ */
 function EnableOAuth2Routes(app, providers) {
     app.use(passport.initialize());
     const isDev = process.env.NODE_ENV === 'development';
@@ -211,14 +223,23 @@ function EnableOAuth2Routes(app, providers) {
                     const secret = await database.getJwtSecret();
                     const expiresIn = isDev ? 10 : JWT_EXPIRE_DAYS * 24 * 3600;
 
-                    // Note: Here you'd ideally use createOrMapUserWithOauth2
-                    // to ensure they have an internal UID mapping, then put uid in payload.
-                    // For now, mirroring old behavior:
-                    const payload = config.mapProfile(user);
+                    const mappedProfile = config.mapProfile(user);
+                    const [uid, newlyCreated] = await database.createOrMapUserWithOauth2(
+                        provider,
+                        mappedProfile.id,
+                        mappedProfile
+                    );
+
+                    const payload = {
+                        ...mappedProfile,
+                        uid: uid,
+                        scope: ["/*"],
+                        exp: Math.floor(Date.now() / 1000) + expiresIn,
+                        maxAge: expiresIn
+                    };
 
                     const token = jwt.sign(payload, secret, {
-                        algorithm: 'HS256',
-                        expiresIn: expiresIn
+                        algorithm: 'HS256'
                     });
 
                     res.cookie(JWT_COOKIE_NAME, token, {
@@ -263,7 +284,7 @@ app.post('/authentication', async (req, res) => {
 
   if (pass_check) {
     res.cookie(JWT_COOKIE_NAME, msg.token, {
-      maxAge: msg.info.maxAge * 1000, // Express maxAge is in milliseconds
+      maxAge: msg.payload.maxAge * 1000, // Express maxAge is in milliseconds
       httpOnly: true // ask the browser to hide it from JavaScript
     });
   }
