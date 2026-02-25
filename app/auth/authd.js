@@ -13,6 +13,7 @@ const JWT_COOKIE_NAME = process.env.JWT_COOKIE_NAME || "jwt";
 const LOGIN_MAX_ATTEMPTS = parseInt(process.env.LOGIN_MAX_ATTEMPTS || "5");
 const LOGIN_ATTEMPTS_SPAN = parseInt(process.env.LOGIN_MAX_TIMESPAN || (24 * 60).toString()); // minutes
 const JWT_EXPIRE_DAYS = parseInt(process.env.JWT_EXPIRE_DAYS || "1");
+const OAUTH2_PROVIDERS = (process.env.OAUTH2_PROVIDERS || "").split(',');
 
 
 /**
@@ -268,7 +269,8 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
-EnableOAuth2Routes(app, ['google', 'github']);
+EnableOAuth2Routes(app, OAUTH2_PROVIDERS.map(s => s.trim()).filter(Boolean));
+
 
 app.post('/authorization', async (req, res) => {
   const token = req.body.token || "";
