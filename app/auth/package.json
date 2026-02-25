@@ -2,8 +2,9 @@
   "name": "auth",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "authd.js",
   "scripts": {
+    "start": "node authd.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -13,6 +14,8 @@
   "dependencies": {
     "argon2": "^0.44.0",
     "commander": "^14.0.3",
+    "cookie-parser": "^1.4.7",
+    "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "knex": "^3.1.0",
     "pg": "^8.18.0"
