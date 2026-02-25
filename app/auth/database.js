@@ -393,6 +393,21 @@ async function getJwtSecret() {
   }
 }
 
+module.exports = {
+  db,
+  initializeDB,
+  createOrMapUserWithEmail,
+  createOrMapUserWithOauth2,
+  bindOrChangePassword,
+  bindOrChangeEmail,
+  bindOAuth2Account,
+  getUserBy,
+  storeLoginAttempt,
+  getLoginAttempts,
+  rotateJwtSecret,
+  getJwtSecret
+};
+
 // Main execution block
 if (require.main === module) {
   const avail_fields = '[AuthUser.uid, AuthEmail.email, AuthOAuth2.sub]'

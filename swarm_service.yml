@@ -64,10 +64,9 @@ services:
       dockerfile: Dockerfile
     environment:
       - DB_URL=postgresql://${DB_USER}:${DB_PASS}@wireguard_server:5432/backend_db
-  #    - PYTHONUNBUFFERED=1 # flush python print immediately
-  #    - JWT_COOKIE_NAME=JWT_Token
-  #    - LOGIN_MAX_ATTEMPTS=10
-  #    - JWT_EXPIRE_DAYS=5
+      - LOGIN_MAX_ATTEMPTS=10
+      - JWT_EXPIRE_DAYS=5
+      - JWT_COOKIE_NAME=JWT_Token
   #  deploy:
   #    labels:
   #      gateway.route: auth
