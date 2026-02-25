@@ -14,6 +14,31 @@ const LOGIN_MAX_ATTEMPTS = parseInt(process.env.LOGIN_MAX_ATTEMPTS || "5");
 const LOGIN_ATTEMPTS_SPAN = parseInt(process.env.LOGIN_MAX_TIMESPAN || (24 * 60).toString()); // minutes
 const JWT_EXPIRE_DAYS = parseInt(process.env.JWT_EXPIRE_DAYS || "1");
 
+
+async function grantTokenAsSetCookie(res, uid, extraFields={}, scope=null) {
+  const isDev = process.env.NODE_ENV === 'development';
+  const now = Math.floor(Date.now() / 1000);
+  const durationSeconds = isDev ? 10 : JWT_EXPIRE_DAYS * 24 * 60 * 60;
+  const exp = now + durationSeconds;
+  const payload = {
+    ...extraFields,
+    uid: uid,
+    scope: scope || ["/*"],
+    exp: exp,
+    maxAge: durationSeconds
+  };
+  const secret = await database.getJwtSecret();
+  const token = jwt.sign(payload, secret, {
+    algorithm: 'HS256'
+  });
+  res.cookie(JWT_COOKIE_NAME, token, {
+    httpOnly: !isDev,
+    secure: true,
+    maxAge: durationSeconds * 1000
+  });
+  return { token, payload };
+}
+
 /**
  * Login a user via email and password
  * @param {string} ipAddress - The IP address of the requester
@@ -56,28 +81,12 @@ async function login_via_email_and_password(ipAddress, email, password) {
     // 2. Verify Credentials
     if (user && user.hashed_password && await passhash.verifyPassword(user.hashed_password, password)) {
       // Success logic
-      const now = Math.floor(Date.now() / 1000);
-      const isDev = process.env.NODE_ENV === 'development';
-      const durationSeconds = isDev ? 10 : JWT_EXPIRE_DAYS * 24 * 60 * 60;
-
-      const exp = now + durationSeconds;
-      const payload = {
-        exp: exp,
-        maxAge: durationSeconds,
-        loggedInAs: email,
-        uid: user.uid,
-        scope: ["/*"]
-      };
-
-      const jwtSecret = await database.getJwtSecret();
-      const token = jwt.sign(payload, jwtSecret, { algorithm: "HS256" });
-
       await database.storeLoginAttempt(ipAddress, uid, true);
       return [true, {
         pass: true,
-        payload: payload,
-        algorithm: { algorithm: "HS256" },
-        token: token
+        uid: user.uid,
+        loggedInAs: email,
+        algorithm: { algorithm: "HS256" }
       }];
 
     } else {
@@ -219,37 +228,16 @@ function EnableOAuth2Routes(app, providers) {
                 }
 
                 try {
-                    // Call the DB directly for the secret instead of HTTP fetching
-                    const secret = await database.getJwtSecret();
-                    const expiresIn = isDev ? 10 : JWT_EXPIRE_DAYS * 24 * 3600;
-
-                    const mappedProfile = config.mapProfile(user);
-                    const [uid, newlyCreated] = await database.createOrMapUserWithOauth2(
+                  const mappedProfile = config.mapProfile(user);
+                  const [uid, newlyCreated] = await database.createOrMapUserWithOauth2(
                         provider,
                         mappedProfile.id,
                         mappedProfile
-                    );
+                  );
+                  await grantTokenAsSetCookie(res, uid, mappedProfile);
 
-                    const payload = {
-                        ...mappedProfile,
-                        uid: uid,
-                        scope: ["/*"],
-                        exp: Math.floor(Date.now() / 1000) + expiresIn,
-                        maxAge: expiresIn
-                    };
-
-                    const token = jwt.sign(payload, secret, {
-                        algorithm: 'HS256'
-                    });
-
-                    res.cookie(JWT_COOKIE_NAME, token, {
-                        httpOnly: !isDev,
-                        secure: true,
-                        maxAge: expiresIn * 1000
-                    });
-
-                    // Redirect to the original state (unencoded)
-                    res.redirect(nextUrl);
+                  // Redirect to the original state (unencoded)
+                  res.redirect(nextUrl);
 
                 } catch (e) {
                     console.error("Token signing error:", e);
@@ -283,12 +271,10 @@ app.post('/authentication', async (req, res) => {
   const [pass_check, msg] = await login_via_email_and_password(ip_addr, username, password);
 
   if (pass_check) {
-    res.cookie(JWT_COOKIE_NAME, msg.token, {
-      maxAge: msg.payload.maxAge * 1000, // Express maxAge is in milliseconds
-      httpOnly: true // ask the browser to hide it from JavaScript
-    });
+    const { token, payload } = await grantTokenAsSetCookie(res, msg.uid, { loggedInAs: msg.loggedInAs });
+    msg.token = token;
+    msg.payload = payload;
   }
-
   res.json({ pass: pass_check, msg: msg });
 });
 
