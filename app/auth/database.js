@@ -67,7 +67,8 @@ async function initializeDB(reset = false) {
     // AuthEmail table
     if (!(await db.schema.hasTable('AuthEmail'))) {
       await db.schema.createTable('AuthEmail', (table) => {
-        table.integer('uid').references('uid').inTable('AuthUser').onDelete('CASCADE');
+        /* we want one-to-one UID and email, hence `.unique()` here */
+        table.integer('uid').references('uid').inTable('AuthUser').onDelete('CASCADE').unique();
         table.string('email', 255).primary();
         table.timestamp('created_at').defaultTo(db.fn.now());
         table.timestamp('modified_at').defaultTo(db.fn.now());
@@ -208,6 +209,56 @@ async function bindOrChangePassword(uid, password) {
 }
 
 /**
+ * Bind or change email for a user by UID
+ * @param {number} uid
+ * @param {string} email
+ */
+async function bindOrChangeEmail(uid, email) {
+  try {
+    await db('AuthEmail')
+      .insert({
+        uid: uid,
+        email: email,
+        created_at: now(),
+        modified_at: now()
+      })
+      .onConflict('uid')
+      .merge({
+        email: email,
+        modified_at: now()
+      });
+  } catch (err) {
+    throw new Error(`Error binding/changing email: ${err.message}`);
+  }
+}
+
+/**
+ * Bind an OAuth2 account to a user
+ * @param {number} uid
+ * @param {string} provider
+ * @param {string} sub
+ * @param {Object} info
+ */
+async function bindOAuth2Account(uid, provider, sub, info = {}) {
+  try {
+    const existing = await db('AuthOAuth2').where({ provider, sub }).first();
+    if (existing) {
+      throw new Error(`OAuth2 account with ${provider}/${sub} is already registered.`);
+    }
+
+    await db('AuthOAuth2').insert({
+      uid: uid,
+      provider: provider,
+      sub: sub,
+      info: info,
+      created_at: now()
+    });
+  } catch (err) {
+    throw new Error(`Error binding OAuth2 account: ${err.message}`);
+  }
+}
+
+/**
  * Get user by a specific field.
  * Common usages:
  * - By Email: getUserBy('AuthEmail.email', 'user@example.com')
@@ -341,8 +392,10 @@ if (require.main === module) {
   program
     .arguments('[args...]')
     .option('--reset', 'Reset and then initialize database (with an admin)')
-    .option('--lookup-user-by', `Lookup user by any of ${avail_fields}`)
-    .option('--bind-or-change-password', 'Bind or change password for user')
+    .option('--lookup-user-by', `Lookup user by any of ${avail_fields} and ID`)
+    .option('--bind-or-change-password', 'Bind or change password for user by email')
+    .option('--change-email', 'Bind or change email for user by email')
+    .option('--bind-oauth', 'Bind an OAuth2 account to user by email')
     .option('--verify-email-and-password', 'Verify email and password')
     .option('--rotate-jwt', 'Rotate the JWT secret')
     .parse(process.argv);
@@ -365,6 +418,12 @@ if (require.main === module) {
         /* create admin */
         const [adminUid] = await createOrMapUserWithEmail(emailize('admin'));
         await bindOrChangePassword(adminUid, 'changeme!');
+
+        /* for test: bind email */
+        await bindOrChangeEmail(adminUid, 'admin_alias@admin.local');
+
+        /* for test: bind oauth account */
+        await bindOAuth2Account(adminUid, '3rd_party', 'foreign-admin', {'age': 20});
 
         /* for test: a user without a password (only verified email) */
         await createOrMapUserWithEmail(emailize('no_password_user'));
@@ -397,6 +456,26 @@ if (require.main === module) {
             process.exit(1);
         }
         await bindOrChangePassword(user.uid, password);
+
+      } else if (options.changeEmail) {
+        const [email, newEmail] = program.args;
+        if (!email || !newEmail) {
+           console.error("Error: Please provide current email and new email arguments.");
+           process.exit(1);
+        }
+        const user = await getUserBy('AuthEmail.email', emailize(email));
+        if (!user) { console.error(`User ${email} not found.`); process.exit(1); }
+        await bindOrChangeEmail(user.uid, emailize(newEmail));
+
+      } else if (options.bindOauth) {
+        const [email, provider, sub] = program.args;
+        if (!email || !provider || !sub) {
+           console.error("Error: Please provide email, provider, and sub arguments.");
+           process.exit(1);
+        }
+        const user = await getUserBy('AuthEmail.email', emailize(email));
+        if (!user) { console.error(`User ${email} not found.`); process.exit(1); }
+        await bindOAuth2Account(user.uid, provider, sub);
 
       } else if (options.verifyEmailAndPassword) {
         const [email, password] = program.args;
