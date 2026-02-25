@@ -260,26 +260,21 @@ async function getLoginAttempts(ip_address, max_minutes) {
 async function rotateJwtSecret() {
   const newSecret = crypto.randomBytes(2048).toString('hex');
   try {
-    const existing = await db('AuthJwtConfig').where({ key: 'jwt_secret' }).first();
-
-    if (existing) {
-      await db('AuthJwtConfig')
-        .where({ key: 'jwt_secret' })
-        .update({
-          value: newSecret,
-          modified_at: now()
-        });
-    } else {
-      await db('AuthJwtConfig').insert({
+    await db('AuthJwtConfig')
+      .insert({
         key: 'jwt_secret',
         value: newSecret,
         modified_at: now()
+      })
+      .onConflict('key')
+      .merge({
+        value: newSecret,
+        modified_at: now()
       });
-    }
     return newSecret;
+
   } catch (err) {
-    console.error("Error rotating JWT secret:", err);
-    throw err;
+    throw new Error(`Error rotating JWT secret: ${err.message}`);
   }
 }
 
@@ -294,6 +289,7 @@ async function getJwtSecret() {
       return config.value;
     }
     return await rotateJwtSecret();
+
   } catch (err) {
     console.error("Error getting JWT secret:", err);
     throw err;
@@ -367,17 +363,20 @@ if (require.main === module) {
         const newSecret = await rotateJwtSecret();
         const secret = await getJwtSecret();
         if (newSecret !== secret) {
-            console.error("Consistency Check Failed!");
+          throw new Error("Consistency check failed!");
         } else {
-            console.log(`Stored Secret: ${secret.substring(0, 5)}...`);
+          console.log(`New secret: ${secret.substring(0, 5)}...`);
         }
+
       } else {
         program.help();
       }
+
     } catch (err) {
         console.error("An unexpected error occurred:", err);
     } finally {
         await db.destroy();
     }
-  })();
-}
+
+  })(); /* end top-level async */
+} /* end main module */
