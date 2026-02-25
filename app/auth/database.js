@@ -86,7 +86,7 @@ async function initializeDB(reset = false) {
 
         // Indexes for efficient lookups
         table.index(['ip_address', 'uid']);
-        table.index(['uid']); 
+        table.index(['uid']);
         table.index(['timestamp']); // Useful for time-based cleanup/queries
       });
     }
@@ -315,18 +315,25 @@ async function storeLoginAttempt(ip_address, uid, success) {
 
 /**
  * Get login attempts
- * @param {string} ip_address
+ * @param {string|null} ip_address
  * @param {number|null} uid
  * @param {number} max_minutes
  * @returns {Promise<[number, Array]>} [consecutive_failures, records]
  */
-async function getLoginAttempts(ip_address, max_minutes) {
+async function getLoginAttempts(ip_address, uid, max_minutes) {
+  if (max_minutes <= 0) {
+    throw new Error("max_minutes must be greater than 0");
+  }
   try {
     const since = new Date(Date.now() - max_minutes * 60 * 1000).toISOString();
-    const records = await db('AuthRecord')
-      .where('ip_address', ip_address)
-      .where('timestamp', '>=', since)
-      .orderBy('timestamp', 'desc');
+    let query = db('AuthRecord').where('timestamp', '>=', since);
+    if (ip_address) {
+      query = query.where('ip_address', ip_address);
+    }
+    if (uid) {
+      query = query.where('uid', uid);
+    }
+    const records = await query.orderBy('timestamp', 'desc');
 
     let consec_fails = 0;
     for (const record of records) {
@@ -501,7 +508,7 @@ if (require.main === module) {
         }
 
         const N = 5;
-        const [attempts, records] = await getLoginAttempts("127.0.0.1", N);
+        const [attempts, records] = await getLoginAttempts("127.0.0.1", user ? user.uid : null, N);
         console.log(`Failed consecutive attempts in last ${N} mins: ${attempts}`);
         console.log(records)
 
