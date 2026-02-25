@@ -15,6 +15,20 @@ const LOGIN_ATTEMPTS_SPAN = parseInt(process.env.LOGIN_MAX_TIMESPAN || (24 * 60)
 const JWT_EXPIRE_DAYS = parseInt(process.env.JWT_EXPIRE_DAYS || "1");
 
 
+/**
+ * Generates a JSON Web Token (JWT) for a verified user and sets it as an HTTP-only cookie.
+ *
+ * Behavior:
+ * - Computes token expiration based on `JWT_EXPIRE_DAYS` or development mode constraints.
+ * - Injects standard claims (`uid`, `scope`, `exp`, `maxAge`) along with any provided `extraFields`.
+ * - Sets the cookie securely (omitting `httpOnly` only in development mode).
+ *
+ * @param {Object} res - The Express response object used to set the cookie.
+ * @param {number} uid - The unique database ID of the user.
+ * @param {Object} [extraFields={}] - Additional custom claims to embed in the JWT (e.g., `loggedInAs`).
+ * @param {Array<string>} [scope=null] - The authorization scopes for the user (defaults to `["/*"]`).
+ * @returns {Promise<{token: string, payload: Object}>} The generated token and its decoded payload object.
+ */
 async function grantTokenAsSetCookie(res, uid, extraFields={}, scope=null) {
   const isDev = process.env.NODE_ENV === 'development';
   const now = Math.floor(Date.now() / 1000);
@@ -143,110 +157,110 @@ async function verify(token) {
  * @param {Array<string>} providers - A list of supported OAuth2 providers (e.g., ['google', 'github']).
  */
 function EnableOAuth2Routes(app, providers) {
-    app.use(passport.initialize());
-    const isDev = process.env.NODE_ENV === 'development';
+  app.use(passport.initialize());
+  const isDev = process.env.NODE_ENV === 'development';
 
-    const configs = {
-        google: {
-            Strategy: require('passport-google-oauth20').Strategy,
-            options: {
-                clientID: process.env.OAUTH2_GOOGLE_CLIENT_ID,
-                clientSecret: process.env.OAUTH2_GOOGLE_CLIENT_SECRET,
-                proxy: true
-            },
-            authenticateOptions: {
-                scope: ['profile', 'email']
-            },
-            mapProfile: (profile) => ({
-                loggedInAs: profile.emails?.[0]?.value || profile.id,
-                id: profile.id,
-                displayName: profile.displayName,
-                email: profile.emails?.[0]?.value,
-                photo: profile.photos?.[0]?.value
-            })
-        },
-        github: {
-            Strategy: require('passport-github2').Strategy,
-            options: {
-                clientID: process.env.OAUTH2_GITHUB_CLIENT_ID,
-                clientSecret: process.env.OAUTH2_GITHUB_CLIENT_SECRET,
-                proxy: true
-            },
-            authenticateOptions: {
-                scope: ['user:email']
-            },
-            mapProfile: (profile) => ({
-                loggedInAs: profile.username || profile.id,
-                id: profile.id,
-                displayName: profile.displayName || profile.username,
-                email: profile.emails?.[0]?.value,
-                photo: profile.photos?.[0]?.value
-            })
-        }
+  const configs = {
+    google: {
+      Strategy: require('passport-google-oauth20').Strategy,
+      options: {
+        clientID: process.env.OAUTH2_GOOGLE_CLIENT_ID,
+        clientSecret: process.env.OAUTH2_GOOGLE_CLIENT_SECRET,
+        proxy: true
+      },
+      authenticateOptions: {
+        scope: ['profile', 'email']
+      },
+      mapProfile: (profile) => ({
+        loggedInAs: profile.emails?.[0]?.value || profile.id,
+        id: profile.id,
+        displayName: profile.displayName,
+        email: profile.emails?.[0]?.value,
+        photo: profile.photos?.[0]?.value
+      })
+    },
+    github: {
+      Strategy: require('passport-github2').Strategy,
+      options: {
+        clientID: process.env.OAUTH2_GITHUB_CLIENT_ID,
+        clientSecret: process.env.OAUTH2_GITHUB_CLIENT_SECRET,
+        proxy: true
+      },
+      authenticateOptions: {
+        scope: ['user:email']
+      },
+      mapProfile: (profile) => ({
+        loggedInAs: profile.username || profile.id,
+        id: profile.id,
+        displayName: profile.displayName || profile.username,
+        email: profile.emails?.[0]?.value,
+        photo: profile.photos?.[0]?.value
+      })
+    }
+  };
+
+  for (const provider of providers) {
+    const config = configs[provider];
+    if (!config) {
+      console.error("Unhandled provider:", provider);
+      continue;
+    }
+
+    passport.use(provider,
+      new config.Strategy(config.options, (accessToken, refreshToken, profile, done) => {
+        return done(null, profile);
+      })
+    );
+
+    const getCallbackURL = (req) => {
+      let url = `${OAUTH2_CALLBK_PREFIX}/oauth2/${provider}/callback`;
+      return url.replace("__REQ_DOMAIN__", req.get('host'));
     };
 
-    for (const provider of providers) {
-        const config = configs[provider];
-        if (!config) {
-            console.error("Unhandled provider:", provider);
-            continue;
-        }
+    app.get(`/oauth2/${provider}`, (req, res, next) => {
+      passport.authenticate(provider, {
+        ...config.authenticateOptions,
+        session: false,
+        callbackURL: getCallbackURL(req),
+        state: req.query[REDIRECT_URL_ARGKEY] /* save next URL to OAuth2 state */
+      })(req, res, next);
+    });
 
-        passport.use(provider,
-            new config.Strategy(config.options, (accessToken, refreshToken, profile, done) => {
-                return done(null, profile);
-            })
-        );
+    app.get(`/oauth2/${provider}/callback`, (req, res, next) => {
+      passport.authenticate(provider, {
+        session: false,
+        callbackURL: getCallbackURL(req)
+      }, async (err, user, info) => {
+          const nextUrl = req.query.state || '/';
+          const encNextUrl = encodeURIComponent(nextUrl);
+          const originUrl = `${REDIRECT_URL}?${REDIRECT_URL_ARGKEY}=${encNextUrl}`;
+          const failureUrl = `${originUrl}&oauth2failure=`;
 
-        const getCallbackURL = (req) => {
-            let url = `${OAUTH2_CALLBK_PREFIX}/oauth2/${provider}/callback`;
-            return url.replace("__REQ_DOMAIN__", req.get('host'));
-        };
+          if (err || !user) {
+            console.error(`OAuth2 ${provider} failure:`, err);
+            return res.redirect(failureUrl + 'provider');
+          }
 
-        app.get(`/oauth2/${provider}`, (req, res, next) => {
-            passport.authenticate(provider, {
-                ...config.authenticateOptions,
-                session: false,
-                callbackURL: getCallbackURL(req),
-                state: req.query[REDIRECT_URL_ARGKEY] /* save next URL to OAuth2 state */
-            })(req, res, next);
-        });
+          try {
+            const mappedProfile = config.mapProfile(user);
+            const [uid, newlyCreated] = await database.createOrMapUserWithOauth2(
+              provider,
+              mappedProfile.id,
+              mappedProfile
+            );
+            await grantTokenAsSetCookie(res, uid, mappedProfile);
 
-        app.get(`/oauth2/${provider}/callback`, (req, res, next) => {
-            passport.authenticate(provider, {
-                session: false,
-                callbackURL: getCallbackURL(req)
-            }, async (err, user, info) => {
-                const nextUrl = req.query.state || '/';
-                const encNextUrl = encodeURIComponent(nextUrl);
-                const originUrl = `${REDIRECT_URL}?${REDIRECT_URL_ARGKEY}=${encNextUrl}`;
-                const failureUrl = `${originUrl}&oauth2failure=`;
+            // Redirect to the original state (unencoded)
+            res.redirect(nextUrl);
 
-                if (err || !user) {
-                    console.error(`OAuth2 ${provider} failure:`, err);
-                    return res.redirect(failureUrl + 'provider');
-                }
+          } catch (e) {
+            console.error("Token signing error:", e);
+            return res.redirect(failureUrl + 'jwt');
+          }
 
-                try {
-                  const mappedProfile = config.mapProfile(user);
-                  const [uid, newlyCreated] = await database.createOrMapUserWithOauth2(
-                        provider,
-                        mappedProfile.id,
-                        mappedProfile
-                  );
-                  await grantTokenAsSetCookie(res, uid, mappedProfile);
-
-                  // Redirect to the original state (unencoded)
-                  res.redirect(nextUrl);
-
-                } catch (e) {
-                    console.error("Token signing error:", e);
-                    return res.redirect(failureUrl + 'jwt');
-                }
-
-            })(req, res, next);
-        });
-    }
+        })(req, res, next);
+    });
+  }
 }
 
 // --- HTTP Server ---
