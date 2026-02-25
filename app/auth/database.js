@@ -180,23 +180,18 @@ async function createOrMapUserWithOauth2(provider, sub, info) {
 }
 
 /**
- * Bind or change password for a user by email
- * @param {string} email
+ * Bind or change password for a user by UID
+ * @param {number} uid
  * @param {string} password
  */
-async function bindOrChangePassword(email, password) {
+async function bindOrChangePassword(uid, password) {
   try {
-    const emailRecord = await db('AuthEmail').where({ email }).first();
-    if (!emailRecord) {
-      throw new Error(`User \`${email}\` not found.`);
-    }
-
     const hashedPassword = await passhash.hashPassword(password);
 
     // Upsert password
     await db('AuthPassword')
       .insert({
-        uid: emailRecord.uid,
+        uid: uid,
         hashed_password: hashedPassword,
         created_at: now(),
         modified_at: now()
@@ -368,10 +363,12 @@ if (require.main === module) {
         await initializeDB(true);
 
         /* create admin */
-        await createOrMapUserWithEmail(emailize('admin'));
-        await bindOrChangePassword(emailize('admin'), 'changeme!');
+        const [adminUid] = await createOrMapUserWithEmail(emailize('admin'));
+        await bindOrChangePassword(adminUid, 'changeme!');
+
         /* for test: a user without a password (only verified email) */
         await createOrMapUserWithEmail(emailize('no_password_user'));
+
         /* for test: a user without a password (only through OAuth2) */
         await createOrMapUserWithOauth2('localtest', 'oauth_only_user', {'age': 30});
 
@@ -394,7 +391,12 @@ if (require.main === module) {
            console.error("Error: Please provide email and password arguments.");
            process.exit(1);
         }
-        await bindOrChangePassword(emailize(email), password);
+        const user = await getUserBy('AuthEmail.email', emailize(email));
+        if (!user) {
+            console.error(`User ${email} not found.`);
+            process.exit(1);
+        }
+        await bindOrChangePassword(user.uid, password);
 
       } else if (options.verifyEmailAndPassword) {
         const [email, password] = program.args;
