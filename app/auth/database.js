@@ -107,26 +107,24 @@ async function initializeDB(reset = false) {
 }
 
 /**
- * Create a new user (with only email)
+ * Create or map a user (with only email)
  * @param {string} email
- * @param {string} password
+ * @returns {Promise<[number, boolean]>} [uid, newly_created]
  */
-async function createUserWithEmail(email) {
+async function createOrMapUserWithEmail(email) {
   const trx = await db.transaction();
   try {
-    // Check if email exists
     const existing = await trx('AuthEmail').where({ email }).first();
     if (existing) {
-      throw new Error(`User with email \`${email}\` already exists.`);
+      await trx.commit();
+      return [existing.uid, false];
     }
 
-    // Insert into AuthUser
     const [user] = await trx('AuthUser').insert({
       created_at: now(),
       last_active: now()
     }).returning('uid');
 
-    // Insert into AuthEmail
     await trx('AuthEmail').insert({
       uid: user.uid,
       email: email,
@@ -135,10 +133,49 @@ async function createUserWithEmail(email) {
     });
 
     await trx.commit();
+    return [user.uid, true];
 
   } catch (err) {
     await trx.rollback();
-    throw new Error("Error creating user:", err);
+    throw new Error(`Error creating/mapping user: ${err.message}`);
+  }
+}
+
+/**
+ * Create or map a user (with OAuth2 info)
+ * @param {string} provider
+ * @param {string} sub
+ * @param {Object} info
+ * @returns {Promise<[number, boolean]>} [uid, newly_created]
+ */
+async function createOrMapUserWithOauth2(provider, sub, info) {
+  const trx = await db.transaction();
+  try {
+    const existing = await trx('AuthOAuth2').where({ provider, sub }).first();
+    if (existing) {
+      await trx.commit();
+      return [existing.uid, false];
+    }
+
+    const [user] = await trx('AuthUser').insert({
+      created_at: now(),
+      last_active: now()
+    }).returning('uid');
+
+    await trx('AuthOAuth2').insert({
+      uid: user.uid,
+      provider,
+      sub,
+      info,
+      created_at: now()
+    });
+
+    await trx.commit();
+    return [user.uid, true];
+
+  } catch (err) {
+    await trx.rollback();
+    throw new Error(`Error creating/mapping user with OAuth2: ${err.message}`);
   }
 }
 
@@ -176,22 +213,29 @@ async function bindOrChangePassword(email, password) {
 }
 
 /**
- * Get user by email
- * @param {string} email
- * @returns {Promise<Object|undefined>} User object joined with email info
+ * Get user by a specific field.
+ * Common usages:
+ * - By Email: getUserBy('AuthEmail.email', 'user@example.com')
+ * - By OAuth2 Sub: getUserBy('AuthOAuth2.sub', 'google-oauth2|123456')
+ *
+ * @param {string} field - The database field to search by
+ * @param {string|number} value - The value to search for
+ * @returns {Promise<Object|undefined>} User object joined with email and oauth info
  */
-async function getUserByEmail(email) {
+async function getUserBy(field, value) {
   try {
     return await db('AuthUser')
-      .join('AuthEmail', 'AuthUser.uid', 'AuthEmail.uid')
+      .leftJoin('AuthEmail', 'AuthUser.uid', 'AuthEmail.uid')
       .leftJoin('AuthPassword', 'AuthUser.uid', 'AuthPassword.uid')
-      .where('AuthEmail.email', email)
+      .leftJoin('AuthOAuth2', 'AuthUser.uid', 'AuthOAuth2.uid')
+      .where(field, value)
       .select(
         'AuthUser.uid',
         'AuthUser.created_at',
         'AuthUser.last_active',
         'AuthEmail.email',
-        'AuthPassword.hashed_password'
+        'AuthPassword.hashed_password',
+        'AuthOAuth2.sub as oauth2_sub'
       )
       .first();
   } catch (err) {
@@ -300,7 +344,7 @@ async function getJwtSecret() {
 if (require.main === module) {
   program
     .arguments('[args...]')
-    .option('--reset', 'Reset and then initialize database')
+    .option('--reset', 'Reset and then initialize database (with an admin)')
     .option('--bind-or-change-password', 'Bind or change password for user')
     .option('--verify-email-and-password', 'Verify email and password')
     .option('--rotate-jwt', 'Rotate the JWT secret')
@@ -320,9 +364,14 @@ if (require.main === module) {
     try {
       if (options.reset) {
         await initializeDB(true);
-        await createUserWithEmail(emailize('admin'));
+
+        /* create admin */
+        await createOrMapUserWithEmail(emailize('admin'));
         await bindOrChangePassword(emailize('admin'), 'changeme!');
-        await createUserWithEmail(emailize('no_password_user')); /* for test */
+        /* for test: a user without a password (only verified email) */
+        await createOrMapUserWithEmail(emailize('no_password_user'));
+        /* for test: a user without a password (only through OAuth2) */
+        await createOrMapUserWithOauth2('localtest', 'oauth_only_user', {'age': 30});
 
       } else if (options.bindOrChangePassword) {
         const [email, password] = program.args;
@@ -338,15 +387,16 @@ if (require.main === module) {
            console.error("Error: Please provide email and password arguments.");
            process.exit(1);
         }
-        const user = await getUserByEmail(emailize(email));
+        const user = await getUserBy('AuthEmail.email', emailize(email));
 
         if (user) {
+          console.log('[found user]', user)
           if (user.hashed_password) {
             const successful = await passhash.verifyPassword(user.hashed_password, password);
             console.log('verify successful?', successful);
             await storeLoginAttempt("127.0.0.1", user.uid, successful);
           } else {
-            console.log("User has no password set (OAuth only?)");
+            console.log("User has no password set (OAuth2 only?)");
             await storeLoginAttempt("127.0.0.1", null, false);
           }
 
