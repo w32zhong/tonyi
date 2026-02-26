@@ -43,9 +43,10 @@ async function requirePoW(req, res, next) {
         return res.status(500).send("Internal Server Error: Auth Secret Unavailable");
     }
 
-    const isValid = await pow.verifyPowSolution(secret, challenge, signature, solution);
+    const [isValid, salt] = await pow.verifyPowSolution(secret, challenge, signature, solution);
 
     if (isValid) {
+        req.powSalt = salt;
         return next();
     } else {
         return res.status(403).json({

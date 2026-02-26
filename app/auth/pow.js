@@ -38,10 +38,11 @@ async function generatePowChallenge() {
 
 /**
  * Verify a PoW solution and prevent replay
+ * @param {string} secret
  * @param {Object} challenge
  * @param {string} signature
  * @param {any} solution
- * @returns {Promise<boolean>}
+ * @returns {Promise<[boolean, string|null]>}
  */
 async function verifyPowSolution(secret, challenge, signature, solution) {
   try {
@@ -50,12 +51,12 @@ async function verifyPowSolution(secret, challenge, signature, solution) {
 
     // 2. Check if this specific challenge instance was already used (Replay Protection)
     if (spentSalts.has(decoded.salt)) {
-      return false;
+      return [false, null];
     }
 
     // 3. Ensure the challenge matches the signature
     if (JSON.stringify(decoded.challenge) !== JSON.stringify(challenge)) {
-      return false;
+      return [false, null];
     }
 
     // 4. Verify the mathematical solution
@@ -68,12 +69,13 @@ async function verifyPowSolution(secret, challenge, signature, solution) {
 
       // Schedule removal from cache after the token would have expired anyway
       setTimeout(() => spentSalts.delete(decoded.salt), POW_EXP_MINUTES * 60 * 1000);
+      return [true, decoded.salt];
     }
 
-    return isValid;
+    return [false, null];
 
   } catch (err) {
-    return false;
+    return [false, null];
   }
 }
 
