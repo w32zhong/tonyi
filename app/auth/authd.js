@@ -15,7 +15,6 @@ const LOGIN_ATTEMPTS_SPAN = parseInt(process.env.LOGIN_MAX_TIMESPAN || (24 * 60)
 const JWT_EXPIRE_DAYS = parseInt(process.env.JWT_EXPIRE_DAYS || "1");
 const OAUTH2_PROVIDERS = (process.env.OAUTH2_PROVIDERS || "").split(',');
 
-
 /**
  * Generates a JSON Web Token (JWT) for a verified user and sets it as an HTTP-only cookie.
  *
@@ -270,7 +269,6 @@ app.use(express.json());
 app.use(cookieParser());
 
 EnableOAuth2Routes(app, OAUTH2_PROVIDERS.map(s => s.trim()).filter(Boolean));
-
 
 app.post('/authorization', async (req, res) => {
   const token = req.body.token || "";
