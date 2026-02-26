@@ -5,7 +5,7 @@ const { Resend } = require('resend');
 
 const EMAIL_DOMAIN = process.env.EMAIL_DOMAIN;
 const EMAIL_SMTP_KEY = process.env.EMAIL_SMTP_KEY;
-const resend = new Resend(EMAIL_SMTP_KEY);
+let resend = null;
 
 /**
  * Send an email verification code
@@ -15,7 +15,16 @@ const resend = new Resend(EMAIL_SMTP_KEY);
  * @returns {Promise<[boolean, any]>} [success, data/error]
  */
 async function email_verification_code(receiver, code, subject = null) {
+  if (!EMAIL_SMTP_KEY) {
+    console.error("Email Error: EMAIL_SMTP_KEY is not set.");
+    return [false, "Email service not configured"];
+  }
+
   try {
+    if (!resend) {
+      resend = new Resend(EMAIL_SMTP_KEY);
+    }
+
     const htmlPath = path.join(__dirname, 'email.html');
     const htmlTemplate = fs.readFileSync(htmlPath, 'utf8');
 
