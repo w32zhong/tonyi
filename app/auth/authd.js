@@ -94,18 +94,18 @@ async function login_via_email_and_password(ipAddress, email, password) {
 
     // 1. Defend Brute Force
     let leftChances = Math.max(LOGIN_MAX_ATTEMPTS - consecFails, 0);
-    if (leftChances === 0) {
-      const last = attempts.length - 1;
-      const lastFailureTime = new Date(attempts[last].timestamp).getTime();
+    if (leftChances === 0 && attempts.length > 0) {
+      const lastFailureTime = new Date(attempts[0].timestamp).getTime();
       const minute_unit = 60 * 1000;
       const unlockTime = lastFailureTime + (LOGIN_ATTEMPTS_SPAN * minute_unit);
       const remainingMinutes = Math.max(1, Math.ceil((unlockTime - Date.now()) / minute_unit));
+      const unlockIn = formatSpan(remainingMinutes);
 
       return {
         pass: false,
         reason: 'lockout',
-        unlock_in: formatSpan(remainingMinutes),
-        errmsg: `Too many login attempts. (User, IP) is locked out! Please try again in ${formattedTime}.`
+        unlock_in: unlockIn,
+        errmsg: `Too many login attempts. (User, IP) is locked out! Please try again in ${unlockIn}.`
       };
     }
 
