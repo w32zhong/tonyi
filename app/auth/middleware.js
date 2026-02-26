@@ -13,7 +13,7 @@ const REDIRECT_URL_ARGKEY = process.env.REDIRECT_URL_ARGKEY || "next_url";
  */
 async function getJwtSecret() {
     try {
-        const response = await fetch(JWT_SECRET_URL);
+        const response = await fetch('http://' + JWT_SECRET_URL);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         return await response.text();
     } catch (err) {

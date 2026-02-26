@@ -48,8 +48,8 @@ app.get('/private', requireAuth, (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Test server starting on port ${PORT}`);
     console.log(`Using middleware from: ${path.resolve(__dirname, '../middleware.js')}`);
-    console.log(`JWT_COOKIE_NAME: ${JWT_COOKIE_NAME}`);
     console.log(`AUTH_BASE_URL: ${AUTH_BASE_URL}`);
+    console.log(`JWT_COOKIE_NAME: ${JWT_COOKIE_NAME}`);
     console.log(`JWT_SECRET_URL: ${JWT_SECRET_URL}`);
     console.log(`REDIRECT_URL: ${REDIRECT_URL}`);
     console.log(`REDIRECT_URL_ARGKEY: ${REDIRECT_URL_ARGKEY}`);
