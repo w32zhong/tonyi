@@ -6,7 +6,7 @@ const passport = require('passport');
 const database = require('./database');
 const passhash = require('./passhash');
 const pow = require('./pow');
-const sendmail = require('./email');
+const { email_verification_code } = require('./email');
 const { requirePoW } = require('./middleware');
 
 const PORT = parseInt(process.env.PORT || "19721", 10);
@@ -297,7 +297,7 @@ app.post('/email', requirePoW, async (req, res) => {
   // Send email with verification code
   const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit code
   await database.storeEmailRecord(ip_addr, email, salt, code);
-  const [success, error] = await sendmail.email_verification_code(email, code);
+  const [success, error] = await email_verification_code(email, code);
   if (!success) {
     return res.status(500).json({
       pass: false,
