@@ -102,7 +102,7 @@ async function initializeDB(reset = false) {
         table.string('verification_code', 64).notNullable();
         table.timestamp('timestamp').defaultTo(db.fn.now());
 
-        table.index(['ip_address']);
+        table.index(['ip_address', 'email', 'timestamp']);
         table.index(['email', 'salt']);
         table.index(['timestamp']);
       });
@@ -424,6 +424,7 @@ async function getEmailRecordCount(ip_address, email, max_minutes) {
 
     const [emailCountRes] = await db('EmailRecord')
       .where('timestamp', '>=', since)
+      .andWhere('ip_address', ip_address)
       .andWhere('email', email)
       .count('* as count');
 

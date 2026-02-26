@@ -290,7 +290,7 @@ app.post('/email', requirePoW, async (req, res) => {
       pass: false,
       reason: "rate_limit_email",
       last: last,
-      errmsg: `Too many requests to this email over the last ${last}.`
+      errmsg: `Too many requests from this IP to this email over the last ${last}.`
     });
   }
 
