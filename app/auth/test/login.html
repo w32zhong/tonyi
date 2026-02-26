@@ -3,60 +3,76 @@
 <head>
     <title>Sign in</title>
     <style>
-        section { margin-bottom: 40px; border-bottom: 1px solid #ccc; padding-bottom: 20px; }
+        #result {
+            background: #f4f4f4;
+            padding: 10px;
+            border: 1px solid #ddd;
+            min-height: 50px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
     </style>
 </head>
 <body>
-    <section>
-        <h1>Sign in by email</h1>
-        <form id="login-verify-form">
-            <input type="email" id="email-verify" placeholder="Email" required><br>
-            <button type="button" id="send-code-btn">Send Verification Code</button><br>
-            <input type="text" id="verification-code" placeholder="Verification Code" required><br>
-            <button type="submit">Sign in</button>
-        </form>
-    </section>
+    <p><a href="./private">Go to Private Page</a></p>
 
-    <section>
-        <h1>Sign in by email and password</h1>
-        <form id="login-password-form">
-            <input type="email" id="email-password" placeholder="Email" required><br>
-            <input type="password" id="password" placeholder="Password" required><br>
-            <button type="submit">Sign in</button>
-        </form>
-    </section>
+    <h1>Sign in by email</h1>
+    <form id="login-verify-form">
+        <input type="email" id="email-verify" placeholder="Email" required><br>
+        <button type="button" id="send-code-btn">Send Verification Code</button><br>
+        <input type="text" id="verification-code" placeholder="Verification Code" required><br>
+        <button type="submit">Sign in</button>
+    </form>
+
+    <h1>Sign in by email and password</h1>
+    <form id="login-password-form">
+        <input type="email" id="email-password" placeholder="Email" required><br>
+        <input type="password" id="password" placeholder="Password" required><br>
+        <button type="submit">Sign in</button>
+    </form>
 
     <hr>
     <button onclick="oauthLogin('google')">Login with Google</button>
     <button onclick="oauthLogin('github')">Login with GitHub</button>
 
-    <div id="message" style="color: green;"></div>
-    <p><a href="./private">Go to Private Page</a></p>
+    <h3>Result:</h3>
+    <pre id="result">(none)</pre>
 
     <script type="module">
         import { solve } from './busybot.mjs';
-
         const REDIRECT_URL_ARGKEY = "__REDIRECT_URL_ARGKEY__";
         const AUTH_BASE_URL = "__AUTH_BASE_URL__";
         let emailSalt = null;
 
-        window.oauthLogin = function(provider) {
-            const params = new URLSearchParams(location.search);
-            const next = params.get(REDIRECT_URL_ARGKEY);
-            let url = `${AUTH_BASE_URL}/oauth2/${provider}`;
-            if (next) {
-                url += `?${REDIRECT_URL_ARGKEY}=${encodeURIComponent(next)}`;
-            }
-            console.log('[oauth2 url]', url)
-            location.href = url;
+        function showResult(json) {
+            const resultDisplay = document.getElementById("result");
+            resultDisplay.textContent = JSON.stringify(json, null, 2);
         }
 
         const params = new URLSearchParams(location.search);
         if (params.get("logout") === "true") {
-            document.getElementById("message").textContent = "You have been logged out.";
+            showResult("You have been logged out.");
         }
 
-        // --- Email Verification Logic ---
+        async function login(jsonParam) {
+            try {
+                const resp = await fetch(`${AUTH_BASE_URL}/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(jsonParam)
+                });
+                const result = await resp.json();
+                showResult(result);
+
+                if (result.pass) {
+                    const next = new URLSearchParams(location.search).get(REDIRECT_URL_ARGKEY);
+                    setTimeout(() => location.href = next || '/', 1000);
+                }
+            } catch (err) {
+                showResult("Error: " + err.message);
+            }
+        }
+
         document.getElementById("send-code-btn").onclick = async () => {
             const email = document.getElementById("email-verify").value;
             if (!email) { alert("Email is required"); return; }
@@ -69,7 +85,9 @@
                 btn.textContent = "Requesting Challenge...";
                 const chalResp = await fetch(`${AUTH_BASE_URL}/challenge`);
                 if (!chalResp.ok) throw new Error("Failed to get challenge");
-                const { challenge, signature } = await chalResp.json();
+                const challengeData = await chalResp.json();
+                showResult(challengeData);
+                const { challenge, signature } = challengeData;
 
                 btn.textContent = "Solving PoW...";
                 const solution = await solve(challenge);
@@ -81,6 +99,8 @@
                     body: JSON.stringify({ email, challenge, signature, solution })
                 });
                 const result = await emailResp.json();
+                showResult(result);
+
                 if (result.pass) {
                     emailSalt = result.salt;
                     alert("Verification code sent to your email!");
@@ -88,8 +108,7 @@
                     alert(result.errmsg || "Failed to send verification code");
                 }
             } catch (err) {
-                console.error(err);
-                alert("Error: " + err.message);
+                showResult("Error: " + err.message);
             } finally {
                 btn.disabled = false;
                 btn.textContent = originalText;
@@ -100,53 +119,33 @@
             e.preventDefault();
             const email = document.getElementById("email-verify").value;
             const code = document.getElementById("verification-code").value;
-
-            if (!emailSalt) {
-                alert("Please send verification code first!");
-                return;
-            }
-
-            const resp = await fetch(`${AUTH_BASE_URL}/login`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    method: "email_verify",
-                    email,
-                    email_salt: emailSalt,
-                    code
-                }),
-            });
-            const result = await resp.json();
-            if (result.pass) {
-                const next = new URLSearchParams(location.search).get(REDIRECT_URL_ARGKEY) || "./private";
-                location.href = next;
-            } else {
-                alert(result.errmsg || "Login failed");
-            }
+            login({
+                method: "email_verify",
+                email,
+                email_salt: emailSalt,
+                code
+            })
         };
 
-        // --- Email and Password Logic ---
         document.getElementById("login-password-form").onsubmit = async (e) => {
             e.preventDefault();
             const email = document.getElementById("email-password").value;
             const password = document.getElementById("password").value;
+            login({
+                method: "email_and_password",
+                email,
+                password
+            })
+        };
 
-            const resp = await fetch(`${AUTH_BASE_URL}/login`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    method: "email_and_password",
-                    email,
-                    password
-                }),
-            });
-            const result = await resp.json();
-            if (result.pass) {
-                const next = new URLSearchParams(location.search).get(REDIRECT_URL_ARGKEY) || "./private";
-                location.href = next;
-            } else {
-                alert(result.errmsg || "Login failed");
+        window.oauthLogin = function(provider) {
+            const params = new URLSearchParams(location.search);
+            const next = params.get(REDIRECT_URL_ARGKEY);
+            let url = `${AUTH_BASE_URL}/oauth2/${provider}`;
+            if (next) {
+                url += `?${REDIRECT_URL_ARGKEY}=${encodeURIComponent(next)}`;
             }
+            location.href = url;
         };
     </script>
 </body>
