@@ -35,7 +35,7 @@ async function email_verification_code(receiver, code, subject = null) {
 
   } catch (err) {
     console.error("Email processing error:", err.message);
-    return [false, err];
+    return [false, err.message];
   }
 }
 

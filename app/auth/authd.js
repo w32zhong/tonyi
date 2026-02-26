@@ -6,6 +6,8 @@ const passport = require('passport');
 const database = require('./database');
 const passhash = require('./passhash');
 const pow = require('./pow');
+const sendmail = require('./email');
+const { requirePoW } = require('./middleware');
 
 const PORT = parseInt(process.env.PORT || "19721", 10);
 const REDIRECT_URL = process.env.REDIRECT_URL || "/login_page";
@@ -14,8 +16,25 @@ const OAUTH2_CALLBK_PREFIX = process.env.OAUTH2_CALLBK_PREFIX || `/`;
 const JWT_COOKIE_NAME = process.env.JWT_COOKIE_NAME || "jwt";
 const LOGIN_MAX_ATTEMPTS = parseInt(process.env.LOGIN_MAX_ATTEMPTS || "5");
 const LOGIN_ATTEMPTS_SPAN = parseInt(process.env.LOGIN_MAX_TIMESPAN || (24 * 60).toString()); // minutes
+const EMAIL_MAX_SEND_PER_IP = parseInt(process.env.EMAIL_MAX_SEND_PER_IP || "30");
+const EMAIL_MAX_SEND_PER_EMAIL = parseInt(process.env.EMAIL_MAX_SEND_PER_EMAIL || "3");
+const EMAIL_ATTEMPTS_SPAN = parseInt(process.env.EMAIL_MAX_TIMESPAN || (24 * 60).toString()); // minutes
+const EMAIL_VERIFY_EXPIRATION = parseInt(process.env.EMAIL_VERIFY_EXPIRATION || (2).toString()); // minutes
 const JWT_EXPIRE_DAYS = parseInt(process.env.JWT_EXPIRE_DAYS || "1");
 const OAUTH2_PROVIDERS = (process.env.OAUTH2_PROVIDERS || "").split(',');
+
+
+/**
+ * Formats a duration in minutes into a human-readable string (e.g., "1h:30m" or "45m").
+ *
+ * @param {number} m - The duration in minutes.
+ * @returns {string} The formatted duration string.
+ */
+function formatSpan(m) {
+  const hours = Math.floor(m / 60);
+  const minutes = m % 60;
+  return hours > 0 ? `${hours}h:${minutes}m` : `${minutes}m`;
+}
 
 /**
  * Generates a JSON Web Token (JWT) for a verified user and sets it as an HTTP-only cookie.
@@ -82,43 +101,39 @@ async function login_via_email_and_password(ipAddress, email, password) {
       const unlockTime = lastFailureTime + (LOGIN_ATTEMPTS_SPAN * minute_unit);
       const remainingMinutes = Math.max(1, Math.ceil((unlockTime - Date.now()) / minute_unit));
 
-      const hours = Math.floor(remainingMinutes / 60);
-      const minutes = remainingMinutes % 60;
-      const formattedTime = hours > 0 ? `${hours}h:${minutes}m` : `${minutes}m`;
-
-      return [false, {
+      return {
         pass: false,
         reason: 'lockout',
-        unlock_in: formattedTime,
+        unlock_in: formatSpan(remainingMinutes),
         errmsg: `Too many login attempts. (User, IP) is locked out! Please try again in ${formattedTime}.`
-      }];
+      };
     }
 
     // 2. Verify Credentials
     if (user && user.hashed_password && await passhash.verifyPassword(user.hashed_password, password)) {
       // Success logic
       await database.storeLoginAttempt(ipAddress, uid, true);
-      return [true, {
+      return {
         pass: true,
         uid: user.uid,
         loggedInAs: email,
         algorithm: { algorithm: "HS256" }
-      }];
+      };
 
     } else {
       // Failure logic
       await database.storeLoginAttempt(ipAddress, uid, false);
-      return [false, {
+      return {
         pass: false,
         reason: 'invalid_credentials',
         errmsg: "Wrong password or user not found.",
         left_chances: Math.max(leftChances - 1, 0)
-      }];
+      };
     }
 
   } catch (e) {
     console.log(`Login error: ${e.message}`);
-    return [false, { pass: false, reason: 'unexpected_error', errmsg: e.message }];
+    return { pass: false, reason: 'unexpected_error', errmsg: e.message };
   }
 }
 
@@ -248,40 +263,95 @@ app.use(cookieParser());
 
 EnableOAuth2Routes(app, OAUTH2_PROVIDERS.map(s => s.trim()).filter(Boolean));
 
-/* TODO:
- * 1. complete the following /email route to trigger an email send to my email, using ./email.js
- * 2. use pow.requirePoW to protect this /email route
- * 3. learn from the login_via_email_and_password pass, create an EmailRecord table (similar to AuthRecord) in database.js, and track the (IP source, email destination) records. Additionally, add a field to record what verification number is sent, key'ed by the verifyPowSolution decoded salt we received here.
- * 4. based on EmailRecord, we reject /email if the same IP requested over MAX_SEND_PER_IP, or an email address has been sent to for over MAX_SEND_PER_EMAIL.
- * 5. implement email_verify method under /login route, also using ./email.js.
- */
+app.post('/email', requirePoW, async (req, res) => {
+  const salt = req.powSalt; /* passed by requirePoW */
 
-app.post('/email', async (req, res) => {
   const ip_addr = req.headers['x-real-ip'] || req.ip || "127.0.0.1";
   const email = req.body.email || "";
-  /* ... */
-}
+
+  if (!email) {
+    return res.status(400).json({ pass: false, reason: "email_required", errmsg: "Email is required" });
+  }
+
+  // Rate Limiting
+  const { ipCount, emailCount } = await database.getEmailRecordCount(ip_addr, email, EMAIL_ATTEMPTS_SPAN);
+  if (ipCount >= EMAIL_MAX_SEND_PER_IP) {
+    const last = formatSpan(EMAIL_ATTEMPTS_SPAN);
+    return res.status(429).json({
+      pass: false,
+      reason: "rate_limit_ip",
+      last: last,
+      errmsg: `Too many requests from this IP over the last ${last}.`
+    });
+  }
+  if (emailCount >= EMAIL_MAX_SEND_PER_EMAIL) {
+    const last = formatSpan(EMAIL_ATTEMPTS_SPAN);
+    return res.status(429).json({
+      pass: false,
+      reason: "rate_limit_email",
+      last: last,
+      errmsg: `Too many requests to this email over the last ${last}.`
+    });
+  }
+
+  // Send email with verification code
+  const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit code
+  await database.storeEmailRecord(ip_addr, email, salt, code);
+  const [success, error] = await sendmail.email_verification_code(email, code);
+  if (!success) {
+    return res.status(500).json({
+      pass: false,
+      reason: "send_email_failed",
+      errmsg: error
+    });
+  }
+
+  return res.json({ pass: true, salt: salt });
+});
 
 app.post('/login', async (req, res) => {
   const ip_addr = req.headers['x-real-ip'] || req.ip || "127.0.0.1";
   const method = req.body.method;
   const email = req.body.email || "";
 
+  let msg = {};
+
   if (method === 'email_and_password') {
     const password = req.body.password || "";
-    const [pass_check, msg] = await login_via_email_and_password(ip_addr, email, password);
+    msg = await login_via_email_and_password(ip_addr, email, password);
 
-  } else if (method == 'email_verify') {
-    const method = req.body.email_salt; /* the salt being retured to the client at /email request */
-    /* implement here */
+  } else if (method === 'email_verify') {
+    const email_salt = req.body.email_salt; /* the salt paired with an email verify request */
+    const code = req.body.code; /* the email code to be verified */
+
+    if (!email_salt || !code) {
+      msg = { pass: false, reason: "missing_fields", errmsg: "salt and code required" };
+
+    } else {
+      const record = await database.getEmailRecordBySalt(email, email_salt);
+      const expirationTime = EMAIL_VERIFY_EXPIRATION * 60 * 1000;
+      const now = Date.now();
+
+      if (!record || record.verified || (now - new Date(record.timestamp).getTime() > expirationTime)) {
+        msg = { pass: false, reason: "invalid_or_expired", errmsg: "Invalid or expired verification request" };
+
+      } else if (record.verification_code !== code) {
+        msg = { pass: false, reason: "incorrect_code", errmsg: "Incorrect verification code" };
+
+      } else {
+        const [uid, newlyCreated] = await database.createOrMapUserWithEmail(record.email);
+        msg = { pass: true, uid: uid, loggedInAs: record.email, newlyCreated };
+      }
+    }
+
+  } else {
+    msg = { pass: false, reason: "invalid_method", errmsg: "Invalid method" };
   }
 
-  if (pass_check) {
-    const { token, payload } = await grantTokenAsSetCookie(res, msg.uid, { loggedInAs: msg.loggedInAs });
-    msg.token = token;
-    msg.payload = payload;
+  if (msg.pass) {
+    await grantTokenAsSetCookie(res, msg.uid, { loggedInAs: msg.loggedInAs });
   }
-  res.json({ pass: pass_check, msg: msg });
+  res.json(msg);
 });
 
 app.get('/challenge', async (req, res) => {
