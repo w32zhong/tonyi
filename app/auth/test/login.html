@@ -36,16 +36,16 @@
     <script type="module">
         import { solve } from './busybot.mjs';
 
-        const REDIRECT_KEY = "__REDIRECT_URL_ARGKEY__";
+        const REDIRECT_URL_ARGKEY = "__REDIRECT_URL_ARGKEY__";
         const AUTH_BASE_URL = "__AUTH_BASE_URL__";
         let emailSalt = null;
 
         window.oauthLogin = function(provider) {
             const params = new URLSearchParams(location.search);
-            const next = params.get(REDIRECT_KEY);
-            let url = `./oauth2/${provider}`;
+            const next = params.get(REDIRECT_URL_ARGKEY);
+            let url = `${AUTH_BASE_URL}/oauth2/${provider}`;
             if (next) {
-                url += `?${REDIRECT_KEY}=${encodeURIComponent(next)}`;
+                url += `?${REDIRECT_URL_ARGKEY}=${encodeURIComponent(next)}`;
             }
             console.log('[oauth2 url]', url)
             location.href = url;
@@ -118,7 +118,7 @@
             });
             const result = await resp.json();
             if (result.pass) {
-                const next = new URLSearchParams(location.search).get(REDIRECT_KEY) || "./private";
+                const next = new URLSearchParams(location.search).get(REDIRECT_URL_ARGKEY) || "./private";
                 location.href = next;
             } else {
                 alert(result.errmsg || "Login failed");
@@ -142,7 +142,7 @@
             });
             const result = await resp.json();
             if (result.pass) {
-                const next = new URLSearchParams(location.search).get(REDIRECT_KEY) || "./private";
+                const next = new URLSearchParams(location.search).get(REDIRECT_URL_ARGKEY) || "./private";
                 location.href = next;
             } else {
                 alert(result.errmsg || "Login failed");

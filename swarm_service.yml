@@ -88,6 +88,26 @@ services:
       - gateway_net
       - proxy_net
 
+  auth_test:
+    image: auth:latest
+    build:
+      context: ./app/auth
+      dockerfile: Dockerfile
+    command: ["node", "test/server.js"]
+    environment:
+      - NODE_ENV=development
+      - JWT_COOKIE_NAME=JWT_Token
+      - AUTH_BASE_URL=/auth
+      - JWT_SECRET_URL=auth:19721/secret
+      - REDIRECT_URL=/auth-test/login
+      - REDIRECT_URL_ARGKEY=next
+    deploy:
+      labels:
+        gateway.route: auth-test
+        gateway.port: 3000
+    networks:
+      - gateway_net
+
   ui_404:
     image: ui_404:latest
     build:

@@ -3,7 +3,7 @@ const pow = require('./pow');
 
 // Configuration from environment
 const JWT_COOKIE_NAME = process.env.JWT_COOKIE_NAME || "jwt";
-const AUTH_BASE_URL = process.env.AUTH_BASE_URL || "/";
+const JWT_SECRET_URL = process.env.JWT_SECRET_URL || "/";
 const REDIRECT_URL = process.env.REDIRECT_URL || "/login_page";
 const REDIRECT_URL_ARGKEY = process.env.REDIRECT_URL_ARGKEY || "next_url";
 
@@ -13,8 +13,7 @@ const REDIRECT_URL_ARGKEY = process.env.REDIRECT_URL_ARGKEY || "next_url";
  */
 async function getJwtSecret() {
     try {
-        const url = AUTH_BASE_URL.endsWith('/') ? `${AUTH_BASE_URL}secret` : `${AUTH_BASE_URL}/secret`;
-        const response = await fetch(url);
+        const response = await fetch(JWT_SECRET_URL);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         return await response.text();
     } catch (err) {
