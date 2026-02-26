@@ -17,7 +17,7 @@ const spentSalts = new Set();
  * Generate a signed PoW challenge
  * @returns {Promise<Object>} { challenge, signature }
  */
-async function generateChallenge() {
+async function generatePowChallenge() {
   const challenge = await generate({
     forMersenneExponent: MERSENNE_EXPONENT,
     withDifficulty: POW_DIFFICULTY
@@ -43,10 +43,8 @@ async function generateChallenge() {
  * @param {any} solution
  * @returns {Promise<boolean>}
  */
-async function verifySolution(challenge, signature, solution) {
+async function verifyPowSolution(secret, challenge, signature, solution) {
   try {
-    const secret = await database.getJwtSecret();
-
     // 1. Verify the signature and expiration
     const decoded = jwt.verify(signature, secret, { algorithms: ['HS256'] });
 
@@ -80,8 +78,8 @@ async function verifySolution(challenge, signature, solution) {
 }
 
 module.exports = {
-  generateChallenge,
-  verifySolution
+  generatePowChallenge,
+  verifyPowSolution
 };
 
 if (require.main === module) {

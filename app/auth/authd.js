@@ -1,9 +1,11 @@
 const jwt = require('jsonwebtoken');
 const express = require('express');
 const cookieParser = require('cookie-parser');
+const passport = require('passport');
+
 const database = require('./database');
 const passhash = require('./passhash');
-const passport = require('passport');
+const pow = require('./pow');
 
 const PORT = parseInt(process.env.PORT || "19721", 10);
 const REDIRECT_URL = process.env.REDIRECT_URL || "/login_page";
@@ -86,7 +88,7 @@ async function login_via_email_and_password(ipAddress, email, password) {
 
       return [false, {
         pass: false,
-        code: 100,
+        reason: 'lockout',
         unlock_in: formattedTime,
         errmsg: `Too many login attempts. (User, IP) is locked out! Please try again in ${formattedTime}.`
       }];
@@ -108,7 +110,7 @@ async function login_via_email_and_password(ipAddress, email, password) {
       await database.storeLoginAttempt(ipAddress, uid, false);
       return [false, {
         pass: false,
-        code: 101,
+        reason: 'invalid_credentials',
         errmsg: "Wrong password or user not found.",
         left_chances: Math.max(leftChances - 1, 0)
       }];
@@ -116,7 +118,7 @@ async function login_via_email_and_password(ipAddress, email, password) {
 
   } catch (e) {
     console.log(`Login error: ${e.message}`);
-    return [false, { pass: false, code: 104, errmsg: e.message }];
+    return [false, { pass: false, reason: 'unexpected_error', errmsg: e.message }];
   }
 }
 
@@ -134,10 +136,10 @@ async function verify(token) {
     return [true, decoded];
 
   } catch (err) {
-    const code = err.name === 'TokenExpiredError' ? 102 : 103;
+    const reason = err.name === 'TokenExpiredError' ? 'expired_token' : 'invalid_token';
     return [false, {
       pass: false,
-      code: code,
+      reason: reason,
       name: err.name,
       message: err.message
     }];
@@ -290,6 +292,15 @@ app.post('/authentication', async (req, res) => {
     msg.payload = payload;
   }
   res.json({ pass: pass_check, msg: msg });
+});
+
+app.get('/challenge', async (req, res) => {
+  try {
+    const { challenge, signature } = await pow.generateChallenge();
+    res.json({ challenge, signature });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to generate challenge" });
+  }
 });
 
 app.get('/secret', async (req, res) => {
