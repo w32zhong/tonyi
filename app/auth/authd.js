@@ -5,7 +5,7 @@ const passport = require('passport');
 
 const database = require('./database');
 const passhash = require('./passhash');
-const pow = require('./pow');
+const { generatePowChallenge } = require('./pow');
 const { email_verification_code } = require('./email');
 const { requirePoW } = require('./middleware');
 
@@ -356,7 +356,7 @@ app.post('/login', async (req, res) => {
 
 app.get('/challenge', async (req, res) => {
   try {
-    const { challenge, signature } = await pow.generateChallenge();
+    const { challenge, signature } = await generatePowChallenge();
     res.json({ challenge, signature });
   } catch (err) {
     res.status(500).json({ error: "Failed to generate challenge" });
