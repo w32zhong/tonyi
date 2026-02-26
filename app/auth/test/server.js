@@ -19,7 +19,6 @@ app.get('/login', (req, res) => {
 
     let html = fs.readFileSync(path.join(__dirname, 'login.html'), 'utf8');
     html = html.replace(/__AUTH_BASE_URL__/g, AUTH_BASE_URL);
-    html = html.replace(/__COOKIE_NAME__/g, JWT_COOKIE_NAME);
     html = html.replace(/__REDIRECT_URL_ARGKEY__/g, REDIRECT_URL_ARGKEY);
 
     if (logout) {
@@ -39,7 +38,6 @@ app.get('/private', requireAuth, (req, res) => {
     let html = fs.readFileSync(path.join(__dirname, 'private.html'), 'utf8');
     html = html.replace(/__PAYLOAD__/g, JSON.stringify(user, null, 2));
     html = html.replace(/__USERNAME__/g, user.loggedInAs || user.displayName || "stranger");
-    html = html.replace(/__COOKIE_NAME__/g, JWT_COOKIE_NAME);
     html = html.replace(/__REDIRECT_URL__/g, REDIRECT_URL);
 
     res.send(html);

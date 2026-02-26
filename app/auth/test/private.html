@@ -3,31 +3,6 @@
 <body>
     <h1>Welcome, __USERNAME__</h1>
     <p>JWT payload:</p><pre>__PAYLOAD__</pre>
-    <p>Raw Cookie:</p><pre id="raw-cookie"></pre>
-    <p>Client-side JWT Payload:</p><pre id="client-payload"></pre>
     <a href="__REDIRECT_URL__?logout=true">Sign out</a>
-    <script>
-        function parseJwt(token) {
-            const base64Url = token.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
-            return JSON.parse(jsonPayload);
-        }
-
-        const m = document.cookie.match(/__COOKIE_NAME__=([^;]+)/);
-        if (m) {
-            document.getElementById("raw-cookie").textContent = m[0]; /* the full matched string */
-            try {
-                const payload = parseJwt(m[1]); /* the jwt value */
-                document.getElementById("client-payload").textContent = JSON.stringify(payload, null, 2);
-            } catch (e) {
-                document.getElementById("client-payload").textContent = "Error decoding: " + e.message;
-            }
-        } else {
-            document.getElementById("raw-cookie").textContent = "No cookie found";
-        }
-    </script>
 </body>
 </html>
