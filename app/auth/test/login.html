@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <h1>Sign in</h1>
+    <form id="login-form">
+        <input type="text" id="username" placeholder="Username" required><br>
+        <input type="password" id="password" placeholder="Password" required><br>
+        <button type="submit">Sign in</button>
+    </form>
+    <hr>
+    <button onclick="oauthLogin('google')">Login with Google</button>
+    <button onclick="oauthLogin('github')">Login with GitHub</button>
+
+    <div id="message" style="color: green;"></div>
+    <p><a href="./private">Go to Private Page</a></p>
+    <script>
+        const REDIRECT_KEY = "__REDIRECT_URL_ARGKEY__";
+
+        function oauthLogin(provider) {
+            const params = new URLSearchParams(location.search);
+            const next = params.get(REDIRECT_KEY);
+            let url = `./oauth2/${provider}`;
+            if (next) {
+                url += `?${REDIRECT_KEY}=${encodeURIComponent(next)}`;
+            }
+            console.log('[oauth2 url]', url)
+            location.href = url;
+        }
+
+        const params = new URLSearchParams(location.search);
+        if (params.get("logout") === "true") {
+            document.getElementById("message").textContent = "You have been logged out.";
+        }
+
+        document.getElementById("login-form").onsubmit = async (e) => {
+            e.preventDefault(); /* avoid browser form submission default behaviour, do AJAX instead. */
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+            const resp = await fetch("__AUTH_BASE_URL__/authentication", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password }),
+            });
+            const result = await resp.json();
+            console.log('[login result]', url)
+            if (result.pass) {
+                location.href = new URLSearchParams(location.search).get(REDIRECT_KEY) || "./private";
+            } else {
+                alert(result.msg?.errmsg || "Login failed");
+            }
+        };
+    </script>
+</body>
+</html>

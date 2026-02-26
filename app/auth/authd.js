@@ -125,7 +125,7 @@ async function login_via_email_and_password(ipAddress, email, password) {
 /**
  * Configures and enables OAuth2 authentication routes for the Express application.
  * It initializes Passport.js strategies, sets up the necessary `/oauth2/:provider` login endpoints,
- * and handles the `/oauth2/:provider/callback` endpoints to issue JWTs upon successful external authentication.
+ * and handles the `/oauth2/:provider/callback` endpoints to issue JWTs upon success.
  *
  * Behavior:
  * - If `NODE_ENV` is 'development', it issues short-lived (10s) tokens without `httpOnly` cookies.
@@ -248,13 +248,33 @@ app.use(cookieParser());
 
 EnableOAuth2Routes(app, OAUTH2_PROVIDERS.map(s => s.trim()).filter(Boolean));
 
-app.post('/authentication', async (req, res) => {
-  const username = req.body.username || "";
-  const password = req.body.password || "";
+/* TODO:
+ * 1. complete the following /email route to trigger an email send to my email, using ./email.js
+ * 2. use pow.requirePoW to protect this /email route
+ * 3. learn from the login_via_email_and_password pass, create an EmailRecord table (similar to AuthRecord) in database.js, and track the (IP source, email destination) records. Additionally, add a field to record what verification number is sent, key'ed by the verifyPowSolution decoded salt we received here.
+ * 4. based on EmailRecord, we reject /email if the same IP requested over MAX_SEND_PER_IP, or an email address has been sent to for over MAX_SEND_PER_EMAIL.
+ * 5. implement email_verify method under /login route, also using ./email.js.
+ */
 
+app.post('/email', async (req, res) => {
   const ip_addr = req.headers['x-real-ip'] || req.ip || "127.0.0.1";
+  const email = req.body.email || "";
+  /* ... */
+}
 
-  const [pass_check, msg] = await login_via_email_and_password(ip_addr, username, password);
+app.post('/login', async (req, res) => {
+  const ip_addr = req.headers['x-real-ip'] || req.ip || "127.0.0.1";
+  const method = req.body.method;
+  const email = req.body.email || "";
+
+  if (method === 'email_and_password') {
+    const password = req.body.password || "";
+    const [pass_check, msg] = await login_via_email_and_password(ip_addr, email, password);
+
+  } else if (method == 'email_verify') {
+    const method = req.body.email_salt; /* the salt being retured to the client at /email request */
+    /* implement here */
+  }
 
   if (pass_check) {
     const { token, payload } = await grantTokenAsSetCookie(res, msg.uid, { loggedInAs: msg.loggedInAs });
