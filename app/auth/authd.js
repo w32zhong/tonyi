@@ -123,30 +123,6 @@ async function login_via_email_and_password(ipAddress, email, password) {
 }
 
 /**
- * Verify a JWT token
- * @param {string} token
- * @returns {Promise<[boolean, Object]>} [success, decoded/error]
- */
-async function verify(token) {
-  console.log(`[verify token] ${token.substring(0, 5)}...`);
-
-  try {
-    const secret = await database.getJwtSecret();
-    const decoded = jwt.verify(token, secret, { algorithms: ["HS256"] });
-    return [true, decoded];
-
-  } catch (err) {
-    const reason = err.name === 'TokenExpiredError' ? 'expired_token' : 'invalid_token';
-    return [false, {
-      pass: false,
-      reason: reason,
-      name: err.name,
-      message: err.message
-    }];
-  }
-}
-
-/**
  * Configures and enables OAuth2 authentication routes for the Express application.
  * It initializes Passport.js strategies, sets up the necessary `/oauth2/:provider` login endpoints,
  * and handles the `/oauth2/:provider/callback` endpoints to issue JWTs upon successful external authentication.
@@ -271,12 +247,6 @@ app.use(express.json());
 app.use(cookieParser());
 
 EnableOAuth2Routes(app, OAUTH2_PROVIDERS.map(s => s.trim()).filter(Boolean));
-
-app.post('/authorization', async (req, res) => {
-  const token = req.body.token || "";
-  const [pass_check, msg] = await verify(token);
-  res.json({ pass: pass_check, msg: msg });
-});
 
 app.post('/authentication', async (req, res) => {
   const username = req.body.username || "";
