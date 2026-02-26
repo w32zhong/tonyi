@@ -29,6 +29,7 @@ async function initializeDB(reset = false) {
       await db.schema.dropTableIfExists('AuthOAuth2');
       await db.schema.dropTableIfExists('AuthPassword');
       await db.schema.dropTableIfExists('AuthUser');
+      await db.schema.dropTableIfExists('EmailRecord');
     }
 
     console.log("Creating database tables...");
@@ -88,6 +89,22 @@ async function initializeDB(reset = false) {
         table.index(['ip_address', 'uid']);
         table.index(['uid']);
         table.index(['timestamp']); // Useful for time-based cleanup/queries
+      });
+    }
+
+    // EmailRecord table
+    if (!(await db.schema.hasTable('EmailRecord'))) {
+      await db.schema.createTable('EmailRecord', (table) => {
+        table.increments('id').primary();
+        table.string('ip_address', 45).notNullable();
+        table.string('email', 255).notNullable();
+        table.string('salt', 255).notNullable();
+        table.string('verification_code', 64).notNullable();
+        table.timestamp('timestamp').defaultTo(db.fn.now());
+
+        table.index(['ip_address']);
+        table.index(['email', 'salt']);
+        table.index(['timestamp']);
       });
     }
 
@@ -351,6 +368,76 @@ async function getLoginAttempts(ip_address, uid, max_minutes) {
 }
 
 /**
+ * Store email verification attempt
+ * @param {string} ip_address
+ * @param {string} email
+ * @param {string} salt
+ * @param {string} verification_code
+ */
+async function storeEmailRecord(ip_address, email, salt, verification_code) {
+  try {
+    await db('EmailRecord').insert({
+      ip_address,
+      email,
+      salt,
+      verification_code,
+      timestamp: now()
+    });
+  } catch (err) {
+    console.error("Error storing email record:", err);
+  }
+}
+
+/**
+ * Get email record by salt
+ * @param {string} email
+ * @param {string} salt
+ * @returns {Promise<Object|null>}
+ */
+async function getEmailRecordBySalt(email, salt) {
+  try {
+    return await db('EmailRecord')
+      .where('email', email)
+      .andWhere('salt', salt)
+      .first();
+  } catch (err) {
+    console.error("Error getting email record:", err);
+    return null;
+  }
+}
+
+/**
+ * Get email records count by IP or Email within timeframe
+ * @param {string} ip_address
+ * @param {string} email
+ * @param {number} max_minutes
+ * @returns {Promise<{ipCount: number, emailCount: number}>}
+ */
+async function getEmailRecordCount(ip_address, email, max_minutes) {
+  try {
+    const since = new Date(Date.now() - max_minutes * 60 * 1000).toISOString();
+
+    const [ipCountRes] = await db('EmailRecord')
+      .where('timestamp', '>=', since)
+      .andWhere('ip_address', ip_address)
+      .count('* as count');
+
+    const [emailCountRes] = await db('EmailRecord')
+      .where('timestamp', '>=', since)
+      .andWhere('email', email)
+      .count('* as count');
+
+    return {
+      ipCount: parseInt(ipCountRes.count, 10),
+      emailCount: parseInt(emailCountRes.count, 10)
+    };
+  } catch (err) {
+    console.error("Error getting email records:", err);
+    return { ipCount: 0, emailCount: 0 };
+  }
+}
+
+/**
  * Rotate JWT Secret
  * @returns {Promise<string>} New secret
  */
@@ -404,6 +491,9 @@ module.exports = {
   getUserBy,
   storeLoginAttempt,
   getLoginAttempts,
+  storeEmailRecord,
+  getEmailRecordBySalt,
+  getEmailRecordCount,
   rotateJwtSecret,
   getJwtSecret
 };
