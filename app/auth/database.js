@@ -171,6 +171,7 @@ async function createOrMapUserWithOauth2(provider, sub, info) {
   try {
     const existing = await trx('AuthOAuth2').where({ provider, sub }).first();
     if (existing) {
+      await trx('AuthOAuth2').where({ provider, sub }).update({ info });
       await trx.commit();
       return [existing.uid, false];
     }

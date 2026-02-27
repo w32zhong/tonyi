@@ -260,7 +260,7 @@ function EnableOAuth2Routes(app, providers) {
             const [uid, newlyCreated] = await database.createOrMapUserWithOauth2(
               provider, mappedProfile.oauth2_sub, mappedProfile
             );
-            await grantTokenAsSetCookie(res, {..mappedProfile, provider, uid, newlyCreated});
+            await grantTokenAsSetCookie(res, {...mappedProfile, provider, uid, newlyCreated});
 
             // Redirect to the original state (unencoded)
             res.redirect(nextUrl);
