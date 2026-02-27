@@ -14,32 +14,33 @@
     </style>
 </head>
 <body>
-    <div id="nav">
+    <h3>__PAGE_TITLE__</h3>
+
+    <div id="private-nav">
         <p><a href="./private">Go to Private Page</a></p>
     </div>
 
     <div id="profile" style="display: none;">
-        <h3>__PAGE_TITLE__</h3>
-        <p>JWT payload:</p><pre>__PAYLOAD__</pre>
+        <p>Logged-In As:</p><pre>__USER__</pre>
         <p><a href="__REDIRECT_URL__?logout=true">Sign out</a></p>
     </div>
 
-    <h3 id="title-email">Method 1: Email and verification code</h3>
+    <h3>Method 1: Email and verification code</h3>
     <form id="form-email">
-        <input type="email" id="email-verify" placeholder="Email" required>
+        <input type="email" id="email-verify" placeholder="Email">
         <button type="button" id="send-code-btn">Send Verification Code</button>
         <input type="text" id="verification-code" placeholder="Verification Code">
         <button type="submit" id="submit-email">Submit</button>
     </form>
 
-    <h3 id="title-password">Method 2: Password</h3>
+    <h3>Method 2: Password</h3>
     <form id="form-password">
-        <input type="email" id="email-password" placeholder="Email">
-        <input type="password" id="password" placeholder="Password" required>
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="password" placeholder="Password">
         <button type="submit" id="submit-password">Submit</button>
     </form>
 
-    <h3 id="title-oauth2">Method 3: OAuth2</h3>
+    <h3>Method 3: OAuth2</h3>
     <div id="oauth2-buttons">
         <button onclick="oauthLogin('google')">Login with Google</button>
         <button onclick="oauthLogin('github')">Login with GitHub</button>
@@ -52,8 +53,7 @@
         import { solve } from './busybot.mjs';
         const REDIRECT_URL_ARGKEY = "__REDIRECT_URL_ARGKEY__";
         const AUTH_BASE_URL = "__AUTH_BASE_URL__";
-        const IS_PRIVATE = __IS_PRIVATE__;
-        const USER = __PAYLOAD__;
+        const USER = __USER__;
         let emailSalt = null;
 
         function showResult(json) {
@@ -66,14 +66,35 @@
             showResult("You have been logged out.");
         }
 
-        if (IS_PRIVATE) {
-            document.getElementById("nav").style.display = "none";
+        async function submitRequest(url, jsonParam) {
+            let result = null
+            try {
+                const resp = await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(jsonParam)
+                });
+                result = await resp.json();
+                showResult(result);
+
+                if (result.pass && !USER) {
+                    const next = new URLSearchParams(location.search).get(REDIRECT_URL_ARGKEY);
+                    setTimeout(() => location.href = next || '/', 1000);
+                }
+            } catch (err) {
+                showResult("Error: " + err.message);
+            }
+            return result
+        }
+
+        if (USER) {
+            document.getElementById("private-nav").style.display = "none";
             document.getElementById("profile").style.display = "block";
 
-            // Remove the extra email input in password form because it's implicitly for the logged-in user
-            document.getElementById("email-password").remove();
-            document.getElementById("verification-code").remove();
-            document.getElementById("send-code-btn").remove();
+            // Show a fixed email and prevent edits.
+            const emailInput = document.getElementById("email");
+            emailInput.value = "your_email@domain.com";
+            emailInput.readOnly = true;
 
             // If user is currently logged in with OAuth2, show the binding link
             if (USER && USER.provider) {
@@ -83,25 +104,6 @@
                     submitRequest(`${AUTH_BASE_URL}/change`, { method: "oauth2" });
                 };
                 document.getElementById("oauth2-buttons").appendChild(btn);
-            }
-        }
-
-        async function submitRequest(url, jsonParam) {
-            try {
-                const resp = await fetch(url, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(jsonParam)
-                });
-                const result = await resp.json();
-                showResult(result);
-
-                if (result.pass && !IS_PRIVATE) {
-                    const next = new URLSearchParams(location.search).get(REDIRECT_URL_ARGKEY);
-                    setTimeout(() => location.href = next || '/', 1000);
-                }
-            } catch (err) {
-                showResult("Error: " + err.message);
             }
         }
 
@@ -116,46 +118,41 @@
         };
 
         const sendCodeBtn = document.getElementById("send-code-btn");
-        if (sendCodeBtn) {
-            sendCodeBtn.onclick = async () => {
-                const email = document.getElementById("email-verify").value;
-                if (!email) { alert("Email is required"); return; }
-                const btn = document.getElementById("send-code-btn");
-                btn.disabled = true;
-                try {
-                    const chalResp = await fetch(`${AUTH_BASE_URL}/challenge`);
-                    if (!chalResp.ok) throw new Error("Failed to get challenge");
-                    const challengeData = await chalResp.json();
-                    const { challenge, signature } = challengeData;
-                    const solution = await solve(challenge);
-                    const emailResp = await fetch(`${AUTH_BASE_URL}/email`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ email, challenge, signature, solution })
-                    });
-                    const emailResult = await emailResp.json();
-                    if (emailResult.pass) {
-                        emailSalt = emailResult.salt;
-                        showResult(emailResult);
-                    } else {
-                        alert(emailResult.errmsg || "Failed to send verification code");
-                    }
-                } catch (err) {
-                    showResult("Error: " + err.message);
-                } finally {
-                    btn.disabled = false;
+        sendCodeBtn.onclick = async () => {
+            const email = document.getElementById("email-verify").value;
+            sendCodeBtn.disabled = true;
+            try {
+                const chalResp = await fetch(`${AUTH_BASE_URL}/challenge`);
+                if (!chalResp.ok) throw new Error("Failed to get challenge");
+                const challengeData = await chalResp.json();
+
+                showResult("Solving challenge ...");
+                const { challenge, signature } = challengeData;
+                const solution = await solve(challenge);
+
+                const emailResult = await submitRequest(`${AUTH_BASE_URL}/email`, {
+                    email, challenge, signature, solution
+                });
+                if (emailResult.pass) {
+                    emailSalt = emailResult.salt;
+                    showResult(emailResult);
+                } else {
+                    showResult(emailResult.errmsg || "Failed to send verification code");
                 }
-            };
-        }
+            } catch (err) {
+                showResult("Error: " + err.message);
+            } finally {
+                sendCodeBtn.disabled = false;
+            }
+        };
 
         document.getElementById("form-email").onsubmit = async (e) => {
             e.preventDefault();
             const email = document.getElementById("email-verify").value;
-            if (IS_PRIVATE) {
+            if (USER) {
                 submitRequest(`${AUTH_BASE_URL}/change`, { method: "email", email });
             } else {
                 const code = document.getElementById("verification-code").value;
-                if (!code) { alert("Verification Code is required"); return; }
                 submitRequest(`${AUTH_BASE_URL}/login`, {
                     method: "email_verify",
                     email,
@@ -168,11 +165,10 @@
         document.getElementById("form-password").onsubmit = async (e) => {
             e.preventDefault();
             const password = document.getElementById("password").value;
-            if (IS_PRIVATE) {
+            if (USER) {
                 submitRequest(`${AUTH_BASE_URL}/change`, { method: "password", password });
             } else {
-                const email = document.getElementById("email-password").value;
-                if (!email) { alert("Email is required"); return; }
+                const email = document.getElementById("email").value;
                 submitRequest(`${AUTH_BASE_URL}/login`, {
                     method: "email_and_password",
                     email,

@@ -17,10 +17,9 @@ app.use(cookieParser());
 function renderTestHtml(req, user = null) {
     let html = fs.readFileSync(path.join(__dirname, 'test.html'), 'utf8');
     html = html.replace(/__AUTH_BASE_URL__/g, AUTH_BASE_URL);
-    html = html.replace(/__REDIRECT_URL_ARGKEY__/g, REDIRECT_URL_ARGKEY);
     html = html.replace(/__REDIRECT_URL__/g, REDIRECT_URL);
-    html = html.replace(/__IS_PRIVATE__/g, user ? "true" : "false");
-    html = html.replace(/__PAYLOAD__/g, user ? JSON.stringify(user, null, 2) : "null");
+    html = html.replace(/__REDIRECT_URL_ARGKEY__/g, REDIRECT_URL_ARGKEY);
+    html = html.replace(/__USER__/g, user ? JSON.stringify(user, null, 2) : "null");
     html = html.replace(/__PAGE_TITLE__/g, user? "Private Profile & Settings": "Sign In");
     return html;
 }
