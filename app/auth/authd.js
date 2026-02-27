@@ -41,26 +41,22 @@ function formatSpan(m) {
  *
  * Behavior:
  * - Computes token expiration based on `JWT_EXPIRE_DAYS` or development mode constraints.
- * - Injects standard claims (`uid`, `scope`, `exp`, `maxAge`) along with any provided `extraFields`.
+ * - Injects standard claims along with any provided `extraFields`.
  * - Sets the cookie securely (omitting `httpOnly` only in development mode).
  *
  * @param {Object} res - The Express response object used to set the cookie.
- * @param {number} uid - The unique database ID of the user.
- * @param {Object} [extraFields={}] - Additional custom claims to embed in the JWT (e.g., `loggedInAs`).
+ * @param {Object} [claims={}] - Additional custom claims to embed in the JWT.
  * @param {Array<string>} [scope=null] - The authorization scopes for the user (defaults to `["/*"]`).
  * @returns {Promise<{token: string, payload: Object}>} The generated token and its decoded payload object.
  */
-async function grantTokenAsSetCookie(res, uid, extraFields={}, scope=null) {
+async function grantTokenAsSetCookie(res, claims={}, scope=null) {
   const isDev = process.env.NODE_ENV === 'development';
   const now = Math.floor(Date.now() / 1000);
   const durationSeconds = isDev ? 10 : JWT_EXPIRE_DAYS * 24 * 60 * 60;
   const exp = now + durationSeconds;
   const payload = {
-    ...extraFields,
-    uid: uid,
-    scope: scope || ["/*"],
-    exp: exp,
-    maxAge: durationSeconds
+    ...claims,
+    scope: scope || ["read,write"], exp
   };
   const secret = await database.getJwtSecret();
   const token = jwt.sign(payload, secret, {
@@ -115,8 +111,7 @@ async function login_via_email_and_password(ipAddress, email, password) {
       await database.storeLoginAttempt(ipAddress, uid, true);
       return {
         pass: true,
-        uid: user.uid,
-        loggedInAs: email,
+        uid: user.uid, email, displayName: email, newlyCreated: false,
         algorithm: { algorithm: "HS256" }
       };
 
@@ -161,7 +156,7 @@ async function login_via_email_and_verify(email, email_salt, code) {
 
   } else {
     const [uid, newlyCreated] = await database.createOrMapUserWithEmail(record.email);
-    return { pass: true, uid: uid, loggedInAs: record.email, newlyCreated };
+    return { pass: true, uid, email: record.email, displayName: record.email, newlyCreated };
   }
 }
 
@@ -193,9 +188,9 @@ function EnableOAuth2Routes(app, providers) {
         scope: ['profile', 'email']
       },
       mapProfile: (profile) => ({
-        loggedInAs: profile.displayName || profile.emails?.[0]?.value || profile.id,
-        id: profile.id,
+        displayName: profile.displayName || profile.emails?.[0]?.value || profile.id,
         email: profile.emails?.[0]?.value,
+        oauth2_sub: profile.id,
         photo: profile.photos?.[0]?.value
       })
     },
@@ -210,9 +205,9 @@ function EnableOAuth2Routes(app, providers) {
         scope: ['user:email']
       },
       mapProfile: (profile) => ({
-        loggedInAs: profile.displayName || profile.username || profile.id,
-        id: profile.id,
+        displayName: profile.displayName || profile.username || profile.id,
         email: profile.emails?.[0]?.value,
+        oauth2_sub: profile.id,
         photo: profile.photos?.[0]?.value
       })
     }
@@ -262,13 +257,10 @@ function EnableOAuth2Routes(app, providers) {
 
           try {
             const mappedProfile = config.mapProfile(user);
-            mappedProfile.provider = provider;
             const [uid, newlyCreated] = await database.createOrMapUserWithOauth2(
-              provider,
-              mappedProfile.id,
-              mappedProfile
+              provider, mappedProfile.oauth2_sub, mappedProfile
             );
-            await grantTokenAsSetCookie(res, uid, mappedProfile);
+            await grantTokenAsSetCookie(res, {..mappedProfile, provider, uid, newlyCreated});
 
             // Redirect to the original state (unencoded)
             res.redirect(nextUrl);
@@ -357,7 +349,7 @@ app.post('/login', async (req, res) => {
   }
 
   if (msg.pass) {
-    await grantTokenAsSetCookie(res, msg.uid, { loggedInAs: msg.loggedInAs });
+    await grantTokenAsSetCookie(res, msg);
   }
   res.json(msg);
 });
