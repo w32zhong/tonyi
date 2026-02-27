@@ -16,7 +16,7 @@
 <body>
     <p><a href="./private">Go to Private Page</a></p>
 
-    <h1>Sign in by email</h1>
+    <h3>Sign in by email</h3>
     <form id="login-verify-form">
         <input type="email" id="email-verify" placeholder="Email" required><br>
         <button type="button" id="send-code-btn">Send Verification Code</button><br>
@@ -24,18 +24,18 @@
         <button type="submit">Sign in</button>
     </form>
 
-    <h1>Sign in by email and password</h1>
+    <h3>Sign in by email and password</h3>
     <form id="login-password-form">
         <input type="email" id="email-password" placeholder="Email" required><br>
         <input type="password" id="password" placeholder="Password" required><br>
         <button type="submit">Sign in</button>
     </form>
 
-    <hr>
+    <h3>Sign in by OAuth2</h3>
     <button onclick="oauthLogin('google')">Login with Google</button>
     <button onclick="oauthLogin('github')">Login with GitHub</button>
 
-    <h3>Result:</h3>
+    <h3>Result</h3>
     <pre id="result">(none)</pre>
 
     <script type="module">
