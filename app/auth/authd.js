@@ -7,7 +7,7 @@ const database = require('./database');
 const passhash = require('./passhash');
 const { generatePowChallenge } = require('./pow');
 const { email_verification_code } = require('./email');
-const { requirePoW } = require('./middleware');
+const { requirePoW, requireAuth } = require('./middleware');
 
 const PORT = parseInt(process.env.PORT || "19721", 10);
 const REDIRECT_URL = process.env.REDIRECT_URL || "/login_page";
@@ -360,6 +360,57 @@ app.post('/login', async (req, res) => {
   if (msg.pass) {
     await grantTokenAsSetCookie(res, msg.uid, { loggedInAs: msg.loggedInAs });
   }
+  res.json(msg);
+});
+
+app.post('/change', requireAuth, async (req, res) => {
+  const uid = req.user.uid;
+
+  const method = req.body?.method;
+  let msg = {};
+
+  try {
+    if (method === 'email') {
+      const email = req.body?.email || "";
+      if (!email) {
+        msg = { pass: false, reason: "email_required", errmsg: "Email is required" };
+      } else {
+        await database.bindOrChangeEmail(uid, email);
+        msg = { pass: true, method: "email" };
+      }
+
+    } else if (method === 'password') {
+      const password = req.body?.password || "";
+      if (!password) {
+        msg = { pass: false, reason: "password_required", errmsg: "Password is required" };
+      } else {
+        await database.bindOrChangePassword(uid, password);
+        msg = { pass: true, method: "password" };
+      }
+
+    } else if (method === 'oauth2') {
+      const provider = req.body?.provider || "";
+      const sub = req.body?.sub || "";
+      const info = (req.body?.info && typeof req.body.info === "object") ? req.body.info : {};
+
+      if (!provider || !sub) {
+        msg = {
+          pass: false,
+          reason: "oauth2_fields_required",
+          errmsg: "OAuth2 provider and sub are required"
+        };
+      } else {
+        await database.bindOAuth2Account(uid, provider, sub, info);
+        msg = { pass: true, method: "oauth2", provider, sub };
+      }
+
+    } else {
+      msg = { pass: false, reason: "invalid_method", errmsg: "Invalid method" };
+    }
+  } catch (e) {
+    msg = { pass: false, reason: "unexpected_error", errmsg: e.message };
+  }
+
   res.json(msg);
 });
 

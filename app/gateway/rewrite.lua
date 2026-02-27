@@ -100,9 +100,14 @@ if protected_mode then
             local jwt_res = jwt:verify(jwt_secret, jwt_token, claim_spec)
 
             if jwt_res.valid and jwt_res.verified then
-                print('[JWT] verified, will expire@: ', jwt_res.payload.exp)
-                ngx.req.set_header("X-Remote-User", jwt_res.payload.loggedInAs)
-                pass = true
+                local uid = jwt_res.payload and jwt_res.payload.uid
+                if uid then
+                    print('[JWT] verified, uid=', uid, ', will expire@: ', jwt_res.payload.exp)
+                    ngx.req.set_header("X-Remote-User", tostring(uid))
+                    pass = true
+                else
+                    print('[JWT] request rejected: missing uid in payload')
+                end
             else
                 print('[JWT] request rejected: ', jwt_res.reason)
             end

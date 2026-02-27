@@ -109,10 +109,11 @@ async function requirePoW(req, res, next) {
  * Attaches the decoded payload to req.user.
  */
 async function requireAuth(req, res, next) {
-    // 1. Trust Gateway Header (X-Remote-User) if present
-    const remoteUser = req.headers['x-remote-user'];
-    if (remoteUser) {
-        req.user = { loggedInAs: remoteUser, via: 'gateway' };
+    // 1. Trust Gateway Header (X-Remote-User) as uid if present
+    const remoteUid = req.headers['x-remote-user'];
+    if (remoteUid) {
+        const uid = Number(remoteUid);
+        req.user = { uid, via: 'gateway' };
         return next();
     }
 
@@ -130,6 +131,7 @@ async function requireAuth(req, res, next) {
 
     try {
         const decoded = jwt.verify(token, secret, { algorithms: ["HS256"] });
+        decoded.uid = Number(decoded.uid);
         req.user = decoded;
         next();
     } catch (err) {
