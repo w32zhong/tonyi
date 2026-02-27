@@ -67,7 +67,6 @@ services:
       - DB_URL=postgresql://${DB_USER}:${DB_PASS}@wireguard_server:5432/backend_db
       - LOGIN_MAX_ATTEMPTS=10
       - JWT_EXPIRE_DAYS=5
-      - JWT_SECRET_URL=auth:19721/secret # authd.js relies on middleware.js:requirePoW
       - JWT_COOKIE_NAME=JWT_Token
       - REDIRECT_URL=/login
       - REDIRECT_URL_ARGKEY=next

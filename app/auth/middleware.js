@@ -1,24 +1,68 @@
 const jwt = require('jsonwebtoken');
-const pow = require('./pow');
 
 // Configuration from environment
-const JWT_COOKIE_NAME = process.env.JWT_COOKIE_NAME || "jwt";
-const JWT_SECRET_URL = process.env.JWT_SECRET_URL || "/";
-const REDIRECT_URL = process.env.REDIRECT_URL || "/login_page";
-const REDIRECT_URL_ARGKEY = process.env.REDIRECT_URL_ARGKEY || "next_url";
+const ENV = (typeof process !== "undefined" && process.env) ? process.env : {};
+const JWT_SECRET_URL = ENV.JWT_SECRET_URL || null;
+const JWT_COOKIE_NAME = ENV.JWT_COOKIE_NAME || "jwt";
+const REDIRECT_URL = ENV.REDIRECT_URL || "/login_page";
+const REDIRECT_URL_ARGKEY = ENV.REDIRECT_URL_ARGKEY || "next_url";
+
+function DynamicNodejsRequire() {
+    if (typeof process === "undefined" || !process.versions?.node) {
+        return null;
+
+    } else if (typeof module !== "undefined" && typeof module.require === "function") {
+        // Bind to this module so relative paths can resolve
+        return module.require.bind(module);
+    }
+    return null;
+}
+
+function loadLocalDatabase() {
+    const nodeRequire = DynamicNodejsRequire();
+    if (!nodeRequire) return null;
+    try {
+        return nodeRequire("./database");
+    } catch (err) {
+        console.error("Auth Middleware: Failed to load local database module:", err.message);
+        return null;
+    }
+}
+
+function loadPowModule() {
+    const nodeRequire = DynamicNodejsRequire();
+    if (!nodeRequire) return null;
+    try {
+        return nodeRequire("./pow");
+    } catch (err) {
+        console.error("Auth Middleware: Failed to load PoW module:", err.message);
+        return null;
+    }
+}
 
 /**
  * Fetch the JWT secret from the central auth server
  * @returns {Promise<string|null>}
  */
 async function getJwtSecret() {
-    try {
-        const response = await fetch('http://' + JWT_SECRET_URL);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        return await response.text();
-    } catch (err) {
-        console.error("Auth Middleware: Failed to fetch JWT secret:", err.message);
-        return null;
+    // If no URL is configured, middleware is expected to use local database.
+    if (!JWT_SECRET_URL) {
+        const database = loadLocalDatabase();
+        try {
+            return await database.getJwtSecret();
+        } catch (err) {
+            console.error("Auth Middleware: Failed to read local JWT secret:", err.message);
+            return null;
+        }
+    } else {
+        try {
+            const response = await fetch('http://' + JWT_SECRET_URL);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return await response.text();
+        } catch (err) {
+            console.error("Auth Middleware: Failed to fetch JWT secret:", err.message);
+            return null;
+        }
     }
 }
 
@@ -40,6 +84,11 @@ async function requirePoW(req, res, next) {
     const secret = await getJwtSecret();
     if (!secret) {
         return res.status(500).send("Internal Server Error: Auth Secret Unavailable");
+    }
+
+    const pow = loadPowModule();
+    if (!pow?.verifyPowSolution) {
+        return res.status(500).send("Internal Server Error: PoW Module Unavailable");
     }
 
     const [isValid, salt] = await pow.verifyPowSolution(secret, challenge, signature, solution);
