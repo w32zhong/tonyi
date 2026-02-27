@@ -82,36 +82,33 @@
             btn.disabled = true;
 
             try {
-                btn.textContent = "Requesting Challenge...";
                 const chalResp = await fetch(`${AUTH_BASE_URL}/challenge`);
                 if (!chalResp.ok) throw new Error("Failed to get challenge");
                 const challengeData = await chalResp.json();
-                showResult(challengeData);
+                console.log('challengeData', challengeData);
+
                 const { challenge, signature } = challengeData;
-
-                btn.textContent = "Solving PoW...";
                 const solution = await solve(challenge);
+                console.log('solution', solution);
 
-                btn.textContent = "Sending Code...";
                 const emailResp = await fetch(`${AUTH_BASE_URL}/email`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ email, challenge, signature, solution })
                 });
-                const result = await emailResp.json();
-                showResult(result);
+                const emailResult = await emailResp.json()
+                console.log('emailResult', emailResult);
 
-                if (result.pass) {
-                    emailSalt = result.salt;
-                    alert("Verification code sent to your email!");
+                if (emailResult.pass) {
+                    emailSalt = emailResult.salt;
+                    showResult(emailResult);
                 } else {
-                    alert(result.errmsg || "Failed to send verification code");
+                    alert(emailResult.errmsg || "Failed to send verification code");
                 }
             } catch (err) {
                 showResult("Error: " + err.message);
             } finally {
                 btn.disabled = false;
-                btn.textContent = originalText;
             }
         };
 
