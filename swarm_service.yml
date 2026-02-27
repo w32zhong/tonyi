@@ -114,9 +114,10 @@ services:
       dockerfile: Dockerfile
       args:
         - AUTH_BASE_URL=/auth
+        - UI_BASE=/u
     deploy:
       labels:
-        gateway.route: login
+        gateway.route: u
         gateway.port: 8080
     networks:
       - gateway_net

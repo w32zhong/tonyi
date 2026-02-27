@@ -10,6 +10,9 @@ RUN npm install
 ARG AUTH_BASE_URL=/auth
 ENV VITE_AUTH_BASE_URL=$AUTH_BASE_URL
 
+ARG UI_BASE=/
+ENV VITE_UI_BASE=$UI_BASE
+
 # Copy source code and build
 COPY . .
 RUN npm run build

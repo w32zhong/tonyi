@@ -91,12 +91,4 @@ const handleGithubLogin = () => {
 .backend-messages {
   margin-top: 1rem;
 }
-
-.w-full {
-  width: 100%;
-}
-
-.mr-2 {
-  margin-right: 0.5rem;
-}
 </style>

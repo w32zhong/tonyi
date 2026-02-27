@@ -6,7 +6,7 @@ html, body, #app {
 }
 
 body {
-  background-image: url("/resource/stars.png");
+  background-image: url("./assets/stars.png");
   background-size: cover;
   background-repeat: no-repeat;
   background-position: center;
@@ -28,3 +28,12 @@ body {
   display: flex;
   flex-direction: column;
 }
+
+/* Utility Classes */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.gap-1 { gap: 0.25rem; }
+.gap-2 { gap: 0.5rem; }
+.mt-4 { margin-top: 1rem; }
+.w-full { width: 100%; }
+.mr-2 { margin-right: 0.5rem; }

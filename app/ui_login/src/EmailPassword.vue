@@ -231,10 +231,6 @@ const onFormSubmit = async ({ valid, states }) => {
   white-space: pre-line;
 }
 
-.w-full {
-  width: 100%;
-}
-
 .login-btn {
   font-weight: 700;
   padding: 0.75rem;

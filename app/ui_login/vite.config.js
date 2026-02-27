@@ -4,7 +4,7 @@ import { fileURLToPath, URL } from 'node:url'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 export default defineConfig({
-  base: './',
+  base: process.env.VITE_UI_BASE || '/',
   plugins: [
     vue(),
     nodePolyfills({

@@ -228,10 +228,6 @@ const onFormSubmit = async ({ valid, states }) => {
   white-space: pre-line;
 }
 
-.w-full {
-  width: 100%;
-}
-
 .otp-container {
   align-items: center;
   margin-top: 0.5rem;
@@ -247,21 +243,5 @@ const onFormSubmit = async ({ valid, states }) => {
   font-weight: 700;
   padding: 0.75rem;
   border-radius: 0.75rem;
-}
-
-.flex {
-  display: flex;
-}
-.flex-col {
-  flex-direction: column;
-}
-.gap-1 {
-  gap: 0.25rem;
-}
-.gap-2 {
-  gap: 0.5rem;
-}
-.mt-4 {
-  margin-top: 1rem;
 }
 </style>

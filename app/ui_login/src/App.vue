@@ -65,11 +65,11 @@ const { i18next, t } = useTranslation()
 const route = useRoute()
 
 // Assets
-const pandaNormal = '/resource/panda-normal.png'
-const pandaUsername = '/resource/panda-username.png'
-const pandaPassword = '/resource/panda-password.png'
+import pandaNormalImage from '@/assets/panda-normal.png'
+import pandaUsernameImage from '@/assets/panda-username.png'
+import pandaPasswordImage from '@/assets/panda-password.png'
 
-const pandaImage = ref(pandaNormal)
+const pandaImage = ref(pandaNormalImage)
 const pandaNormalTop = '-80px'
 const pandaTop = ref(pandaNormalTop)
 const pandaUsernameTop = '-85px'
@@ -83,16 +83,16 @@ const actionTitle = computed(() => {
 
 const handlePandaFocus = (field) => {
   if (field === 'username') {
-    pandaImage.value = pandaUsername
+    pandaImage.value = pandaUsernameImage
     pandaTop.value = pandaUsernameTop
   } else if (field === 'password') {
-    pandaImage.value = pandaPassword
+    pandaImage.value = pandaPasswordImage
     pandaTop.value = pandaPasswordTop
   }
 }
 
 const handlePandaBlur = () => {
-  pandaImage.value = pandaNormal
+  pandaImage.value = pandaNormalImage
   pandaTop.value = pandaNormalTop
 }
 
