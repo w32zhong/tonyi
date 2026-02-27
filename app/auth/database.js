@@ -29,7 +29,7 @@ async function initializeDB(reset = false) {
       await db.schema.dropTableIfExists('AuthOAuth2');
       await db.schema.dropTableIfExists('AuthPassword');
       await db.schema.dropTableIfExists('AuthUser');
-      await db.schema.dropTableIfExists('EmailRecord');
+      await db.schema.dropTableIfExists('AuthEmailCode');
     }
 
     console.log("Creating database tables...");
@@ -92,9 +92,9 @@ async function initializeDB(reset = false) {
       });
     }
 
-    // EmailRecord table
-    if (!(await db.schema.hasTable('EmailRecord'))) {
-      await db.schema.createTable('EmailRecord', (table) => {
+    // AuthEmailCode table
+    if (!(await db.schema.hasTable('AuthEmailCode'))) {
+      await db.schema.createTable('AuthEmailCode', (table) => {
         table.increments('id').primary();
         table.string('ip_address', 45).notNullable();
         table.string('email', 255).notNullable();
@@ -375,9 +375,9 @@ async function getLoginAttempts(ip_address, uid, max_minutes) {
  * @param {string} salt
  * @param {string} verification_code
  */
-async function storeEmailRecord(ip_address, email, salt, verification_code) {
+async function storeEmailCode(ip_address, email, salt, verification_code) {
   try {
-    await db('EmailRecord').insert({
+    await db('AuthEmailCode').insert({
       ip_address,
       email,
       salt,
@@ -395,9 +395,9 @@ async function storeEmailRecord(ip_address, email, salt, verification_code) {
  * @param {string} salt
  * @returns {Promise<Object|null>}
  */
-async function getEmailRecordBySalt(email, salt) {
+async function getEmailCodeBySalt(email, salt) {
   try {
-    return await db('EmailRecord')
+    return await db('AuthEmailCode')
       .where('email', email)
       .andWhere('salt', salt)
       .first();
@@ -414,16 +414,16 @@ async function getEmailRecordBySalt(email, salt) {
  * @param {number} max_minutes
  * @returns {Promise<{ipCount: number, emailCount: number}>}
  */
-async function getEmailRecordCount(ip_address, email, max_minutes) {
+async function getEmailCodeReqCnt(ip_address, email, max_minutes) {
   try {
     const since = new Date(Date.now() - max_minutes * 60 * 1000).toISOString();
 
-    const [ipCountRes] = await db('EmailRecord')
+    const [ipCountRes] = await db('AuthEmailCode')
       .where('timestamp', '>=', since)
       .andWhere('ip_address', ip_address)
       .count('* as count');
 
-    const [emailCountRes] = await db('EmailRecord')
+    const [emailCountRes] = await db('AuthEmailCode')
       .where('timestamp', '>=', since)
       .andWhere('ip_address', ip_address)
       .andWhere('email', email)
@@ -493,9 +493,9 @@ module.exports = {
   getUserBy,
   storeLoginAttempt,
   getLoginAttempts,
-  storeEmailRecord,
-  getEmailRecordBySalt,
-  getEmailRecordCount,
+  storeEmailCode,
+  getEmailCodeBySalt,
+  getEmailCodeReqCnt,
   rotateJwtSecret,
   getJwtSecret
 };

@@ -144,7 +144,7 @@ async function verify_email_code(email, email_salt, code) {
     return { pass: false, reason: "missing_fields", errmsg: "salt and code required" };
   }
 
-  const record = await database.getEmailRecordBySalt(email, email_salt);
+  const record = await database.getEmailCodeBySalt(email, email_salt);
   const expirationTime = EMAIL_VERIFY_EXPIRATION * 60 * 1000;
   const now = Date.now();
   if (!record || record.verified || (now - new Date(record.timestamp).getTime() > expirationTime)) {
@@ -303,7 +303,7 @@ app.post('/email', requirePoW, async (req, res) => {
   }
 
   // Rate Limiting
-  const { ipCount, emailCount } = await database.getEmailRecordCount(ip_addr, email, EMAIL_ATTEMPTS_SPAN);
+  const { ipCount, emailCount } = await database.getEmailCodeReqCnt(ip_addr, email, EMAIL_ATTEMPTS_SPAN);
   if (ipCount >= EMAIL_MAX_SEND_PER_IP) {
     const last = formatSpan(EMAIL_ATTEMPTS_SPAN);
     return res.status(429).json({
@@ -325,7 +325,7 @@ app.post('/email', requirePoW, async (req, res) => {
 
   // Send email with verification code
   const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit code
-  await database.storeEmailRecord(ip_addr, email, salt, code);
+  await database.storeEmailCode(ip_addr, email, salt, code);
   const [success, error] = await email_verification_code(email, code);
   if (!success) {
     return res.status(500).json({
