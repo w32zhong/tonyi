@@ -365,7 +365,6 @@ app.post('/login', async (req, res) => {
 
 app.post('/change', requireAuth, async (req, res) => {
   const uid = req.user.uid;
-
   const method = req.body?.method;
   let msg = {};
 
@@ -376,7 +375,7 @@ app.post('/change', requireAuth, async (req, res) => {
         msg = { pass: false, reason: "email_required", errmsg: "Email is required" };
       } else {
         await database.bindOrChangeEmail(uid, email);
-        msg = { pass: true, method: "email" };
+        msg = { pass: true };
       }
 
     } else if (method === 'password') {
@@ -385,13 +384,13 @@ app.post('/change', requireAuth, async (req, res) => {
         msg = { pass: false, reason: "password_required", errmsg: "Password is required" };
       } else {
         await database.bindOrChangePassword(uid, password);
-        msg = { pass: true, method: "password" };
+        msg = { pass: true };
       }
 
     } else if (method === 'oauth2') {
       const provider = req.body?.provider || "";
       const sub = req.body?.sub || "";
-      const info = (req.body?.info && typeof req.body.info === "object") ? req.body.info : {};
+      const info = (req.body?.info) ? req.body.info : {};
 
       if (!provider || !sub) {
         msg = {
@@ -401,14 +400,14 @@ app.post('/change', requireAuth, async (req, res) => {
         };
       } else {
         await database.bindOAuth2Account(uid, provider, sub, info);
-        msg = { pass: true, method: "oauth2", provider, sub };
+        msg = { pass: true };
       }
 
     } else {
       msg = { pass: false, reason: "invalid_method", errmsg: "Invalid method" };
     }
   } catch (e) {
-    msg = { pass: false, reason: "unexpected_error", errmsg: e.message };
+    msg = { pass: false, reason: "failed_to_change", errmsg: e.message };
   }
 
   res.json(msg);
