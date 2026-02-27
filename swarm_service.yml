@@ -107,6 +107,20 @@ services:
     networks:
       - gateway_net
 
+  ui_login:
+    image: ui_login:latest
+    build:
+      context: ./app/ui_login
+      dockerfile: Dockerfile
+      args:
+        - AUTH_BASE_URL=/auth
+    deploy:
+      labels:
+        gateway.route: login
+        gateway.port: 8080
+    networks:
+      - gateway_net
+
   ui_404:
     image: ui_404:latest
     build:
@@ -118,21 +132,6 @@ services:
     deploy:
       labels:
         gateway.route: _404_
-        gateway.port: 8080
-    networks:
-      - gateway_net
-
-  ui_login:
-    image: ui_login:latest
-    build:
-      context: ./app/ui_login
-      dockerfile: Dockerfile
-      args:
-        - AUTH_BASE_URL=/auth
-        - ADMIN_EMAIL=admin@localhost.me
-    deploy:
-      labels:
-        gateway.route: login
         gateway.port: 8080
     networks:
       - gateway_net

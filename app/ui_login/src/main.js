@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import App from './App.vue'
+import EmailVerify from './EmailVerify.vue'
 import EmailPassword from './EmailPassword.vue'
 import OAuth2 from './OAuth2.vue'
 import EmailPasswordAndOAuth2 from './EmailPasswordAndOAuth2.vue'
@@ -23,12 +24,17 @@ import jaTranslation from './locales/ja/translation.json'
 // Router Setup
 const routes = [
   {
-    path: '/:action(login|signup)',
+    path: '/:action(login)',
     name: 'EmailPasswordAndOAuth2',
     component: EmailPasswordAndOAuth2
   },
   {
-    path: '/:action(bind)/email_password',
+    path: '/:action(signup|forget_pass)',
+    name: 'EmailVerify',
+    component: EmailVerify
+  },
+  {
+    path: '/:action(bind_password|change_password)/email_password',
     name: 'EmailPassword',
     component: EmailPassword
   },

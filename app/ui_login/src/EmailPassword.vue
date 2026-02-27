@@ -6,7 +6,9 @@
           name="username"
           type="text"
           class="w-full"
+          :class="{ 'p-disabled': isBindOrChange }"
           :placeholder="$t('username')"
+          :readonly="isBindOrChange"
           fluid
           @focus="$emit('panda-focus', 'username')"
           @blur="$emit('panda-blur')"
@@ -27,13 +29,26 @@
         <Message v-if="$form?.password?.invalid" severity="error" size="small" variant="simple">{{ $t($form?.password?.error?.message) }}</Message>
       </div>
 
+      <div class="flex flex-col gap-1" v-if="isBindOrChange">
+        <Password
+          name="repeat_password"
+          :placeholder="$t('repeat_password') || 'Repeat Password'"
+          :feedback="false"
+          toggleMask
+          fluid
+          @focus="$emit('panda-focus', 'password')"
+          @blur="$emit('panda-blur')"
+        />
+        <Message v-if="$form?.repeat_password?.invalid" severity="error" size="small" variant="simple">{{ $t($form?.repeat_password?.error?.message) }}</Message>
+      </div>
+
       <div class="footer-actions mt-4">
         <Button
           type="submit"
           :label="actionTitle"
           class="w-full login-btn"
           :loading="loading"
-          :disabled="!$form?.valid || !$form?.username?.value || !$form?.password?.value"
+          :disabled="!$form?.valid || !$form?.username?.value || !$form?.password?.value || (isBindOrChange && !$form?.repeat_password?.value)"
         />
       </div>
 
@@ -64,6 +79,8 @@ const route = useRoute()
 
 defineEmits(['panda-focus', 'panda-blur'])
 
+const isBindOrChange = computed(() => ['bind_password', 'change_password'].includes(route.params.action))
+
 const actionTitle = computed(() => {
   const action = route.params.action || 'login'
   return t(action)
@@ -72,15 +89,17 @@ const actionTitle = computed(() => {
 // State
 const loading = ref(false)
 const succKey = ref('')
-const failInfo = ref({ key: '', chances: -1 })
+const failInfo = ref({ key: '', msg: '', chances: -1 })
 
 const resetFail = () => {
   failInfo.value.key = ''
+  failInfo.value.msg = ''
   failInfo.value.chances = -1
 }
 
 const succMsg = computed(() => succKey.value ? t(succKey.value) : '')
 const failMsg = computed(() => {
+  if (failInfo.value.msg) return failInfo.value.msg
   if (!failInfo.value.key) return ''
   const base = t(failInfo.value.key)
   return failInfo.value.chances >= 0
@@ -89,12 +108,13 @@ const failMsg = computed(() => {
 })
 
 const initialValues = reactive({
-  username: '',
-  password: ''
+  username: window.__USER__?.email || '',
+  password: '',
+  repeat_password: ''
 })
 
 const resolver = ({ values }) => {
-  const schema = z.object({
+  const schemaObj = {
     username: z
       .string()
       .email('errors.invalid_email')
@@ -106,19 +126,33 @@ const resolver = ({ values }) => {
       .regex(/[a-z]/, 'errors.password_needs_lowercase')
       .regex(/[A-Z]/, 'errors.password_needs_uppercase')
       .regex(/[0-9]/, 'errors.password_needs_number')
-      .regex(/[^a-zA-Z0-9]/, 'errors.password_needs_special'),
-  })
-
-  const result = schema.safeParse(values)
-  if (result.success) return { errors: {} }
-
-  const errors = {}
-  for (const issue of result.error.issues) {
-    const field = issue.path[0]
-    if (!errors[field]) errors[field] = []
-    errors[field].push({ message: issue.message })
+      .regex(/[^a-zA-Z0-9]/, 'errors.password_needs_special')
   }
-  return { errors }
+
+  if (isBindOrChange.value) {
+    schemaObj.repeat_password = z.string()
+  }
+
+  const schema = z.object(schemaObj)
+  const result = schema.safeParse(values)
+  
+  const errors = {}
+  
+  if (!result.success) {
+    for (const issue of result.error.issues) {
+      const field = issue.path[0]
+      if (!errors[field]) errors[field] = []
+      errors[field].push({ message: issue.message })
+    }
+  }
+
+  if (isBindOrChange.value && values.password !== values.repeat_password) {
+    if (!errors.repeat_password) errors.repeat_password = []
+    errors.repeat_password.push({ message: 'errors.passwords_do_not_match' })
+  }
+
+  if (Object.keys(errors).length > 0) return { errors }
+  return { errors: {} }
 }
 
 // Form Submission
@@ -129,19 +163,25 @@ const onFormSubmit = async ({ valid, states }) => {
   resetFail()
   loading.value = true
 
-  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || 'admin@localhost.me'
-  const username = states.username.value === adminEmail ? 'admin' : states.username.value
+  const username = states.username.value
 
   try {
     const authBaseUrl = import.meta.env.VITE_AUTH_BASE_URL || '/auth'
     const cleanUrl = authBaseUrl.replace(/\/$/, '')
 
-    const response = await axios.post(`${cleanUrl}/authentication`, {
-      username,
-      password: states.password.value
-    }, {
-      timeout: 5000
-    })
+    let response
+    if (isBindOrChange.value) {
+      response = await axios.post(`${cleanUrl}/change`, {
+        method: "password",
+        password: states.password.value
+      }, { timeout: 5000 })
+    } else {
+      response = await axios.post(`${cleanUrl}/login`, {
+        method: "email_and_password",
+        email: username,
+        password: states.password.value
+      }, { timeout: 5000 })
+    }
 
     const data = response.data
     loading.value = false
@@ -149,16 +189,24 @@ const onFormSubmit = async ({ valid, states }) => {
     if (data.pass) {
       succKey.value = 'success_redirect'
       const next = new URLSearchParams(window.location.search).get('next') || '/'
-      setTimeout(() => window.location.assign(next), 5000)
+      setTimeout(() => window.location.assign(next), 2000)
     } else {
       states.password.value = ''
-      failInfo.value.key = 'login_failed'
-      failInfo.value.chances = typeof data.msg?.left_chances === 'number' ? data.msg.left_chances : -1
+      if (states.repeat_password) states.repeat_password.value = ''
+      
+      if (data.reason || data.errmsg) {
+        failInfo.value.msg = data.errmsg || data.reason
+      } else {
+        failInfo.value.key = 'login_failed'
+        failInfo.value.chances = typeof data.msg?.left_chances === 'number' ? data.msg.left_chances : -1
+      }
     }
   } catch (err) {
     loading.value = false
     states.password.value = ''
+    if (states.repeat_password) states.repeat_password.value = ''
     failInfo.value.key = 'errors.service_unavailable'
+    failInfo.value.msg = err.response?.data?.error || err.message
     failInfo.value.chances = -1
   }
 }

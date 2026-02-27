@@ -45,7 +45,12 @@ const handleGoogleLogin = () => {
 
   // Pass the current action (login/signup/bind) to the backend
   const action = route.params.action || 'login'
-  window.location.href = `/oauth2/google?action=${action}`
+  const next = new URLSearchParams(window.location.search).get('next') || '/'
+  
+  const authBaseUrl = import.meta.env.VITE_AUTH_BASE_URL || '/auth'
+  const cleanUrl = authBaseUrl.replace(/\/$/, '')
+  
+  window.location.href = `${cleanUrl}/oauth2/google?next=${encodeURIComponent(next)}`
 }
 
 const handleGithubLogin = () => {
@@ -54,7 +59,12 @@ const handleGithubLogin = () => {
 
   // Pass the current action (login/signup/bind) to the backend
   const action = route.params.action || 'login'
-  window.location.href = `/oauth2/github?action=${action}`
+  const next = new URLSearchParams(window.location.search).get('next') || '/'
+  
+  const authBaseUrl = import.meta.env.VITE_AUTH_BASE_URL || '/auth'
+  const cleanUrl = authBaseUrl.replace(/\/$/, '')
+  
+  window.location.href = `${cleanUrl}/oauth2/github?next=${encodeURIComponent(next)}`
 }
 </script>
 
