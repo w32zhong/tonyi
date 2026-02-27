@@ -139,25 +139,35 @@ async function login_via_email_and_password(ipAddress, email, password) {
  * @param {string} code - The email code to be verified
  * @returns {Promise<Object>} result info
  */
-async function login_via_email_and_verify(email, email_salt, code) {
-  if (!email_salt || !code) {
+async function verify_email_code(email, email_salt, code) {
+  if (!email || !email_salt || !code) {
     return { pass: false, reason: "missing_fields", errmsg: "salt and code required" };
   }
 
   const record = await database.getEmailRecordBySalt(email, email_salt);
   const expirationTime = EMAIL_VERIFY_EXPIRATION * 60 * 1000;
   const now = Date.now();
-
   if (!record || record.verified || (now - new Date(record.timestamp).getTime() > expirationTime)) {
     return { pass: false, reason: "invalid_or_expired", errmsg: "Invalid or expired verification request" };
-
   } else if (record.verification_code !== code) {
     return { pass: false, reason: "incorrect_code", errmsg: "Incorrect verification code" };
-
   } else {
-    const [uid, newlyCreated] = await database.createOrMapUserWithEmail(record.email);
-    return { pass: true, uid, email: record.email, displayName: record.email, newlyCreated };
+    return { pass: true, record };
   }
+}
+
+/**
+ * Handles login via email and verification code
+ * @param {string} email
+ * @param {string} email_salt
+ * @param {string} code
+ * @returns {Promise<Object>} result info
+ */
+async function login_via_email_and_verify(email, email_salt, code) {
+  const verifyResult = await verify_email_code(email, email_salt, code);
+  if (!verifyResult.pass) { return verifyResult; }
+  const [uid, newlyCreated] = await database.createOrMapUserWithEmail(email);
+  return { pass: true, uid, email, displayName: email, newlyCreated };
 }
 
 /**
@@ -362,11 +372,11 @@ app.post('/change', requireAuth, async (req, res) => {
   try {
     if (method === 'email') {
       const email = req.body?.email || "";
-      if (!email) {
-        msg = { pass: false, reason: "email_required", errmsg: "Email is required" };
-      } else {
+      const email_salt = req.body.email_salt; /* the salt paired with an email verify request */
+      const code = req.body.code; /* the email code to be verified */
+      msg = await verify_email_code(email, email_salt, code);
+      if (msg.pass) {
         await database.bindOrChangeEmail(uid, email);
-        msg = { pass: true };
       }
 
     } else if (method === 'password') {

@@ -33,14 +33,14 @@
         <input type="email" id="email-verify" placeholder="Email">
         <button type="button" id="send-code-btn">Send Verification Code</button>
         <input type="text" id="verification-code" placeholder="Verification Code">
-        <button type="submit" id="submit-email">Submit</button>
+        <button type="submit">Submit</button>
     </form>
 
     <h3>Method 2: Password</h3>
     <form id="form-password">
         <input type="email" id="email" placeholder="Email">
         <input type="password" id="password" placeholder="Password">
-        <button type="submit" id="submit-password">Submit</button>
+        <button type="submit">Submit</button>
     </form>
 
     <h3>Method 3: OAuth2</h3>
@@ -59,6 +59,7 @@
         const USER = __USER__;
         let emailSalt = null;
 
+        /* UI elements to display result */
         function showResult(json) {
             const resultDisplay = document.getElementById("result");
             resultDisplay.textContent = JSON.stringify(json, null, 2);
@@ -69,6 +70,7 @@
             showResult("You have been logged out.");
         }
 
+        /* an utility request submit function */
         async function submitRequest(url, jsonParam) {
             let result = null
             try {
@@ -90,6 +92,7 @@
             return result
         }
 
+        /* depending on whether this user is logged-in or not, modify UI elements */
         if (USER) {
             document.getElementById("private-nav").style.display = "none";
             document.getElementById("profile").style.display = "block";
@@ -102,7 +105,7 @@
             emailInput.style.backgroundColor = '#eeeeee';
 
             // If user is currently logged in with OAuth2, show the binding link
-            if (USER && USER.provider) {
+            if (USER.provider) {
                 const btn = document.createElement("button");
                 btn.textContent = `Bind ${USER.provider}`;
                 btn.onclick = () => {
@@ -112,6 +115,7 @@
             }
         }
 
+        /* attach the next (redirect) URL when clicking the oauth2 login button */
         window.oauthLogin = function(provider) {
             const params = new URLSearchParams(location.search);
             let next = USER ? location.href : params.get(REDIRECT_URL_ARGKEY);
@@ -122,6 +126,7 @@
             location.href = url;
         };
 
+        /* send code via email, obtain spent salt */
         const sendCodeBtn = document.getElementById("send-code-btn");
         sendCodeBtn.onclick = async () => {
             const email = document.getElementById("email-verify").value;
@@ -151,22 +156,21 @@
             }
         };
 
+        /* log in via email, or bind a new email. Verified by the code and spent salt */
         document.getElementById("form-email").onsubmit = async (e) => {
             e.preventDefault();
             const email = document.getElementById("email-verify").value;
-            if (USER) {
-                submitRequest(`${AUTH_BASE_URL}/change`, { method: "email", email });
-            } else {
-                const code = document.getElementById("verification-code").value;
-                submitRequest(`${AUTH_BASE_URL}/login`, {
-                    method: "email_verify",
-                    email,
-                    email_salt: emailSalt,
-                    code
-                });
-            }
+            const code = document.getElementById("verification-code").value;
+            const route = USER ? 'change' : 'login'
+            submitRequest(`${AUTH_BASE_URL}/${route}`, {
+                method: "email",
+                email,
+                email_salt: emailSalt,
+                code
+            });
         };
 
+        /* log in via email and password, or bind a new password */
         document.getElementById("form-password").onsubmit = async (e) => {
             e.preventDefault();
             const password = document.getElementById("password").value;
