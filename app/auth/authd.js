@@ -138,6 +138,34 @@ async function login_via_email_and_password(ipAddress, email, password) {
 }
 
 /**
+ * Login a user via email and verification code
+ * @param {string} email - The user's email
+ * @param {string} email_salt - The salt paired with an email verify request
+ * @param {string} code - The email code to be verified
+ * @returns {Promise<Object>} result info
+ */
+async function login_via_email_and_verify(email, email_salt, code) {
+  if (!email_salt || !code) {
+    return { pass: false, reason: "missing_fields", errmsg: "salt and code required" };
+  }
+
+  const record = await database.getEmailRecordBySalt(email, email_salt);
+  const expirationTime = EMAIL_VERIFY_EXPIRATION * 60 * 1000;
+  const now = Date.now();
+
+  if (!record || record.verified || (now - new Date(record.timestamp).getTime() > expirationTime)) {
+    return { pass: false, reason: "invalid_or_expired", errmsg: "Invalid or expired verification request" };
+
+  } else if (record.verification_code !== code) {
+    return { pass: false, reason: "incorrect_code", errmsg: "Incorrect verification code" };
+
+  } else {
+    const [uid, newlyCreated] = await database.createOrMapUserWithEmail(record.email);
+    return { pass: true, uid: uid, loggedInAs: record.email, newlyCreated };
+  }
+}
+
+/**
  * Configures and enables OAuth2 authentication routes for the Express application.
  * It initializes Passport.js strategies, sets up the necessary `/oauth2/:provider` login endpoints,
  * and handles the `/oauth2/:provider/callback` endpoints to issue JWTs upon success.
@@ -323,26 +351,7 @@ app.post('/login', async (req, res) => {
   } else if (method === 'email_verify') {
     const email_salt = req.body.email_salt; /* the salt paired with an email verify request */
     const code = req.body.code; /* the email code to be verified */
-
-    if (!email_salt || !code) {
-      msg = { pass: false, reason: "missing_fields", errmsg: "salt and code required" };
-
-    } else {
-      const record = await database.getEmailRecordBySalt(email, email_salt);
-      const expirationTime = EMAIL_VERIFY_EXPIRATION * 60 * 1000;
-      const now = Date.now();
-
-      if (!record || record.verified || (now - new Date(record.timestamp).getTime() > expirationTime)) {
-        msg = { pass: false, reason: "invalid_or_expired", errmsg: "Invalid or expired verification request" };
-
-      } else if (record.verification_code !== code) {
-        msg = { pass: false, reason: "incorrect_code", errmsg: "Incorrect verification code" };
-
-      } else {
-        const [uid, newlyCreated] = await database.createOrMapUserWithEmail(record.email);
-        msg = { pass: true, uid: uid, loggedInAs: record.email, newlyCreated };
-      }
-    }
+    msg = await login_via_email_and_verify(email, email_salt, code);
 
   } else {
     msg = { pass: false, reason: "invalid_method", errmsg: "Invalid method" };
