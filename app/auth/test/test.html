@@ -14,7 +14,7 @@
     </style>
 </head>
 <body>
-    <h3>__PAGE_TITLE__</h3>
+    <h1>__PAGE_TITLE__</h1>
 
     <div id="private-nav">
         <p><a href="./private">Go to Private Page</a></p>
@@ -95,6 +95,8 @@
             const emailInput = document.getElementById("email");
             emailInput.value = "your_email@domain.com";
             emailInput.readOnly = true;
+            emailInput.style.color = '#6c6c6c';
+            emailInput.style.backgroundColor = '#eeeeee';
 
             // If user is currently logged in with OAuth2, show the binding link
             if (USER && USER.provider) {
@@ -109,7 +111,7 @@
 
         window.oauthLogin = function(provider) {
             const params = new URLSearchParams(location.search);
-            const next = params.get(REDIRECT_URL_ARGKEY);
+            let next = USER ? location.href : params.get(REDIRECT_URL_ARGKEY);
             let url = `${AUTH_BASE_URL}/oauth2/${provider}`;
             if (next) {
                 url += `?${REDIRECT_URL_ARGKEY}=${encodeURIComponent(next)}`;
