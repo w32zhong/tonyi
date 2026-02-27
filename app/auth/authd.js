@@ -193,9 +193,8 @@ function EnableOAuth2Routes(app, providers) {
         scope: ['profile', 'email']
       },
       mapProfile: (profile) => ({
-        loggedInAs: profile.emails?.[0]?.value || profile.id,
+        loggedInAs: profile.displayName || profile.emails?.[0]?.value || profile.id,
         id: profile.id,
-        displayName: profile.displayName,
         email: profile.emails?.[0]?.value,
         photo: profile.photos?.[0]?.value
       })
@@ -211,9 +210,8 @@ function EnableOAuth2Routes(app, providers) {
         scope: ['user:email']
       },
       mapProfile: (profile) => ({
-        loggedInAs: profile.username || profile.id,
+        loggedInAs: profile.displayName || profile.username || profile.id,
         id: profile.id,
-        displayName: profile.displayName || profile.username,
         email: profile.emails?.[0]?.value,
         photo: profile.photos?.[0]?.value
       })
@@ -264,6 +262,7 @@ function EnableOAuth2Routes(app, providers) {
 
           try {
             const mappedProfile = config.mapProfile(user);
+            mappedProfile.provider = provider;
             const [uid, newlyCreated] = await database.createOrMapUserWithOauth2(
               provider,
               mappedProfile.id,
@@ -388,15 +387,15 @@ app.post('/change', requireAuth, async (req, res) => {
       }
 
     } else if (method === 'oauth2') {
-      const provider = req.body?.provider || "";
-      const sub = req.body?.sub || "";
-      const info = (req.body?.info) ? req.body.info : {};
+      const provider = req.user?.provider || "";
+      const sub = req.user?.id || "";
+      const info = req.user || {};
 
       if (!provider || !sub) {
         msg = {
           pass: false,
           reason: "oauth2_fields_required",
-          errmsg: "OAuth2 provider and sub are required"
+          errmsg: "OAuth2 provider and sub are required in current session"
         };
       } else {
         await database.bindOAuth2Account(uid, provider, sub, info);
