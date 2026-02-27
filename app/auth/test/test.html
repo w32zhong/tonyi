@@ -96,7 +96,7 @@
 
             // Show a fixed email and prevent edits.
             const emailInput = document.getElementById("email");
-            emailInput.value = "your_email@domain.com";
+            emailInput.value = USER.email || "";
             emailInput.readOnly = true;
             emailInput.style.color = '#6c6c6c';
             emailInput.style.backgroundColor = '#eeeeee';

@@ -380,7 +380,7 @@ app.post('/change', requireAuth, async (req, res) => {
 
     } else if (method === 'oauth2') {
       const provider = req.user?.provider || "";
-      const sub = req.user?.id || "";
+      const sub = req.user?.oauth2_sub || "";
       const info = req.user || {};
 
       if (!provider || !sub) {
