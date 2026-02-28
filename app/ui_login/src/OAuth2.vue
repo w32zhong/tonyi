@@ -92,3 +92,54 @@ const handleGithubLogin = () => {
   margin-top: 1rem;
 }
 </style>
+
+<style>
+/* Unscoped global rules for button theming */
+.google-btn {
+  --p-button-primary-background: #db4437;
+  --p-button-primary-hover-background: #c53929;
+  --p-button-primary-active-background: #b03224;
+  --p-button-primary-border-color: #db4437;
+  --p-button-primary-hover-border-color: #c53929;
+  --p-button-primary-active-border-color: #b03224;
+  --p-button-primary-color: #ffffff;
+  --p-button-primary-hover-color: #ffffff;
+  --p-button-primary-active-color: #ffffff;
+}
+
+.p-dark .google-btn {
+  --p-button-primary-background: #f28b82;
+  --p-button-primary-hover-background: #f6aea9;
+  --p-button-primary-active-background: #f9c2be;
+  --p-button-primary-border-color: #f28b82;
+  --p-button-primary-hover-border-color: #f6aea9;
+  --p-button-primary-active-border-color: #f9c2be;
+  --p-button-primary-color: #202124;
+  --p-button-primary-hover-color: #202124;
+  --p-button-primary-active-color: #202124;
+}
+
+.github-btn {
+  --p-button-secondary-background: #24292e;
+  --p-button-secondary-hover-background: #1b1f23;
+  --p-button-secondary-active-background: #121417;
+  --p-button-secondary-border-color: #24292e;
+  --p-button-secondary-hover-border-color: #1b1f23;
+  --p-button-secondary-active-border-color: #121417;
+  --p-button-secondary-color: #ffffff;
+  --p-button-secondary-hover-color: #ffffff;
+  --p-button-secondary-active-color: #ffffff;
+}
+
+.p-dark .github-btn {
+  --p-button-secondary-background: #f0f6fc;
+  --p-button-secondary-hover-background: #e1e4e8;
+  --p-button-secondary-active-background: #d1d5da;
+  --p-button-secondary-border-color: #f0f6fc;
+  --p-button-secondary-hover-border-color: #e1e4e8;
+  --p-button-secondary-active-border-color: #d1d5da;
+  --p-button-secondary-color: #24292e;
+  --p-button-secondary-hover-color: #24292e;
+  --p-button-secondary-active-color: #24292e;
+}
+</style>

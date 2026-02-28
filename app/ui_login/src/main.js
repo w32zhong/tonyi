@@ -11,7 +11,6 @@ import I18NextVue from 'i18next-vue'
 import LanguageDetector from 'i18next-browser-languagedetector'
 
 import PrimeVue from 'primevue/config'
-import Tooltip from 'primevue/tooltip'
 import UsingTheme from '@primeuix/themes/nora'
 import 'primeicons/primeicons.css'
 import './style.css'
@@ -76,7 +75,6 @@ const app = createApp(App)
 
 app.use(router)
 app.use(I18NextVue, { i18next })
-app.directive('tooltip', Tooltip)
 app.use(PrimeVue, {
     theme: {
         preset: UsingTheme,
