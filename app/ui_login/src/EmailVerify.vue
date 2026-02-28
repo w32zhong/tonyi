@@ -47,7 +47,7 @@
       </div>
 
       <div class="backend-messages" v-if="succMsg || failMsg || infoMsg">
-        <Message v-if="infoMsg" severity="info" closable @close="infoMsg = ''">{{ infoMsg }}</Message>
+        <Message v-if="infoMsg" severity="info" closable @close="infoKey = ''">{{ infoMsg }}</Message>
         <Message v-if="succMsg" severity="success" closable @close="succKey = ''">{{ succMsg }}</Message>
         <Message v-if="failMsg" severity="error" closable @close="resetFail">{{ failMsg }}</Message>
       </div>
@@ -86,20 +86,18 @@ const codeSent = ref(false)
 const emailSalt = ref(null)
 
 const succKey = ref('')
-const failInfo = ref({ key: '', msg: '' })
-const infoMsg = ref('')
+const failKey = ref('')
+const infoKey = ref('')
 
 const resetFail = () => {
-  failInfo.value.key = ''
-  failInfo.value.msg = ''
+  failKey.value = ''
 }
 
 const succMsg = computed(() => succKey.value ? t(succKey.value) : '')
-const failMsg = computed(() => {
-  if (failInfo.value.msg) return failInfo.value.msg
-  if (!failInfo.value.key) return ''
-  return t(failInfo.value.key)
-})
+const failMsg = computed(() => failKey.value ? t(failKey.value) : '')
+const infoMsg = computed(() => infoKey.value ? t(infoKey.value) : '')
+
+const toErrorKey = (payload) => payload?.reason ? `errors.${payload.reason}` : 'errors.service_unavailable'
 
 const initialValues = reactive({
   email: '',
@@ -133,16 +131,16 @@ const sendCode = async ($form) => {
   sendingCode.value = true
   resetFail()
   succKey.value = ''
-  infoMsg.value = ''
+  infoKey.value = ''
 
   try {
     const chalResp = await axios.get(`${cleanUrl}/challenge`)
     const challengeData = chalResp.data
-    infoMsg.value = t('solving_challenge') || 'Solving anti-bot challenge...'
+    infoKey.value = 'solving_challenge'
 
     const { challenge, signature } = challengeData
     const solution = await solve(challenge)
-    infoMsg.value = ''
+    infoKey.value = ''
 
     const emailResult = await axios.post(`${cleanUrl}/email`, {
       email: $form.email.value,
@@ -156,11 +154,10 @@ const sendCode = async ($form) => {
       codeSent.value = true
       succKey.value = 'code_sent_successfully'
     } else {
-      failInfo.value.msg = t('failed_to_send_code')
+      failKey.value = toErrorKey(emailResult.data)
     }
   } catch (err) {
-    failInfo.value.key = 'errors.service_unavailable'
-    failInfo.value.msg = err.response?.data?.error || err.message
+    failKey.value = toErrorKey(err.response?.data)
   } finally {
     sendingCode.value = false
   }
@@ -198,11 +195,10 @@ const onFormSubmit = async ({ valid, states }) => {
         }
       }, 1000)
     } else {
-      failInfo.value.msg = t('login_failed')
+      failKey.value = toErrorKey(data)
     }
   } catch (err) {
-    failInfo.value.key = 'errors.service_unavailable'
-    failInfo.value.msg = err.response?.data?.error || err.message
+    failKey.value = toErrorKey(err.response?.data)
   } finally {
     loading.value = false
   }

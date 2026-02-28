@@ -311,7 +311,11 @@ app.get('/challenge', async (req, res) => {
     const { challenge, signature } = await generatePowChallenge();
     res.json({ challenge, signature });
   } catch (err) {
-    res.status(500).json({ error: "Failed to generate challenge" });
+    res.status(500).json({
+      pass: false,
+      reason: "challenge_generation_failed",
+      errmsg: "Failed to generate challenge"
+    });
   }
 });
 

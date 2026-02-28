@@ -32,7 +32,7 @@
       <div class="flex flex-col gap-1" v-if="isBindOrChange">
         <Password
           name="repeat_password"
-          :placeholder="$t('repeat_password') || 'Repeat Password'"
+          :placeholder="$t('repeat_password')"
           :feedback="false"
           toggleMask
           fluid
@@ -92,24 +92,17 @@ const cleanUrl = authBaseUrl.replace(/\/$/, '')
 // State
 const loading = ref(false)
 const succKey = ref('')
-const failInfo = ref({ key: '', msg: '', chances: -1 })
+const failKey = ref('')
 const formKey = ref(0)
 
 const resetFail = () => {
-  failInfo.value.key = ''
-  failInfo.value.msg = ''
-  failInfo.value.chances = -1
+  failKey.value = ''
 }
 
 const succMsg = computed(() => succKey.value ? t(succKey.value) : '')
-const failMsg = computed(() => {
-  if (failInfo.value.msg) return failInfo.value.msg
-  if (!failInfo.value.key) return ''
-  const base = t(failInfo.value.key)
-  return failInfo.value.chances >= 0
-    ? `${base}\n${t('chances_left', { count: failInfo.value.chances })}`
-    : base
-})
+const failMsg = computed(() => failKey.value ? t(failKey.value) : '')
+
+const toErrorKey = (payload) => payload?.reason ? `errors.${payload.reason}` : 'errors.service_unavailable'
 
 const initialValues = reactive({
   username: '',
@@ -129,14 +122,7 @@ onMounted(async () => {
       formKey.value += 1
     }
   } catch (err) {
-    const redirect = err.response?.data?.redirect
-    if (redirect) {
-      window.location.assign(redirect)
-      return
-    }
-    failInfo.value.key = 'errors.service_unavailable'
-    failInfo.value.msg = err.response?.data?.errmsg || err.message
-    failInfo.value.chances = -1
+    failKey.value = toErrorKey(err.response?.data)
   }
 })
 
@@ -217,21 +203,14 @@ const onFormSubmit = async ({ valid, states }) => {
     } else {
       states.password.value = ''
       if (states.repeat_password) states.repeat_password.value = ''
-      
-      if (data.reason || data.errmsg) {
-        failInfo.value.msg = data.errmsg || data.reason
-      } else {
-        failInfo.value.key = 'login_failed'
-        failInfo.value.chances = typeof data.msg?.left_chances === 'number' ? data.msg.left_chances : -1
-      }
+
+      failKey.value = toErrorKey(data)
     }
   } catch (err) {
     loading.value = false
     states.password.value = ''
     if (states.repeat_password) states.repeat_password.value = ''
-    failInfo.value.key = 'errors.service_unavailable'
-    failInfo.value.msg = err.response?.data?.error || err.message
-    failInfo.value.chances = -1
+    failKey.value = toErrorKey(err.response?.data)
   }
 }
 </script>

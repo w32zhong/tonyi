@@ -7,7 +7,7 @@
 
     <div class="section-divider">
       <div class="line"></div>
-      <span class="text">{{ $t('or_continue_with') || 'OR' }}</span>
+      <span class="text">{{ $t('or_continue_with') }}</span>
       <div class="line"></div>
     </div>
 

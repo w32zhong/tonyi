@@ -7,7 +7,7 @@
         :loading="loading"
       >
         <i class="pi pi-google mr-2"></i>
-        <span>{{ $t('continue_with_google') || 'Continue with Google' }}</span>
+        <span>{{ $t('continue_with_google') }}</span>
       </Button>
 
       <Button
@@ -17,7 +17,7 @@
         :loading="loading"
       >
         <i class="pi pi-github mr-2"></i>
-        <span>{{ $t('continue_with_github') || 'Continue with GitHub' }}</span>
+        <span>{{ $t('continue_with_github') }}</span>
       </Button>
 
       <div class="backend-messages" v-if="errorMsg">
@@ -28,23 +28,23 @@
 </template>
 
 <script setup>
-import { ref, defineEmits } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, defineEmits } from 'vue'
+import { useTranslation } from 'i18next-vue'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 
-const route = useRoute()
+const { t } = useTranslation()
+
 defineEmits(['panda-focus', 'panda-blur'])
 
 const loading = ref(false)
-const errorMsg = ref('')
+const errorKey = ref('')
+const errorMsg = computed(() => errorKey.value ? t(errorKey.value) : '')
 
 const handleGoogleLogin = () => {
   loading.value = true
-  errorMsg.value = ''
+  errorKey.value = ''
 
-  // Pass the current action (login/signup/bind) to the backend
-  const action = route.params.action || 'login'
   const next = new URLSearchParams(window.location.search).get('next') || '/'
   
   const authBaseUrl = import.meta.env.VITE_AUTH_BASE_URL || '/auth'
@@ -55,10 +55,8 @@ const handleGoogleLogin = () => {
 
 const handleGithubLogin = () => {
   loading.value = true
-  errorMsg.value = ''
+  errorKey.value = ''
 
-  // Pass the current action (login/signup/bind) to the backend
-  const action = route.params.action || 'login'
   const next = new URLSearchParams(window.location.search).get('next') || '/'
   
   const authBaseUrl = import.meta.env.VITE_AUTH_BASE_URL || '/auth'
