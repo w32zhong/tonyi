@@ -147,7 +147,7 @@
                     emailSalt = emailResult.salt;
                     showResult(emailResult);
                 } else {
-                    showResult(emailResult.errmsg || "Failed to send verification code");
+                    showResult(emailResult.errmsg || "");
                 }
             } catch (err) {
                 showResult("Error: " + err.message);
