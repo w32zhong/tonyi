@@ -2,7 +2,7 @@
   <div class="container">
     <div class="error-content">
       <div class="image-wrapper">
-        <img :src="beeImage" alt="404 Page Not Found" class="error-image" />
+        <img :src="beeImage" :alt="$t('translation:title')" class="error-image" />
       </div>
 
       <div class="countdown-box">
@@ -18,15 +18,23 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useTranslation } from 'i18next-vue'
 import beeImage from './assets/404-bee.png'
 
-const { i18next } = useTranslation()
+const { i18next, t } = useTranslation()
 
 const remainingTime = ref(parseInt(import.meta.env.VITE_REDIRECT_TIMEOUT || '5', 10))
 const redirectUrl = import.meta.env.VITE_REDIRECT_URL || '/'
 let timer = null
+
+const pageTitle = computed(() => t('translation:title'))
+
+watch(pageTitle, (newTitle) => {
+  if (newTitle) {
+    document.title = newTitle
+  }
+}, { immediate: true })
 
 // Apply or remove the .p-dark class on <html> to match ui_login behaviour
 const applyTheme = (dark) => {

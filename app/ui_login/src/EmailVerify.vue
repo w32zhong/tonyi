@@ -6,7 +6,7 @@
           name="email"
           type="email"
           class="w-full"
-          :placeholder="$t('email')"
+          :placeholder="$t('username')"
           fluid
           :disabled="codeSent"
           @focus="$emit('panda-focus', 'username')"
@@ -106,7 +106,7 @@ const initialValues = reactive({
 
 const resolver = ({ values }) => {
   const schema = z.object({
-    email: z.string().email('errors.invalid_email').max(64, 'errors.username_too_long'),
+    email: z.string().min(1, 'errors.email_required').email('errors.invalid_email').max(64, 'errors.username_too_long'),
     code: codeSent.value ? z.string().min(1, 'errors.required_field') : z.string().optional()
   })
 

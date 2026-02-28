@@ -3,21 +3,15 @@
   "signup": "S'inscrire",
   "signin": "Se connecter",
   "change": "Changer le mot de passe",
-  "forget_pass": "Réinitialiser le mot de passe",
   "bind": "Lier",
-  "bind_password": "Créer un mot de passe",
-  "change_password": "Changer le mot de passe",
   "username": "E-mail",
   "password": "Mot de passe",
   "repeat_password": "Confirmer le mot de passe",
   "verification_code": "Code de vérification",
   "send_verification_code": "Envoyer le code",
   "code_sent_successfully": "Le code a été envoyé à votre e-mail avec succès.",
-  "failed_to_send_code": "Échec de l'envoi du code.",
   "solving_challenge": "Résolution du défi anti-bot...",
   "success_redirect": "Bienvenue ! Redirection dans quelques secondes...",
-  "login_failed": "Échec de la connexion",
-  "chances_left": "Il vous reste {{count}} chance(s).",
   "errors": {
     "invalid_email": "Veuillez entrer une adresse e-mail valide.",
     "required_field": "Ce champ est obligatoire.",
@@ -52,5 +46,12 @@
   "continue_with_google": "Continuer avec Google",
   "continue_with_github": "Continuer avec GitHub",
   "or_continue_with": "OU",
-  "panda_alt": "Panda"
+  "panda_alt": "Panda",
+  "primevue": {
+    "aria": {
+      "passwordHide": "Masquer le mot de passe",
+      "passwordShow": "Afficher le mot de passe",
+      "close": "Fermer"
+    }
+  }
 }

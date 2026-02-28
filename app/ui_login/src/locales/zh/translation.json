@@ -3,21 +3,15 @@
   "signup": "注册",
   "signin": "登录",
   "change": "修改密码",
-  "forget_pass": "重置密码",
   "bind": "绑定",
-  "bind_password": "设置密码",
-  "change_password": "修改密码",
   "username": "邮箱",
   "password": "密码",
   "repeat_password": "确认密码",
   "verification_code": "验证码",
   "send_verification_code": "发送验证码",
   "code_sent_successfully": "验证码已成功发送到您的邮箱。",
-  "failed_to_send_code": "发送验证码失败。",
   "solving_challenge": "正在解决反机器人验证...",
   "success_redirect": "欢迎！几秒后重定向...",
-  "login_failed": "登录失败",
-  "chances_left": "您还有 {{count}} 次机会。",
   "errors": {
     "invalid_email": "请输入有效的邮箱地址。",
     "required_field": "此字段为必填项。",
@@ -52,5 +46,12 @@
   "continue_with_google": "使用 Google 继续",
   "continue_with_github": "使用 GitHub 继续",
   "or_continue_with": "或者",
-  "panda_alt": "熊猫"
+  "panda_alt": "熊猫",
+  "primevue": {
+    "aria": {
+      "passwordHide": "隐藏密码",
+      "passwordShow": "显示密码",
+      "close": "关闭"
+    }
+  }
 }

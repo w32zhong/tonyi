@@ -3,21 +3,15 @@
   "signup": "新規登録",
   "signin": "サインイン",
   "change": "パスワードを変更",
-  "forget_pass": "パスワードをリセット",
   "bind": "連携",
-  "bind_password": "パスワードを設定",
-  "change_password": "パスワードを変更",
   "username": "メールアドレス",
   "password": "パスワード",
   "repeat_password": "パスワード（確認用）",
   "verification_code": "認証コード",
   "send_verification_code": "コードを送信",
   "code_sent_successfully": "認証コードがメールに送信されました。",
-  "failed_to_send_code": "コードの送信に失敗しました。",
   "solving_challenge": "ボット対策の課題を解決しています...",
   "success_redirect": "ようこそ！数秒後にリダイレクトします...",
-  "login_failed": "ログインに失敗しました",
-  "chances_left": "残り {{count}} 回の試行が可能です。",
   "errors": {
     "invalid_email": "有効なメールアドレスを入力してください。",
     "required_field": "このフィールドは必須です。",
@@ -52,5 +46,12 @@
   "continue_with_google": "Google で続行",
   "continue_with_github": "GitHub で続行",
   "or_continue_with": "または",
-  "panda_alt": "パンダ"
+  "panda_alt": "パンダ",
+  "primevue": {
+    "aria": {
+      "passwordHide": "パスワードを隠す",
+      "passwordShow": "パスワードを表示",
+      "close": "閉じる"
+    }
+  }
 }

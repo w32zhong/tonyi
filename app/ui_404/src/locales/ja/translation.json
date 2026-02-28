@@ -1,6 +1,5 @@
 {
   "title": "ページが見つかりません",
-  "description": "申し訳ありませんが、お探しのページは存在しないか、削除された可能性があります。",
   "redirect_message": "ご安心ください。 <span id=\"n-sec\">{{count}}</span> 秒後に正しい場所へご案内します...",
   "redirect_prefix": "お急ぎの場合は、",
   "redirect_now": "こちら",

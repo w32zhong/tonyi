@@ -130,10 +130,12 @@ const resolver = ({ values }) => {
   const schemaObj = {
     username: z
       .string()
+      .min(1, 'errors.email_required')
       .email('errors.invalid_email')
       .max(32, 'errors.username_too_long'),
     password: z
       .string()
+      .min(1, 'errors.password_required')
       .min(8, 'errors.password_too_short')
       .max(128, 'errors.password_too_long')
       .regex(/[a-z]/, 'errors.password_needs_lowercase')
@@ -143,7 +145,7 @@ const resolver = ({ values }) => {
   }
 
   if (isBindOrChange.value) {
-    schemaObj.repeat_password = z.string()
+    schemaObj.repeat_password = z.string().min(1, 'errors.password_required')
   }
 
   const schema = z.object(schemaObj)

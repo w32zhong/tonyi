@@ -1,6 +1,5 @@
 {
   "title": "Page Not Found",
-  "description": "Sorry, the page you are looking for does not exist or has been removed.",
   "redirect_message": "Don't worry, I'll show you the way in just <span id=\"n-sec\">{{count}}</span> seconds...",
   "redirect_prefix": "If you can't wait, ",
   "redirect_now": "click here",

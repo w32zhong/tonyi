@@ -3,21 +3,15 @@
   "signup": "Sign Up",
   "signin": "Sign In",
   "change": "Change Password",
-  "forget_pass": "Reset Password",
   "bind": "Bind",
-  "bind_password": "Set Password",
-  "change_password": "Change Password",
   "username": "Email",
   "password": "Password",
   "repeat_password": "Confirm Password",
   "verification_code": "Verification Code",
   "send_verification_code": "Send Code",
   "code_sent_successfully": "Code sent successfully to your email.",
-  "failed_to_send_code": "Failed to send code.",
   "solving_challenge": "Solving anti-bot challenge...",
   "success_redirect": "Welcome! Redirecting in a few second(s) ...",
-  "login_failed": "Login failed",
-  "chances_left": "You have {{count}} chance(s).",
   "errors": {
     "invalid_email": "Please enter a valid email address.",
     "required_field": "This field is required.",
@@ -52,5 +46,12 @@
   "continue_with_google": "Continue with Google",
   "continue_with_github": "Continue with GitHub",
   "or_continue_with": "OR",
-  "panda_alt": "Panda"
+  "panda_alt": "Panda",
+  "primevue": {
+    "aria": {
+      "passwordHide": "Hide Password",
+      "passwordShow": "Show Password",
+      "close": "Close"
+    }
+  }
 }

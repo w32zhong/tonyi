@@ -51,8 +51,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useTranslation } from 'i18next-vue'
+import { usePrimeVue } from 'primevue/config'
 
 // PrimeVue components
 import Toolbar from 'primevue/toolbar'
@@ -63,6 +64,7 @@ import { useRoute } from 'vue-router'
 
 const { i18next, t } = useTranslation()
 const route = useRoute()
+const primevue = usePrimeVue()
 
 // Assets
 import pandaNormalImage from '@/assets/panda-normal.png'
@@ -79,6 +81,21 @@ const actionTitle = computed(() => {
   const action = route.params.action || 'login'
   return t(action)
 })
+
+watch(actionTitle, (newTitle) => {
+  if (newTitle) {
+    document.title = newTitle
+  }
+}, { immediate: true })
+
+watch(() => i18next.language, () => {
+  if (i18next.exists('primevue', { returnObjects: true })) {
+    const pvLocale = t('primevue', { returnObjects: true })
+    if (pvLocale && typeof pvLocale === 'object') {
+      primevue.config.locale = { ...primevue.config.locale, ...pvLocale, aria: { ...primevue.config.locale?.aria, ...pvLocale.aria } }
+    }
+  }
+}, { immediate: true })
 
 
 const handlePandaFocus = (field) => {
