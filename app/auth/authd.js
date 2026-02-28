@@ -302,6 +302,10 @@ app.get('/secret', async (req, res) => {
   }
 });
 
+app.post('/profile', requireAuth, async (req, res) => {
+  res.json(req.user);
+});
+
 app.get('/challenge', async (req, res) => {
   try {
     const { challenge, signature } = await generatePowChallenge();

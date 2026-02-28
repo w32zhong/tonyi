@@ -1,6 +1,6 @@
 <template>
   <div class="login-password-content">
-    <Form v-slot="$form" :initialValues="initialValues" :resolver="resolver" :validateOnBlur="true" @submit="onFormSubmit" class="form-grid">
+    <Form v-slot="$form" :key="formKey" :initialValues="initialValues" :resolver="resolver" :validateOnBlur="true" @submit="onFormSubmit" class="form-grid">
       <div class="flex flex-col gap-1">
         <InputText
           name="username"
@@ -61,7 +61,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, defineEmits } from 'vue'
+import { ref, reactive, computed, defineEmits, onMounted } from 'vue'
 import { useTranslation } from 'i18next-vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
@@ -86,10 +86,14 @@ const actionTitle = computed(() => {
   return t(action)
 })
 
+const authBaseUrl = import.meta.env.VITE_AUTH_BASE_URL || '/auth'
+const cleanUrl = authBaseUrl.replace(/\/$/, '')
+
 // State
 const loading = ref(false)
 const succKey = ref('')
 const failInfo = ref({ key: '', msg: '', chances: -1 })
+const formKey = ref(0)
 
 const resetFail = () => {
   failInfo.value.key = ''
@@ -108,9 +112,32 @@ const failMsg = computed(() => {
 })
 
 const initialValues = reactive({
-  username: window.__USER__?.email || '',
+  username: '',
   password: '',
   repeat_password: ''
+})
+
+onMounted(async () => {
+  if (!isBindOrChange.value) return
+
+  try {
+    const response = await axios.post(`${cleanUrl}/profile`, {}, { timeout: 5000 })
+    const profile = response.data
+
+    if (profile?.email) {
+      initialValues.username = profile.email
+      formKey.value += 1
+    }
+  } catch (err) {
+    const redirect = err.response?.data?.redirect
+    if (redirect) {
+      window.location.assign(redirect)
+      return
+    }
+    failInfo.value.key = 'errors.service_unavailable'
+    failInfo.value.msg = err.response?.data?.errmsg || err.message
+    failInfo.value.chances = -1
+  }
 })
 
 const resolver = ({ values }) => {
@@ -166,9 +193,6 @@ const onFormSubmit = async ({ valid, states }) => {
   const username = states.username.value
 
   try {
-    const authBaseUrl = import.meta.env.VITE_AUTH_BASE_URL || '/auth'
-    const cleanUrl = authBaseUrl.replace(/\/$/, '')
-
     let response
     if (isBindOrChange.value) {
       response = await axios.post(`${cleanUrl}/bind`, {
