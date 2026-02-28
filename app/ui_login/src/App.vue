@@ -73,9 +73,9 @@ import pandaPasswordImage from '@/assets/panda-password.png'
 
 const pandaImage = ref(pandaNormalImage)
 const pandaNormalTop = '-80px'
-const pandaTop = ref(pandaNormalTop)
 const pandaUsernameTop = '-85px'
 const pandaPasswordTop = '-70px'
+const pandaTop = ref(pandaNormalTop)
 
 const actionTitle = computed(() => {
   const action = route.params.action || 'login'

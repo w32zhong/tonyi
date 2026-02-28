@@ -54,7 +54,7 @@
 
       <div class="backend-messages" v-if="succMsg || failMsg">
         <Message v-if="succMsg" severity="success" closable @close="succKey = ''">{{ succMsg }}</Message>
-        <Message v-if="failMsg" severity="error" closable @close="resetFail">{{ failMsg }}</Message>
+        <Message v-if="failMsg" severity="error" closable @close="failKey = ''">{{ failMsg }}</Message>
       </div>
     </Form>
   </div>
@@ -79,6 +79,7 @@ const route = useRoute()
 
 defineEmits(['panda-focus', 'panda-blur'])
 
+/* EmailPassword is also imported as a child component inside EmailPasswordAndOAuth2 */
 const isBindOrChange = computed(() => ['signup', 'change'].includes(route.params.action))
 
 const actionTitle = computed(() => {
@@ -86,18 +87,14 @@ const actionTitle = computed(() => {
   return t(action)
 })
 
-const authBaseUrl = import.meta.env.VITE_AUTH_BASE_URL || '/auth'
-const cleanUrl = authBaseUrl.replace(/\/$/, '')
+let authBase = import.meta.env.VITE_AUTH_BASE_URL || '/auth'
+authBase = authBaseUrl.replace(/\/$/, '')
 
 // State
 const loading = ref(false)
 const succKey = ref('')
 const failKey = ref('')
 const formKey = ref(0)
-
-const resetFail = () => {
-  failKey.value = ''
-}
 
 const succMsg = computed(() => succKey.value ? t(succKey.value) : '')
 const failMsg = computed(() => failKey.value ? t(failKey.value) : '')
@@ -114,7 +111,7 @@ onMounted(async () => {
   if (!isBindOrChange.value) return
 
   try {
-    const response = await axios.post(`${cleanUrl}/profile`, {}, { timeout: 5000 })
+    const response = await axios.post(`${authBase}/profile`, {}, { timeout: 5000 })
     const profile = response.data
 
     if (profile?.email) {
@@ -127,7 +124,7 @@ onMounted(async () => {
 })
 
 const resolver = ({ values }) => {
-  const schemaObj = {
+  let schema = z.object({
     username: z
       .string()
       .min(1, 'errors.email_required')
@@ -136,46 +133,50 @@ const resolver = ({ values }) => {
     password: z
       .string()
       .min(1, 'errors.password_required')
-      .min(8, 'errors.password_too_short')
-      .max(128, 'errors.password_too_long')
-      .regex(/[a-z]/, 'errors.password_needs_lowercase')
-      .regex(/[A-Z]/, 'errors.password_needs_uppercase')
-      .regex(/[0-9]/, 'errors.password_needs_number')
-      .regex(/[^a-zA-Z0-9]/, 'errors.password_needs_special')
-  }
+  })
 
   if (isBindOrChange.value) {
-    schemaObj.repeat_password = z.string().min(1, 'errors.password_required')
+    schema = schema.extend({
+      password: z
+        .string()
+        .min(1, 'errors.password_required')
+        .min(8, 'errors.password_too_short')
+        .max(128, 'errors.password_too_long')
+        .regex(/[a-z]/, 'errors.password_needs_lowercase')
+        .regex(/[A-Z]/, 'errors.password_needs_uppercase')
+        .regex(/[0-9]/, 'errors.password_needs_number')
+        .regex(/[^a-zA-Z0-9]/, 'errors.password_needs_special'),
+      repeat_password: z
+        .string()
+        .min(1, 'errors.password_required')
+
+    }).refine((data) => data.password === data.repeat_password, {
+      message: 'errors.passwords_do_not_match',
+      path: ['repeat_password']
+    })
   }
 
-  const schema = z.object(schemaObj)
   const result = schema.safeParse(values)
-  
-  const errors = {}
-  
   if (!result.success) {
-    for (const issue of result.error.issues) {
-      const field = issue.path[0]
-      if (!errors[field]) errors[field] = []
-      errors[field].push({ message: issue.message })
+    const formattedErrors = result.error.format()
+    /* convert to PrimeVue resolver format */
+    const primeVueErrors = {}
+    for (const [key, val] of Object.entries(formattedErrors)) {
+      if (key !== '_errors' && val?._errors?.length > 0) {
+        primeVueErrors[key] = [{ message: val._errors[0] }]
+      }
     }
+    return { errors: primeVueErrors }
+  } else {
+    return { errors: {} }
   }
-
-  if (isBindOrChange.value && values.password !== values.repeat_password) {
-    if (!errors.repeat_password) errors.repeat_password = []
-    errors.repeat_password.push({ message: 'errors.passwords_do_not_match' })
-  }
-
-  if (Object.keys(errors).length > 0) return { errors }
-  return { errors: {} }
 }
 
-// Form Submission
 const onFormSubmit = async ({ valid, states }) => {
   if (!valid) return
 
   succKey.value = ''
-  resetFail()
+  failKey.value = ''
   loading.value = true
 
   const username = states.username.value
@@ -183,12 +184,12 @@ const onFormSubmit = async ({ valid, states }) => {
   try {
     let response
     if (isBindOrChange.value) {
-      response = await axios.post(`${cleanUrl}/bind`, {
+      response = await axios.post(`${authBase}/bind`, {
         method: "password",
         password: states.password.value
       }, { timeout: 5000 })
     } else {
-      response = await axios.post(`${cleanUrl}/login`, {
+      response = await axios.post(`${authBase}/login`, {
         method: "email_and_password",
         email: username,
         password: states.password.value
@@ -203,16 +204,15 @@ const onFormSubmit = async ({ valid, states }) => {
       const next = new URLSearchParams(window.location.search).get('next') || '/'
       setTimeout(() => window.location.assign(next), 2000)
     } else {
+      failKey.value = toErrorKey(data)
       states.password.value = ''
       if (states.repeat_password) states.repeat_password.value = ''
-
-      failKey.value = toErrorKey(data)
     }
   } catch (err) {
     loading.value = false
+    failKey.value = toErrorKey(err.response?.data)
     states.password.value = ''
     if (states.repeat_password) states.repeat_password.value = ''
-    failKey.value = toErrorKey(err.response?.data)
   }
 }
 </script>
