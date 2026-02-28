@@ -109,7 +109,7 @@
                 const btn = document.createElement("button");
                 btn.textContent = `Bind ${USER.provider}`;
                 btn.onclick = () => {
-                    submitRequest(`${AUTH_BASE_URL}/bind`, { subject: "oauth2" });
+                    submitRequest(`${AUTH_BASE_URL}/bind`, { method: "oauth2" });
                 };
                 document.getElementById("oauth2-buttons").appendChild(btn);
             }
@@ -163,7 +163,7 @@
             const code = document.getElementById("verification-code").value;
             const route = USER ? 'bind' : 'login'
             submitRequest(`${AUTH_BASE_URL}/${route}`, {
-                [USER ? "subject" : "method"]: USER ? "email" : "email_and_verify",
+                method: USER ? "email" : "email_and_verify",
                 email,
                 email_salt: emailSalt,
                 code
@@ -175,7 +175,7 @@
             e.preventDefault();
             const password = document.getElementById("password").value;
             if (USER) {
-                submitRequest(`${AUTH_BASE_URL}/bind`, { subject: "password", password });
+                submitRequest(`${AUTH_BASE_URL}/bind`, { method: "password", password });
             } else {
                 const email = document.getElementById("email").value;
                 submitRequest(`${AUTH_BASE_URL}/login`, {

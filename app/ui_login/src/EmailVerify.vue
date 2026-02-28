@@ -178,7 +178,7 @@ const onFormSubmit = async ({ valid, states }) => {
     const routePath = isUserSet ? 'bind' : 'login'
 
     const response = await axios.post(`${cleanUrl}/${routePath}`, {
-      [isUserSet ? "subject" : "method"]: isUserSet ? "email" : "email_and_verify",
+      method: isUserSet ? "email" : "email_and_verify",
       email: states.email.value,
       email_salt: emailSalt.value,
       code: states.code.value

@@ -385,11 +385,11 @@ app.post('/login', async (req, res) => {
 
 app.post('/bind', requireAuth, async (req, res) => {
   const uid = req.user.uid;
-  const subject = req.body?.subject;
+  const method = req.body?.method;
   let msg = {};
 
   try {
-    if (subject === 'email') {
+    if (method === 'email') {
       const email = req.body?.email || "";
       const email_salt = req.body.email_salt; /* the salt paired with an email verify request */
       const code = req.body.code; /* the email code to be verified */
@@ -398,7 +398,7 @@ app.post('/bind', requireAuth, async (req, res) => {
         await database.bindOrChangeEmail(uid, email);
       }
 
-    } else if (subject === 'password') {
+    } else if (method === 'password') {
       const password = req.body?.password || "";
       if (!password) {
         msg = { pass: false, reason: "password_required", errmsg: "Password is required" };
@@ -407,7 +407,7 @@ app.post('/bind', requireAuth, async (req, res) => {
         msg = { pass: true };
       }
 
-    } else if (subject === 'oauth2') {
+    } else if (method === 'oauth2') {
       const provider = req.user?.provider || "";
       const sub = req.user?.oauth2_sub || "";
       const info = req.user || {};
