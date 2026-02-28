@@ -30,7 +30,7 @@
         <Button
           v-if="!codeSent"
           type="button"
-          :label="$t('send_verification_code') || 'Send Verification Code'"
+          :label="$t('send_verification_code')"
           class="w-full login-btn"
           :loading="sendingCode"
           @click="sendCode($form)"
@@ -156,7 +156,7 @@ const sendCode = async ($form) => {
       codeSent.value = true
       succKey.value = 'code_sent_successfully'
     } else {
-      failInfo.value.msg = emailResult.data.errmsg || t('failed_to_send_code')
+      failInfo.value.msg = t('failed_to_send_code')
     }
   } catch (err) {
     failInfo.value.key = 'errors.service_unavailable'
@@ -174,11 +174,9 @@ const onFormSubmit = async ({ valid, states }) => {
   loading.value = true
 
   try {
-    const isUserSet = window.__USER__ != null
-    const routePath = isUserSet ? 'bind' : 'login'
-
+    const routePath = (route.params.action === 'signup') ? 'login' : 'bind';
     const response = await axios.post(`${cleanUrl}/${routePath}`, {
-      method: isUserSet ? "email" : "email_and_verify",
+      method: (route.params.action === 'signup') ? 'email_and_verify' : 'email',
       email: states.email.value,
       email_salt: emailSalt.value,
       code: states.code.value
@@ -190,17 +188,17 @@ const onFormSubmit = async ({ valid, states }) => {
       succKey.value = 'success_redirect'
       setTimeout(() => {
         const next = new URLSearchParams(window.location.search).get('next') || '/'
-
+	const query = window.location.search
         if (route.params.action === 'signup') {
-           router.push(`/signup/password${window.location.search}`)
+	   router.push(`/signup/password${query}`)
         } else if (route.params.action === 'signin') {
-           router.push(`/change/password${window.location.search}`)
+           router.push(`/change/password${query}`)
         } else {
            window.location.assign(next)
         }
       }, 1000)
     } else {
-      failInfo.value.msg = data.errmsg || t('login_failed')
+      failInfo.value.msg = t('login_failed')
     }
   } catch (err) {
     failInfo.value.key = 'errors.service_unavailable'
