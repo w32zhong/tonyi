@@ -171,8 +171,8 @@ const onFormSubmit = async ({ valid, states }) => {
 
     let response
     if (isBindOrChange.value) {
-      response = await axios.post(`${cleanUrl}/change`, {
-        method: "password",
+      response = await axios.post(`${cleanUrl}/bind`, {
+        subject: "password",
         password: states.password.value
       }, { timeout: 5000 })
     } else {
