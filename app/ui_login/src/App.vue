@@ -101,12 +101,12 @@ const isDark = ref(false)
 
 // Language Menu
 const langMenu = ref()
-const langItems = computed(() => ([
-  { label: t('language_english'), command: () => i18next.changeLanguage('en') },
-  { label: t('language_chinese'), command: () => i18next.changeLanguage('zh') },
-  { label: t('language_french'), command: () => i18next.changeLanguage('fr') },
-  { label: t('language_japanese'), command: () => i18next.changeLanguage('ja') }
-]))
+const langItems = [
+  { label: 'English', command: () => i18next.changeLanguage('en') },
+  { label: '中文', command: () => i18next.changeLanguage('zh') },
+  { label: 'Français', command: () => i18next.changeLanguage('fr') },
+  { label: '日本語', command: () => i18next.changeLanguage('ja') }
+]
 
 const onLangClick = (event) => {
   langMenu.value.toggle(event)
