@@ -79,7 +79,7 @@ const route = useRoute()
 
 defineEmits(['panda-focus', 'panda-blur'])
 
-const isBindOrChange = computed(() => ['bind_password', 'change_password'].includes(route.params.action))
+const isBindOrChange = computed(() => ['signup', 'change'].includes(route.params.action))
 
 const actionTitle = computed(() => {
   const action = route.params.action || 'login'

@@ -139,7 +139,7 @@ const sendCode = async ($form) => {
     const chalResp = await axios.get(`${cleanUrl}/challenge`)
     const challengeData = chalResp.data
     infoMsg.value = t('solving_challenge') || 'Solving anti-bot challenge...'
-    
+
     const { challenge, signature } = challengeData
     const solution = await solve(challenge)
     infoMsg.value = ''
@@ -176,7 +176,7 @@ const onFormSubmit = async ({ valid, states }) => {
   try {
     const isUserSet = window.__USER__ != null
     const routePath = isUserSet ? 'change' : 'login'
-    
+
     const response = await axios.post(`${cleanUrl}/${routePath}`, {
       method: "email",
       email: states.email.value,
@@ -185,14 +185,16 @@ const onFormSubmit = async ({ valid, states }) => {
     })
 
     const data = response.data
-    
+
     if (data.pass) {
       succKey.value = 'success_redirect'
       setTimeout(() => {
         const next = new URLSearchParams(window.location.search).get('next') || '/'
-        // redirect to bind_password
-        if (!isUserSet) {
-           router.push('/bind_password/email_password' + window.location.search)
+
+        if (route.params.action === 'signup') {
+           router.push(`/signup/password${window.location.search}`)
+        } else if (route.params.action === 'signin') {
+           router.push(`/change/password${window.location.search}`)
         } else {
            window.location.assign(next)
         }

@@ -1,6 +1,8 @@
 {
   "login": "Login",
   "signup": "Sign Up",
+  "signin": "Sign In",
+  "change": "Change Password",
   "forget_pass": "Reset Password",
   "bind": "Bind",
   "bind_password": "Set Password",
