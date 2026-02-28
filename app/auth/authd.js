@@ -292,6 +292,25 @@ app.use(cookieParser());
 
 EnableOAuth2Routes(app, OAUTH2_PROVIDERS.map(s => s.trim()).filter(Boolean));
 
+/* this route will be protected for internal access only */
+app.get('/secret', async (req, res) => {
+  try {
+    const secret = await database.getJwtSecret();
+    res.type('text/plain').send(secret);
+  } catch (err) {
+    res.status(500).send("Error retrieving secret");
+  }
+});
+
+app.get('/challenge', async (req, res) => {
+  try {
+    const { challenge, signature } = await generatePowChallenge();
+    res.json({ challenge, signature });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to generate challenge" });
+  }
+});
+
 app.post('/email', requirePoW, async (req, res) => {
   const salt = req.powSalt; /* passed by requirePoW */
 
@@ -349,7 +368,7 @@ app.post('/login', async (req, res) => {
     const password = req.body.password || "";
     msg = await login_via_email_and_password(ip_addr, email, password);
 
-  } else if (method === 'email_verify') {
+  } else if (method === 'email_and_verify') {
     const email_salt = req.body.email_salt; /* the salt paired with an email verify request */
     const code = req.body.code; /* the email code to be verified */
     msg = await login_via_email_and_verify(email, email_salt, code);
@@ -364,13 +383,13 @@ app.post('/login', async (req, res) => {
   res.json(msg);
 });
 
-app.post('/change', requireAuth, async (req, res) => {
+app.post('/bind', requireAuth, async (req, res) => {
   const uid = req.user.uid;
-  const method = req.body?.method;
+  const subject = req.body?.subject;
   let msg = {};
 
   try {
-    if (method === 'email') {
+    if (subject === 'email') {
       const email = req.body?.email || "";
       const email_salt = req.body.email_salt; /* the salt paired with an email verify request */
       const code = req.body.code; /* the email code to be verified */
@@ -379,7 +398,7 @@ app.post('/change', requireAuth, async (req, res) => {
         await database.bindOrChangeEmail(uid, email);
       }
 
-    } else if (method === 'password') {
+    } else if (subject === 'password') {
       const password = req.body?.password || "";
       if (!password) {
         msg = { pass: false, reason: "password_required", errmsg: "Password is required" };
@@ -388,7 +407,7 @@ app.post('/change', requireAuth, async (req, res) => {
         msg = { pass: true };
       }
 
-    } else if (method === 'oauth2') {
+    } else if (subject === 'oauth2') {
       const provider = req.user?.provider || "";
       const sub = req.user?.oauth2_sub || "";
       const info = req.user || {};
@@ -405,31 +424,13 @@ app.post('/change', requireAuth, async (req, res) => {
       }
 
     } else {
-      msg = { pass: false, reason: "invalid_method", errmsg: "Invalid method" };
+      msg = { pass: false, reason: "invalid_args", errmsg: "Invalid Argument" };
     }
   } catch (e) {
     msg = { pass: false, reason: "failed_to_change", errmsg: e.message };
   }
 
   res.json(msg);
-});
-
-app.get('/challenge', async (req, res) => {
-  try {
-    const { challenge, signature } = await generatePowChallenge();
-    res.json({ challenge, signature });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to generate challenge" });
-  }
-});
-
-app.get('/secret', async (req, res) => {
-  try {
-    const secret = await database.getJwtSecret();
-    res.type('text/plain').send(secret);
-  } catch (err) {
-    res.status(500).send("Error retrieving secret");
-  }
 });
 
 app.get('/', (req, res) => {
