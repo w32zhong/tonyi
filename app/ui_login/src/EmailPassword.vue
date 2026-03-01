@@ -13,7 +13,9 @@
           @focus="$emit('panda-focus', 'username')"
           @blur="$emit('panda-blur')"
         />
-        <Message v-if="$form?.username?.invalid" severity="error" size="small" variant="simple">{{ $t($form?.username?.error?.message) }}</Message>
+        <Message v-if="$form?.username?.invalid" severity="error" size="small" variant="simple">
+          {{ $t($form?.username?.error?.message) }}
+        </Message>
       </div>
 
       <div class="flex flex-col gap-1">
@@ -26,7 +28,9 @@
           @focus="$emit('panda-focus', 'password')"
           @blur="$emit('panda-blur')"
         />
-        <Message v-if="$form?.password?.invalid" severity="error" size="small" variant="simple">{{ $t($form?.password?.error?.message) }}</Message>
+        <Message v-if="$form?.password?.invalid" severity="error" size="small" variant="simple">
+          {{ $t($form?.password?.error?.message) }}
+        </Message>
       </div>
 
       <div class="flex flex-col gap-1" v-if="isBindOrChange">
@@ -39,7 +43,9 @@
           @focus="$emit('panda-focus', 'password')"
           @blur="$emit('panda-blur')"
         />
-        <Message v-if="$form?.repeat_password?.invalid" severity="error" size="small" variant="simple">{{ $t($form?.repeat_password?.error?.message) }}</Message>
+        <Message v-if="$form?.repeat_password?.invalid" severity="error" size="small" variant="simple">
+          {{ $t($form?.repeat_password?.error?.message) }}
+        </Message>
       </div>
 
       <div class="footer-actions mt-4">
@@ -48,7 +54,7 @@
           :label="actionTitle"
           class="w-full login-btn"
           :loading="loading"
-          :disabled="!$form?.valid || !$form?.username?.value || !$form?.password?.value || (isBindOrChange && !$form?.repeat_password?.value)"
+          :disabled="isFormSubmitDisabled($form)"
         />
       </div>
 
@@ -87,8 +93,7 @@ const actionTitle = computed(() => {
   return t(action)
 })
 
-let authBase = import.meta.env.VITE_AUTH_BASE_URL || '/auth'
-authBase = authBaseUrl.replace(/\/$/, '')
+const authBase = import.meta.env.VITE_AUTH_BASE_URL.replace(/\/$/, '') || '/auth'
 
 // State
 const loading = ref(false)
@@ -170,6 +175,27 @@ const resolver = ({ values }) => {
   } else {
     return { errors: {} }
   }
+}
+
+const isFormSubmitDisabled = ($form) => {
+  // If the form hasn't initialized yet, disable the button
+  if (!$form) return true
+  // If the form has validation errors, disable the button
+  if (!$form.valid) return true
+
+  // Ensure all fields have actual values entered
+  const hasUsername = !!$form.username?.value
+  const hasPassword = !!$form.password?.value
+  if (!hasUsername || !hasPassword) return true
+
+  // If isBindOrChange, ensure the repeat password is also filled
+  if (isBindOrChange.value) {
+    const hasRepeatPassword = !!$form.repeat_password?.value
+    if (!hasRepeatPassword) return true
+  }
+
+  // If all checks pass, enable the button
+  return false
 }
 
 const onFormSubmit = async ({ valid, states }) => {
