@@ -28,11 +28,12 @@ const routes = [
     component: EmailPasswordAndOAuth2
   },
   {
-    path: '/:action(signup|signin)/email',
+    path: '/:action(signup|signin|change)/email',
     name: 'EmailVerify',
     component: EmailVerify
   },
   {
+    /* action=login if this component is embedded in EmailPasswordAndOAuth2 */
     path: '/:action(signup|change)/password',
     name: 'EmailPassword',
     component: EmailPassword

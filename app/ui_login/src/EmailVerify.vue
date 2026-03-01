@@ -171,9 +171,9 @@ const onFormSubmit = async ({ valid, states }) => {
   loading.value = true
 
   try {
-    const routePath = (route.params.action === 'signup') ? 'login' : 'bind';
+    const routePath = (route.params.action === 'change') ? 'bind' : 'login';
     const response = await axios.post(`${cleanUrl}/${routePath}`, {
-      method: (route.params.action === 'signup') ? 'email_and_verify' : 'email',
+      method: (route.params.action === 'change') ? 'email' : 'email_and_verify',
       email: states.email.value,
       email_salt: emailSalt.value,
       code: states.code.value
@@ -191,7 +191,7 @@ const onFormSubmit = async ({ valid, states }) => {
 	   router.push(`/signup/password${query}`)
         } else if (route.params.action === 'signin') {
            router.push(`/change/password${query}`)
-        } else {
+        } else { /* route.params.action == 'change' */
            window.location.assign(next)
         }
       }, 1000)
