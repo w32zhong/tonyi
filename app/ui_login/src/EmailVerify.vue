@@ -153,12 +153,15 @@ const sendCode = async ($form) => {
   try {
     const challengeResp = await axios.get(`${authBase}/challenge`)
     const challengeData = challengeResp.data
-    infoKey.value = 'solving_challenge'
 
+    // Defer solve() so Vue can update the UI first
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    infoKey.value = 'solving_challenge'
     const { challenge, signature } = challengeData
     const solution = await solve(challenge)
-    infoKey.value = 'sending_email'
 
+    infoKey.value = 'sending_email'
     const emailResult = await axios.post(`${authBase}/email`, {
       email: $form.email.value,
       challenge,
