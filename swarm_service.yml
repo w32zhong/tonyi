@@ -115,6 +115,7 @@ services:
       args:
         - AUTH_BASE_URL=/auth
         - UI_BASE=/u
+        - REDIRECT_URL_ARGKEY=next
     deploy:
       labels:
         gateway.route: u

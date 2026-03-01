@@ -184,7 +184,8 @@ const onFormSubmit = async ({ valid, states }) => {
     if (data.pass) {
       succKey.value = 'success_redirect'
       setTimeout(() => {
-        const next = new URLSearchParams(window.location.search).get('next') || '/'
+        const argKey = import.meta.env.VITE_REDIRECT_URL_ARGKEY || 'next'
+        const next = new URLSearchParams(window.location.search).get(argKey) || '/'
 	const query = window.location.search
         if (route.params.action === 'signup') {
 	   router.push(`/signup/password${query}`)

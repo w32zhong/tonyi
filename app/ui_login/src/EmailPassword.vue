@@ -227,7 +227,8 @@ const onFormSubmit = async ({ valid, states }) => {
 
     if (data.pass) {
       succKey.value = 'success_redirect'
-      const next = new URLSearchParams(window.location.search).get('next') || '/'
+      const argKey = import.meta.env.VITE_REDIRECT_URL_ARGKEY || 'next'
+      const next = new URLSearchParams(window.location.search).get(argKey) || '/'
       setTimeout(() => window.location.assign(next), 2000)
     } else {
       failKey.value = toErrorKey(data)

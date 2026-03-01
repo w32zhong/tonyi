@@ -3,7 +3,7 @@
     <div class="oauth-actions-grid">
       <Button
         class="w-full oauth-btn google-btn"
-        @click="handleGoogleLogin"
+        @click="handleOAuthLogin('google')"
         :loading="loading"
       >
         <i class="pi pi-google mr-2"></i>
@@ -13,7 +13,7 @@
       <Button
         class="w-full oauth-btn github-btn"
         severity="secondary"
-        @click="handleGithubLogin"
+        @click="handleOAuthLogin('github')"
         :loading="loading"
       >
         <i class="pi pi-github mr-2"></i>
@@ -41,28 +41,13 @@ const loading = ref(false)
 const errorKey = ref('')
 const errorMsg = computed(() => errorKey.value ? t(errorKey.value) : '')
 
-const handleGoogleLogin = () => {
+const handleOAuthLogin = (provider) => {
   loading.value = true
   errorKey.value = ''
-
-  const next = new URLSearchParams(window.location.search).get('next') || '/'
-  
-  const authBaseUrl = import.meta.env.VITE_AUTH_BASE_URL || '/auth'
-  const cleanUrl = authBaseUrl.replace(/\/$/, '')
-  
-  window.location.href = `${cleanUrl}/oauth2/google?next=${encodeURIComponent(next)}`
-}
-
-const handleGithubLogin = () => {
-  loading.value = true
-  errorKey.value = ''
-
-  const next = new URLSearchParams(window.location.search).get('next') || '/'
-  
-  const authBaseUrl = import.meta.env.VITE_AUTH_BASE_URL || '/auth'
-  const cleanUrl = authBaseUrl.replace(/\/$/, '')
-  
-  window.location.href = `${cleanUrl}/oauth2/github?next=${encodeURIComponent(next)}`
+  const argKey = import.meta.env.VITE_REDIRECT_URL_ARGKEY || 'next'
+  const next = new URLSearchParams(window.location.search).get(argKey) || '/'
+  const authBaseUrl = import.meta.env.VITE_AUTH_BASE_URL.replace(/\/$/, '') || '/auth'
+  window.location.href = `${authBaseUrl}/oauth2/${provider}?${argKey}=${encodeURIComponent(next)}`
 }
 </script>
 
