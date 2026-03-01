@@ -54,5 +54,6 @@
       "close": "关闭"
     }
   },
-  "change_email": "修改邮箱"
+  "change_email": "修改邮箱",
+  "sending_email": "正在发送验证邮件..."
 }

@@ -49,7 +49,7 @@
       <div class="backend-messages" v-if="succMsg || failMsg || infoMsg">
         <Message v-if="infoMsg" severity="info" closable @close="infoKey = ''">{{ infoMsg }}</Message>
         <Message v-if="succMsg" severity="success" closable @close="succKey = ''">{{ succMsg }}</Message>
-        <Message v-if="failMsg" severity="error" closable @close="resetFail">{{ failMsg }}</Message>
+        <Message v-if="failMsg" severity="error" closable @close="failKey = ''">{{ failMsg }}</Message>
       </div>
     </Form>
   </div>
@@ -90,10 +90,6 @@ const succKey = ref('')
 const failKey = ref('')
 const infoKey = ref('')
 
-const resetFail = () => {
-  failKey.value = ''
-}
-
 const succMsg = computed(() => succKey.value ? t(succKey.value) : '')
 const failMsg = computed(() => failKey.value ? t(failKey.value) : '')
 const infoMsg = computed(() => infoKey.value ? t(infoKey.value) : '')
@@ -115,9 +111,11 @@ const resolver = ({ values }) => {
       z.string().min(1, 'errors.required_field') : z.string().optional()
   })
 
+  /* on success, return no error */
   const result = schema.safeParse(values)
   if (result.success) return { errors: {} }
 
+  /* on invalid inputs, convert to PrimeVue errors */
   const errors = {}
   for (const issue of result.error.issues) {
     const field = issue.path[0]
@@ -127,27 +125,26 @@ const resolver = ({ values }) => {
   return { errors }
 }
 
-const authBaseUrl = import.meta.env.VITE_AUTH_BASE_URL || '/auth'
-const cleanUrl = authBaseUrl.replace(/\/$/, '')
+const authBase = import.meta.env.VITE_AUTH_BASE_URL.replace(/\/$/, '') || '/auth'
 
 const sendCode = async ($form) => {
   if (!$form?.email?.value || $form?.email?.invalid) return
 
   sendingCode.value = true
-  resetFail()
+  failKey.value = ''
   succKey.value = ''
   infoKey.value = ''
 
   try {
-    const chalResp = await axios.get(`${cleanUrl}/challenge`)
-    const challengeData = chalResp.data
+    const challengeResp = await axios.get(`${authBase}/challenge`)
+    const challengeData = challengeResp.data
     infoKey.value = 'solving_challenge'
 
     const { challenge, signature } = challengeData
     const solution = await solve(challenge)
-    infoKey.value = ''
+    infoKey.value = 'sending_email'
 
-    const emailResult = await axios.post(`${cleanUrl}/email`, {
+    const emailResult = await axios.post(`${authBase}/email`, {
       email: $form.email.value,
       challenge,
       signature,
@@ -165,6 +162,7 @@ const sendCode = async ($form) => {
     failKey.value = toErrorKey(err.response?.data)
   } finally {
     sendingCode.value = false
+    infoKey.value = ''
   }
 }
 
@@ -172,12 +170,12 @@ const onFormSubmit = async ({ valid, states }) => {
   if (!valid) return
 
   succKey.value = ''
-  resetFail()
+  failKey.value = ''
   loading.value = true
 
   try {
     const routePath = (route.params.action === 'change') ? 'bind' : 'login';
-    const response = await axios.post(`${cleanUrl}/${routePath}`, {
+    const response = await axios.post(`${authBase}/${routePath}`, {
       method: (route.params.action === 'change') ? 'email' : 'email_and_verify',
       email: states.email.value,
       email_salt: emailSalt.value,
@@ -191,13 +189,13 @@ const onFormSubmit = async ({ valid, states }) => {
       setTimeout(() => {
         const argKey = import.meta.env.VITE_REDIRECT_URL_ARGKEY || 'next'
         const next = new URLSearchParams(window.location.search).get(argKey) || '/'
-	const query = window.location.search
+        const query = window.location.search();
         if (route.params.action === 'signup') {
-	   router.push(`/signup/password${query}`)
+          router.push(`/signup/password${query}`)
         } else if (route.params.action === 'signin') {
-           router.push(`/change/password${query}`)
+          router.push(`/change/password${query}`)
         } else { /* route.params.action == 'change' */
-           window.location.assign(next)
+          window.location.assign(next)
         }
       }, 1000)
     } else {

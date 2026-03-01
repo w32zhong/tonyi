@@ -54,5 +54,6 @@
       "close": "Fermer"
     }
   },
-  "change_email": "Changer l'e-mail"
+  "change_email": "Changer l'e-mail",
+  "sending_email": "Envoi de l'e-mail de vérification..."
 }

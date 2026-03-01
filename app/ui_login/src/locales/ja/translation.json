@@ -54,5 +54,6 @@
       "close": "閉じる"
     }
   },
-  "change_email": "メールアドレスを変更"
+  "change_email": "メールアドレスを変更",
+  "sending_email": "認証メールを送信しています..."
 }
