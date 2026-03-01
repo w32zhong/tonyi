@@ -22,6 +22,8 @@
           :length="6"
           @focus="$emit('panda-focus', 'password')"
           @blur="$emit('panda-blur')"
+          @update:modelValue="(val) => onCodeChange(val, $form)"
+          integerOnly
         />
         <Message v-if="$form?.code?.invalid" severity="error" size="small" variant="simple">{{ $t($form?.code?.error?.message) }}</Message>
       </div>
@@ -108,7 +110,8 @@ const resolver = ({ values }) => {
       .email('errors.invalid_email')
       .max(64, 'errors.username_too_long'),
     code: codeSent.value ?
-      z.string().min(1, 'errors.required_field') : z.string().optional()
+      z.string().min(1, 'errors.required_field'):
+      z.string().optional()
   })
 
   /* on success, return no error */
@@ -126,6 +129,18 @@ const resolver = ({ values }) => {
 }
 
 const authBase = import.meta.env.VITE_AUTH_BASE_URL.replace(/\/$/, '') || '/auth'
+
+const onCodeChange = (val, $form) => {
+  if (val && val.length === 6 && $form?.email?.value) {
+    onFormSubmit({
+      valid: true,
+      states: {
+        email: { value: $form.email.value },
+        code: { value: val }
+      }
+    })
+  }
+}
 
 const sendCode = async ($form) => {
   if (!$form?.email?.value || $form?.email?.invalid) return

@@ -41,7 +41,8 @@
     "password_required": "パスワードは必須です。",
     "oauth2_fields_required": "現在のセッションに OAuth2 情報がありません。",
     "invalid_args": "引数が無効です。",
-    "failed_to_change": "アカウント設定の更新に失敗しました。"
+    "failed_to_change": "アカウント設定の更新に失敗しました。",
+    "invalid_code_format": "認証コードは数字のみである必要があります。"
   },
   "continue_with_google": "Google で続行",
   "continue_with_github": "GitHub で続行",

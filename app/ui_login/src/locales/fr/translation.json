@@ -41,7 +41,8 @@
     "password_required": "Le mot de passe est requis.",
     "oauth2_fields_required": "Informations OAuth2 manquantes dans la session actuelle.",
     "invalid_args": "Arguments invalides.",
-    "failed_to_change": "Échec de la mise à jour du compte."
+    "failed_to_change": "Échec de la mise à jour du compte.",
+    "invalid_code_format": "Le code de vérification ne doit contenir que des chiffres."
   },
   "continue_with_google": "Continuer avec Google",
   "continue_with_github": "Continuer avec GitHub",

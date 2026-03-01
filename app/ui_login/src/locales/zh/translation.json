@@ -41,7 +41,8 @@
     "password_required": "密码不能为空。",
     "oauth2_fields_required": "当前会话缺少 OAuth2 账号信息。",
     "invalid_args": "参数无效。",
-    "failed_to_change": "更新账号信息失败。"
+    "failed_to_change": "更新账号信息失败。",
+    "invalid_code_format": "验证码只能包含数字。"
   },
   "continue_with_google": "使用 Google 继续",
   "continue_with_github": "使用 GitHub 继续",

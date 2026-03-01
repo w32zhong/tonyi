@@ -41,7 +41,8 @@
     "password_required": "Password is required.",
     "oauth2_fields_required": "OAuth2 account info is missing in current session.",
     "invalid_args": "Invalid arguments.",
-    "failed_to_change": "Failed to update account settings."
+    "failed_to_change": "Failed to update account settings.",
+    "invalid_code_format": "Verification code must be numbers only."
   },
   "continue_with_google": "Continue with Google",
   "continue_with_github": "Continue with GitHub",
