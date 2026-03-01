@@ -189,7 +189,7 @@ const onFormSubmit = async ({ valid, states }) => {
       setTimeout(() => {
         const argKey = import.meta.env.VITE_REDIRECT_URL_ARGKEY || 'next'
         const next = new URLSearchParams(window.location.search).get(argKey) || '/'
-        const query = window.location.search();
+        const query = window.location.search
         if (route.params.action === 'signup') {
           router.push(`/signup/password${query}`)
         } else if (route.params.action === 'signin') {
