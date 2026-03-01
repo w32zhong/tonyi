@@ -56,5 +56,7 @@
     }
   },
   "change_email": "メールアドレスを変更",
-  "sending_email": "認証メールを送信しています..."
+  "sending_email": "認証メールを送信しています...",
+  "not_received": "届きませんか？迷惑メールフォルダを確認するか、",
+  "use_another_email": "別のメールアドレスを使用する"
 }

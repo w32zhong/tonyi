@@ -56,5 +56,7 @@
     }
   },
   "change_email": "Change Email",
-  "sending_email": "Sending verification email..."
+  "sending_email": "Sending verification email...",
+  "not_received": "Not received? Check your junk folder, or ",
+  "use_another_email": "use another email"
 }

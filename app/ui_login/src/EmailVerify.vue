@@ -48,6 +48,11 @@
         />
       </div>
 
+      <div class="not-received-prompt" v-if="codeSent">
+        <span>{{ $t('not_received') }}</span>
+        <a href="#" @click.prevent="resetEmail" class="use-another-link">{{ $t('use_another_email') }}</a>
+      </div>
+
       <div class="backend-messages" v-if="succMsg || failMsg || infoMsg">
         <Message v-if="infoMsg" severity="info" closable @close="infoKey = ''">{{ infoMsg }}</Message>
         <Message v-if="succMsg" severity="success" closable @close="succKey = ''">{{ succMsg }}</Message>
@@ -129,6 +134,14 @@ const resolver = ({ values }) => {
 }
 
 const authBase = import.meta.env.VITE_AUTH_BASE_URL.replace(/\/$/, '') || '/auth'
+
+const resetEmail = () => {
+  codeSent.value = false
+  succKey.value = ''
+  failKey.value = ''
+  infoKey.value = ''
+  emailSalt.value = null
+}
 
 const onCodeChange = (val, $form) => {
   if (val && val.length === 6 && $form?.email?.value) {
@@ -261,5 +274,24 @@ const onFormSubmit = async ({ valid, states }) => {
   font-weight: 700;
   padding: 0.75rem;
   border-radius: 0.75rem;
+}
+
+.not-received-prompt {
+  font-size: 0.875rem;
+  color: var(--p-text-color-secondary);
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.use-another-link {
+  color: var(--p-primary-color);
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+.use-another-link:hover {
+  text-decoration: underline;
 }
 </style>

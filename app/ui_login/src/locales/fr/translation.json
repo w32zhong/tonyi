@@ -56,5 +56,7 @@
     }
   },
   "change_email": "Changer l'e-mail",
-  "sending_email": "Envoi de l'e-mail de vérification..."
+  "sending_email": "Envoi de l'e-mail de vérification...",
+  "not_received": "Non reçu ? Vérifiez vos courriers indésirables, ou ",
+  "use_another_email": "utiliser une autre adresse"
 }
