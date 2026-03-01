@@ -79,6 +79,7 @@ const pandaTop = ref(pandaNormalTop)
 
 const actionTitle = computed(() => {
   const action = route.params.action || 'login'
+  if (action === 'change' && route.name === 'EmailVerify') return t('change_email')
   return t(action)
 })
 

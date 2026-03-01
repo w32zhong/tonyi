@@ -77,6 +77,7 @@ defineEmits(['panda-focus', 'panda-blur'])
 
 const actionTitle = computed(() => {
   const action = route.params.action || 'signup'
+  if (action === 'change') return t('change_email')
   return t(action)
 })
 
@@ -106,8 +107,12 @@ const initialValues = reactive({
 
 const resolver = ({ values }) => {
   const schema = z.object({
-    email: z.string().min(1, 'errors.email_required').email('errors.invalid_email').max(64, 'errors.username_too_long'),
-    code: codeSent.value ? z.string().min(1, 'errors.required_field') : z.string().optional()
+    email: z.string()
+      .min(1, 'errors.email_required')
+      .email('errors.invalid_email')
+      .max(64, 'errors.username_too_long'),
+    code: codeSent.value ?
+      z.string().min(1, 'errors.required_field') : z.string().optional()
   })
 
   const result = schema.safeParse(values)
