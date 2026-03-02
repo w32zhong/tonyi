@@ -20,7 +20,21 @@ import zhTranslation from './locales/zh/translation.json'
 import frTranslation from './locales/fr/translation.json'
 import jaTranslation from './locales/ja/translation.json'
 
-// Router Setup
+/*
+ * Legend:                             Login               ROUTE MAP & STATES
+ *  [⛲] = Public Route                  |
+ *  [🔒] = Requires Auth                 v                      +-----------------------------+
+ *                          +-----> [⛲] /login -->- Redirect ->|________Privite_Zone_________|
+ *                          ^ (/login/{password,oauth2}           v v                        v
+ *                          |                           +---------+ |                        |
+ *     Registration     Redirect    Forgot Password     |   Change Login Email      Bind OAuth2 Account
+ *   [⛲] /signup/email     |     [⛲] /signin/email    |  [🔒] /change/email       [🔒] /bind/oauth2
+ *        |                 |            |              |           |
+ *        v                 ^            v              v           v
+ *   [🔒] /signup/password  |   [🔒] /change/password --+           |
+ *        |                 |            |                          |
+ *        +->------>--------^------<-----+----<-------<-------<-----+
+ */
 const routes = [
   {
     path: '/:action(login)',
