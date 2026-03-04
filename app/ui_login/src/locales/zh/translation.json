@@ -58,5 +58,9 @@
   "change_email": "修改邮箱",
   "sending_email": "正在发送验证邮件...",
   "not_received": "没有收到？请检查垃圾邮件，或者",
-  "use_another_email": "更换邮箱"
+  "use_another_email": "更换邮箱",
+  "forgot_password": "忘记密码了？ ",
+  "click_here": "点此找回",
+  "no_account": "还没有账号？ ",
+  "signup_here": "在此注册"
 }

@@ -83,7 +83,7 @@ import { Form } from '@primevue/forms'
 const { t } = useTranslation()
 const route = useRoute()
 
-defineEmits(['panda-focus', 'panda-blur'])
+const emit = defineEmits(['panda-focus', 'panda-blur', 'login-failed'])
 
 /* EmailPassword is also imported as a child component inside EmailPasswordAndOAuth2 */
 const isBindOrChange = computed(() => ['signup', 'change'].includes(route.params.action))
@@ -231,6 +231,7 @@ const onFormSubmit = async ({ valid, states }) => {
       const next = new URLSearchParams(window.location.search).get(argKey) || '/'
       setTimeout(() => window.location.assign(next), 2000)
     } else {
+      emit('login-failed')
       failKey.value = toErrorKey(data)
       states.password.value = ''
       if (states.repeat_password) states.repeat_password.value = ''

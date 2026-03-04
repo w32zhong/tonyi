@@ -58,5 +58,9 @@
   "change_email": "Changer l'e-mail",
   "sending_email": "Envoi de l'e-mail de vérification...",
   "not_received": "Non reçu ? Vérifiez vos courriers indésirables, ou ",
-  "use_another_email": "utiliser une autre adresse"
+  "use_another_email": "utiliser une autre adresse",
+  "forgot_password": "Mot de passe oublié ? ",
+  "click_here": "cliquez ici",
+  "no_account": "Vous n'avez pas de compte ? ",
+  "signup_here": "Inscrivez-vous ici"
 }
