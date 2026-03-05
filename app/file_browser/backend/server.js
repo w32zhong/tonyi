@@ -6,12 +6,14 @@ const multer = require('multer');
 const crypto = require('crypto');
 const wopiRoutes = require('./wopi');
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
+const DEFAULT_PAGE_LIMIT = parseInt(process.env.PAGE_LIMIT) || 20;
 
 app.use(cors());
 app.use(express.json());
 
-const STORAGE_DIR = path.join(__dirname, 'storage');
+// ROOT env var points to any local filesystem path; defaults to ./storage
+const STORAGE_DIR = path.resolve(process.env.ROOT || path.join(__dirname, 'storage'));
 
 // Hardened path resolver:
 // 1. Rejects null bytes
@@ -126,7 +128,7 @@ app.get('/api/files', async (req, res) => {
         const dir = req.query.dir || '/';
         const targetPath = await resolveSafePath(dir);
         const page = parseInt(req.query.page) || 1;
-        const limit = Math.min(parseInt(req.query.limit) || 200, 1000);
+        const limit = Math.min(parseInt(req.query.limit) || DEFAULT_PAGE_LIMIT, 1000);
 
         const entries = await fs.readdir(targetPath, { withFileTypes: true });
 

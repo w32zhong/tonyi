@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
-import { Cloud, Folder, File, Code, Image as ImageIcon, Film, FileText, ChevronRight, UploadCloud, FileMusic, FileType2, ClipboardCopy, Check } from 'lucide-vue-next';
+import { Cloud, Folder, File, Code, Image as ImageIcon, Film, FileText, ChevronRight, ChevronLeft, UploadCloud, FileMusic, FileType2, ClipboardCopy, Check } from 'lucide-vue-next';
 import ViewerModal from './components/Viewers/ViewerModal.vue';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
@@ -13,6 +13,9 @@ const loading = ref(false);
 const selectedFile = ref<any | null>(null);
 const fileInput = ref<HTMLInputElement | null>(null);
 const copied = ref(false);
+const pagination = ref<{ page: number; limit: number; totalItems: number; totalPages: number }>({
+  page: 1, limit: 200, totalItems: 0, totalPages: 1,
+});
 
 // [8] Breadcrumb segments computed from currentDir
 const breadcrumbs = computed(() => {
@@ -23,12 +26,14 @@ const breadcrumbs = computed(() => {
   }));
 });
 
-const fetchFiles = async (dir: string) => {
+const fetchFiles = async (dir: string, page = 1) => {
   loading.value = true;
   try {
-    const res = await axios.get(`${API_BASE}/files`, { params: { dir } });
-    // Handle new paginated response shape
+    const res = await axios.get(`${API_BASE}/files`, { params: { dir, page } });
     files.value = res.data.items ?? res.data;
+    if (res.data.pagination) {
+      pagination.value = res.data.pagination;
+    }
     currentDir.value = dir;
   } catch (error) {
     console.error('Failed to fetch files:', error);
@@ -185,47 +190,80 @@ onMounted(() => {
       </div>
 
       <!-- File List -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 flex-1 overflow-auto">
-        <div v-if="loading" class="p-8 text-center text-gray-500 animate-pulse">Loading files...</div>
-        
-        <table v-else class="w-full text-left border-collapse">
-          <thead>
-            <tr class="border-b border-gray-100 text-gray-500 text-sm">
-              <th class="py-3 px-4 font-medium">Name</th>
-              <th class="py-3 px-4 font-medium w-32">Size</th>
-              <th class="py-3 px-4 font-medium w-48">Modified</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="currentDir !== '/'" 
-                @dblclick="goUp()"
-                class="border-b border-gray-50 hover:bg-blue-50 cursor-pointer transition-colors select-none group">
-              <td class="py-3 px-4 flex items-center">
-                <Folder class="w-6 h-6 mr-3 text-blue-400 group-hover:text-blue-500 transition-colors" />
-                <span class="text-gray-700 font-medium">..</span>
-              </td>
-              <td class="py-3 px-4 text-gray-400 text-sm">-</td>
-              <td class="py-3 px-4 text-gray-400 text-sm">-</td>
-            </tr>
-            <tr v-for="file in files" :key="file.name" 
-                @dblclick="handleDoubleClick(file)"
-                class="border-b border-gray-50 hover:bg-blue-50 cursor-pointer transition-colors select-none group">
-              <td class="py-3 px-4 flex items-center">
-                <component :is="getIcon(file)" class="w-6 h-6 mr-3 transition-colors" :class="[getIconColor(file), 'group-hover:opacity-80']" />
-                <span class="text-gray-700 font-medium group-hover:text-blue-700 transition-colors">{{ file.name }}</span>
-              </td>
-              <td class="py-3 px-4 text-gray-500 text-sm">
-                {{ file.isDir ? '-' : (file.size / 1024).toFixed(1) + ' KB' }}
-              </td>
-              <td class="py-3 px-4 text-gray-500 text-sm">
-                {{ new Date(file.mtime).toLocaleDateString() }}
-              </td>
-            </tr>
-            <tr v-if="files.length === 0">
-              <td colspan="3" class="py-12 text-center text-gray-400">This folder is empty.</td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 flex-1 flex flex-col overflow-hidden">
+        <!-- Scrollable table area -->
+        <div class="flex-1 overflow-auto">
+          <div v-if="loading" class="p-8 text-center text-gray-500 animate-pulse">Loading files...</div>
+          
+          <table v-else class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-gray-100 text-gray-500 text-sm">
+                <th class="py-3 px-4 font-medium">Name</th>
+                <th class="py-3 px-4 font-medium w-32">Size</th>
+                <th class="py-3 px-4 font-medium w-48">Modified</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="currentDir !== '/'" 
+                  @dblclick="goUp()"
+                  class="border-b border-gray-50 hover:bg-blue-50 cursor-pointer transition-colors select-none group">
+                <td class="py-3 px-4 flex items-center">
+                  <Folder class="w-6 h-6 mr-3 text-blue-400 group-hover:text-blue-500 transition-colors" />
+                  <span class="text-gray-700 font-medium">..</span>
+                </td>
+                <td class="py-3 px-4 text-gray-400 text-sm">-</td>
+                <td class="py-3 px-4 text-gray-400 text-sm">-</td>
+              </tr>
+              <tr v-for="file in files" :key="file.name" 
+                  @dblclick="handleDoubleClick(file)"
+                  class="border-b border-gray-50 hover:bg-blue-50 cursor-pointer transition-colors select-none group">
+                <td class="py-3 px-4 flex items-center">
+                  <component :is="getIcon(file)" class="w-6 h-6 mr-3 transition-colors" :class="[getIconColor(file), 'group-hover:opacity-80']" />
+                  <span class="text-gray-700 font-medium group-hover:text-blue-700 transition-colors">{{ file.name }}</span>
+                </td>
+                <td class="py-3 px-4 text-gray-500 text-sm">
+                  {{ file.isDir ? '-' : (file.size / 1024).toFixed(1) + ' KB' }}
+                </td>
+                <td class="py-3 px-4 text-gray-500 text-sm">
+                  {{ new Date(file.mtime).toLocaleDateString() }}
+                </td>
+              </tr>
+              <tr v-if="files.length === 0">
+                <td colspan="3" class="py-12 text-center text-gray-400">This folder is empty.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination controls: pinned to bottom, centered -->
+        <div v-if="pagination.totalPages > 1" class="shrink-0 flex flex-col items-center gap-2 px-4 py-3 border-t border-gray-100 bg-white">
+          <div class="flex items-center gap-2">
+            <button
+              @click="fetchFiles(currentDir, pagination.page - 1)"
+              :disabled="pagination.page <= 1"
+              class="flex items-center px-3 py-1.5 text-sm rounded-md border transition-colors"
+              :class="pagination.page <= 1
+                ? 'border-gray-200 text-gray-300 cursor-not-allowed'
+                : 'border-gray-300 text-gray-600 hover:bg-gray-50'"
+            >
+              <ChevronLeft class="w-4 h-4 mr-1" /> Prev
+            </button>
+            <span class="text-sm text-gray-500 px-2">
+              {{ pagination.page }} / {{ pagination.totalPages }}
+            </span>
+            <button
+              @click="fetchFiles(currentDir, pagination.page + 1)"
+              :disabled="pagination.page >= pagination.totalPages"
+              class="flex items-center px-3 py-1.5 text-sm rounded-md border transition-colors"
+              :class="pagination.page >= pagination.totalPages
+                ? 'border-gray-200 text-gray-300 cursor-not-allowed'
+                : 'border-gray-300 text-gray-600 hover:bg-gray-50'"
+            >
+              Next <ChevronRight class="w-4 h-4 ml-1" />
+            </button>
+          </div>
+          <span class="text-xs text-gray-400">{{ pagination.totalItems }} items total</span>
+        </div>
       </div>
     </main>
 
