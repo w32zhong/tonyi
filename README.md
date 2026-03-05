@@ -118,3 +118,10 @@ curl http://localhost/auth/authorization \
     -d '{"token":"xxx"}'
 ```
 alternatively, use your browser to visit the test UI interface `http://yourhost/auth-test/private`.
+
+## File Browser
+```sh
+cd backend && node server.js
+docker run -it --rm -p 9980:9980 -e "extra_params=--o:ssl.enable=false" --name collabora_wopi collabora/code
+cd frontend && VITE_BACKEND_URL=http://192.168.232.115:3001 npm run dev
+```
