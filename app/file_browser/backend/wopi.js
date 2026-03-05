@@ -1,7 +1,9 @@
 const express = require('express');
 const fs = require('fs/promises');
 const path = require('path');
-const crypto = require('crypto');
+
+// In-memory lock store: fileId -> { lockId, timestamp }
+const locks = new Map();
 
 module.exports = function(app, STORAGE_DIR, resolveSafePath) {
     // 1. CheckFileInfo
@@ -12,9 +14,6 @@ module.exports = function(app, STORAGE_DIR, resolveSafePath) {
             
             const stat = await fs.stat(targetPath);
             const fileName = path.basename(targetPath);
-            
-            // Generate a dummy SHA256 of the file as an identifier
-            // For a simple mock, we just use the mtime
             const version = stat.mtimeMs.toString();
             
             const wopiInfo = {
@@ -36,7 +35,68 @@ module.exports = function(app, STORAGE_DIR, resolveSafePath) {
         }
     });
 
-    // 2. GetFile
+    // 2. Lock/Unlock/RefreshLock operations
+    // Collabora sends POST /wopi/files/:id with X-WOPI-Override header
+    // to LOCK, UNLOCK, REFRESH_LOCK, or GET_LOCK before saving.
+    app.post('/wopi/files/:id', express.raw({ type: '*/*', limit: '50mb' }), (req, res) => {
+        const fileId = req.params.id;
+        const override = (req.headers['x-wopi-override'] || '').toUpperCase();
+        const requestLock = req.headers['x-wopi-lock'] || '';
+        const oldLock = req.headers['x-wopi-oldlock'] || '';
+
+        const currentLock = locks.get(fileId);
+
+        switch (override) {
+            case 'LOCK': {
+                if (oldLock) {
+                    // This is an UNLOCK_AND_RELOCK operation
+                    if (currentLock && currentLock.lockId !== oldLock) {
+                        res.set('X-WOPI-Lock', currentLock.lockId);
+                        return res.status(409).json({ error: 'Lock mismatch' });
+                    }
+                    locks.set(fileId, { lockId: requestLock, timestamp: Date.now() });
+                    return res.status(200).json({});
+                }
+
+                if (currentLock && currentLock.lockId !== requestLock) {
+                    // Conflict: already locked with a different lock
+                    res.set('X-WOPI-Lock', currentLock.lockId);
+                    return res.status(409).json({ error: 'Lock mismatch' });
+                }
+                // Grant the lock (or re-lock with same ID)
+                locks.set(fileId, { lockId: requestLock, timestamp: Date.now() });
+                return res.status(200).json({});
+            }
+
+            case 'GET_LOCK': {
+                res.set('X-WOPI-Lock', currentLock ? currentLock.lockId : '');
+                return res.status(200).json({});
+            }
+
+            case 'REFRESH_LOCK': {
+                if (!currentLock || currentLock.lockId !== requestLock) {
+                    res.set('X-WOPI-Lock', currentLock ? currentLock.lockId : '');
+                    return res.status(409).json({ error: 'Lock mismatch' });
+                }
+                currentLock.timestamp = Date.now();
+                return res.status(200).json({});
+            }
+
+            case 'UNLOCK': {
+                if (!currentLock || currentLock.lockId !== requestLock) {
+                    res.set('X-WOPI-Lock', currentLock ? currentLock.lockId : '');
+                    return res.status(409).json({ error: 'Lock mismatch' });
+                }
+                locks.delete(fileId);
+                return res.status(200).json({});
+            }
+
+            default:
+                return res.status(400).json({ error: `Unknown X-WOPI-Override: ${override}` });
+        }
+    });
+
+    // 3. GetFile
     app.get('/wopi/files/:id/contents', (req, res) => {
         try {
             const filePath = Buffer.from(req.params.id, 'base64').toString('utf8');
@@ -48,7 +108,7 @@ module.exports = function(app, STORAGE_DIR, resolveSafePath) {
         }
     });
 
-    // 3. PutFile
+    // 4. PutFile
     // Use raw parser because the body will be binary data
     app.post('/wopi/files/:id/contents', express.raw({ type: '*/*', limit: '50mb' }), async (req, res) => {
         try {
@@ -58,7 +118,11 @@ module.exports = function(app, STORAGE_DIR, resolveSafePath) {
             // Write the new content to disk
             await fs.writeFile(targetPath, req.body);
             
-            res.status(200).send('OK');
+            // Return the updated file info as required by the WOPI spec
+            const stat = await fs.stat(targetPath);
+            res.status(200).json({
+                LastModifiedTime: stat.mtime.toISOString(),
+            });
         } catch (err) {
             console.error(err);
             res.status(500).json({ error: 'Failed to save file' });
