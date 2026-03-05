@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
-import { Cloud, Folder, File, Code, Image as ImageIcon, Film, FileText, ChevronRight, UploadCloud, FileMusic, FileType2 } from 'lucide-vue-next';
+import { Cloud, Folder, File, Code, Image as ImageIcon, Film, FileText, ChevronRight, UploadCloud, FileMusic, FileType2, ClipboardCopy, Check } from 'lucide-vue-next';
 import ViewerModal from './components/Viewers/ViewerModal.vue';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
@@ -12,12 +12,23 @@ const files = ref<any[]>([]);
 const loading = ref(false);
 const selectedFile = ref<any | null>(null);
 const fileInput = ref<HTMLInputElement | null>(null);
+const copied = ref(false);
+
+// [8] Breadcrumb segments computed from currentDir
+const breadcrumbs = computed(() => {
+  const parts = currentDir.value.split('/').filter(Boolean);
+  return parts.map((part, index) => ({
+    label: part,
+    path: '/' + parts.slice(0, index + 1).join('/'),
+  }));
+});
 
 const fetchFiles = async (dir: string) => {
   loading.value = true;
   try {
     const res = await axios.get(`${API_BASE}/files`, { params: { dir } });
-    files.value = res.data;
+    // Handle new paginated response shape
+    files.value = res.data.items ?? res.data;
     currentDir.value = dir;
   } catch (error) {
     console.error('Failed to fetch files:', error);
@@ -72,6 +83,25 @@ const triggerUpload = () => {
   fileInput.value?.click();
 };
 
+// [8] Copy current path to clipboard
+const copyPath = async () => {
+  try {
+    await navigator.clipboard.writeText(currentDir.value);
+    copied.value = true;
+    setTimeout(() => { copied.value = false; }, 1500);
+  } catch {
+    // Fallback for insecure contexts
+    const ta = document.createElement('textarea');
+    ta.value = currentDir.value;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    copied.value = true;
+    setTimeout(() => { copied.value = false; }, 1500);
+  }
+};
+
 const getIcon = (file: any) => {
   if (file.isDir) return Folder;
   const ext = file.name.split('.').pop()?.toLowerCase();
@@ -117,17 +147,37 @@ onMounted(() => {
       
       <!-- Breadcrumbs and Actions -->
       <div class="flex items-center justify-between mb-6">
-        <div class="flex items-center text-sm text-gray-600 bg-white p-3 rounded-lg shadow-sm border border-gray-100">
-          <button @click="fetchFiles('/')" class="hover:bg-gray-100 px-2 py-1 rounded transition-colors flex items-center">
+        <div class="flex items-center text-sm text-gray-600 bg-white p-3 rounded-lg shadow-sm border border-gray-100 min-w-0 overflow-x-auto">
+          <!-- Root button -->
+          <button @click="fetchFiles('/')" class="hover:bg-gray-100 px-2 py-1 rounded transition-colors flex items-center shrink-0"
+                  :class="{ 'bg-blue-50 text-blue-700 font-semibold': currentDir === '/' }">
             <Cloud class="w-4 h-4 mr-1"/> Root
           </button>
-          <div v-for="(part, index) in currentDir.split('/').filter(Boolean)" :key="index" class="flex items-center">
-            <ChevronRight class="w-4 h-4 mx-1 text-gray-400" />
-            <span class="px-2 py-1 font-medium">{{ part }}</span>
-          </div>
+
+          <!-- [8] Clickable breadcrumb for each path segment -->
+          <template v-for="(crumb, index) in breadcrumbs" :key="crumb.path">
+            <ChevronRight class="w-4 h-4 mx-1 text-gray-400 shrink-0" />
+            <button
+              @click="fetchFiles(crumb.path)"
+              class="px-2 py-1 rounded transition-colors font-medium shrink-0 hover:bg-gray-100"
+              :class="index === breadcrumbs.length - 1 ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-600'"
+            >
+              {{ crumb.label }}
+            </button>
+          </template>
+
+          <!-- [8] Copy path button -->
+          <button
+            @click="copyPath"
+            class="ml-2 p-1 rounded hover:bg-gray-100 transition-colors shrink-0"
+            :title="copied ? 'Copied!' : 'Copy path to clipboard'"
+          >
+            <Check v-if="copied" class="w-4 h-4 text-green-500" />
+            <ClipboardCopy v-else class="w-4 h-4 text-gray-400 hover:text-gray-600" />
+          </button>
         </div>
 
-        <button @click="triggerUpload" class="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm">
+        <button @click="triggerUpload" class="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm ml-4 shrink-0">
           <UploadCloud class="w-5 h-5 mr-2" />
           Upload File
         </button>

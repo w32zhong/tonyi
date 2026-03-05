@@ -1,6 +1,7 @@
 const express = require('express');
 const fs = require('fs/promises');
 const path = require('path');
+const crypto = require('crypto');
 
 // In-memory lock store: fileId -> { lockId, timestamp }
 const locks = new Map();
@@ -10,7 +11,7 @@ module.exports = function(app, STORAGE_DIR, resolveSafePath) {
     app.get('/wopi/files/:id', async (req, res) => {
         try {
             const filePath = Buffer.from(req.params.id, 'base64').toString('utf8');
-            const targetPath = resolveSafePath(filePath);
+            const targetPath = await resolveSafePath(filePath);
             
             const stat = await fs.stat(targetPath);
             const fileName = path.basename(targetPath);
@@ -97,10 +98,10 @@ module.exports = function(app, STORAGE_DIR, resolveSafePath) {
     });
 
     // 3. GetFile
-    app.get('/wopi/files/:id/contents', (req, res) => {
+    app.get('/wopi/files/:id/contents', async (req, res) => {
         try {
             const filePath = Buffer.from(req.params.id, 'base64').toString('utf8');
-            const targetPath = resolveSafePath(filePath);
+            const targetPath = await resolveSafePath(filePath);
             res.sendFile(targetPath);
         } catch (err) {
             console.error(err);
@@ -108,15 +109,17 @@ module.exports = function(app, STORAGE_DIR, resolveSafePath) {
         }
     });
 
-    // 4. PutFile
-    // Use raw parser because the body will be binary data
+    // 4. PutFile — atomic write
     app.post('/wopi/files/:id/contents', express.raw({ type: '*/*', limit: '50mb' }), async (req, res) => {
+        let tmpPath;
         try {
             const filePath = Buffer.from(req.params.id, 'base64').toString('utf8');
-            const targetPath = resolveSafePath(filePath);
+            const targetPath = await resolveSafePath(filePath);
             
-            // Write the new content to disk
-            await fs.writeFile(targetPath, req.body);
+            // Atomic write: temp file then rename
+            tmpPath = targetPath + '.tmp.' + crypto.randomBytes(6).toString('hex');
+            await fs.writeFile(tmpPath, req.body);
+            await fs.rename(tmpPath, targetPath);
             
             // Return the updated file info as required by the WOPI spec
             const stat = await fs.stat(targetPath);
@@ -125,6 +128,7 @@ module.exports = function(app, STORAGE_DIR, resolveSafePath) {
             });
         } catch (err) {
             console.error(err);
+            if (tmpPath) await fs.unlink(tmpPath).catch(() => {});
             res.status(500).json({ error: 'Failed to save file' });
         }
     });
