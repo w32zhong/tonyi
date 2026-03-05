@@ -107,6 +107,21 @@ services:
     networks:
       - proxy_net
 
+  chromium:
+    image: lscr.io/linuxserver/chromium:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - CHROME_CLI=https://www.google.com/
+    volumes:
+      - ./mnt/chromium:/config
+      - ./app/browser/openbox/:/config/.config/openbox
+    ports:
+      - 3000:3000
+      - 3001:3001
+    shm_size: "1gb"
+
 networks:
   proxy_net:
     name: proxy_net

@@ -1,0 +1,5 @@
+#!/bin/bash
+wrapped-chromium --remote-debugging-port=9222 \
+        --remote-allow-origins="*" \
+	--kiosk \
+	${CHROME_CLI}
