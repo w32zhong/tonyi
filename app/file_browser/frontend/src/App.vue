@@ -110,7 +110,7 @@ const copyPath = async () => {
 const getIcon = (file: any) => {
   if (file.isDir) return Folder;
   const ext = file.name.split('.').pop()?.toLowerCase();
-  if (['js', 'ts', 'py', 'html', 'css', 'json'].includes(ext)) return Code;
+  if (['js', 'ts', 'py', 'html', 'css', 'json', 'yaml', 'yml', 'ini', 'config', 'cfg', 'toml', 'env', 'sh', 'bash', 'xml', 'sql', 'dockerfile', 'makefile', 'log', 'csv', 'rs', 'rb', 'php', 'java', 'c', 'cpp', 'h', 'hpp', 'swift', 'kt', 'r', 'lua', 'pl', 'ex', 'exs', 'zig', 'nim', 'conf', 'properties', 'go', 'vue'].includes(ext)) return Code;
   if (['jpg', 'png', 'gif', 'jpeg', 'webp', 'svg'].includes(ext)) return ImageIcon;
   if (['mp4', 'mkv', 'webm', 'mov'].includes(ext)) return Film;
   if (['mp3', 'wav', 'flac', 'aac', 'm4a'].includes(ext)) return FileMusic;
@@ -122,7 +122,7 @@ const getIcon = (file: any) => {
 const getIconColor = (file: any) => {
   if (file.isDir) return 'text-blue-500';
   const ext = file.name.split('.').pop()?.toLowerCase();
-  if (['js', 'ts', 'py', 'html', 'css', 'json'].includes(ext)) return 'text-yellow-500';
+  if (['js', 'ts', 'py', 'html', 'css', 'json', 'yaml', 'yml', 'ini', 'config', 'cfg', 'toml', 'env', 'sh', 'bash', 'xml', 'sql', 'dockerfile', 'makefile', 'log', 'csv', 'rs', 'rb', 'php', 'java', 'c', 'cpp', 'h', 'hpp', 'swift', 'kt', 'r', 'lua', 'pl', 'ex', 'exs', 'zig', 'nim', 'conf', 'properties', 'go', 'vue'].includes(ext)) return 'text-yellow-500';
   if (['jpg', 'png', 'gif', 'jpeg', 'webp', 'svg'].includes(ext)) return 'text-pink-500';
   if (['mp4', 'mkv', 'webm', 'mov'].includes(ext)) return 'text-purple-500';
   if (['mp3', 'wav', 'flac', 'aac', 'm4a'].includes(ext)) return 'text-emerald-500';

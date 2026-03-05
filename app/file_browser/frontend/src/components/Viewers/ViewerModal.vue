@@ -22,7 +22,7 @@ const extension = computed(() => {
   return props.file.name.split('.').pop().toLowerCase();
 });
 
-const isCode = computed(() => ['js', 'ts', 'vue', 'py', 'json', 'md', 'txt', 'html', 'css', 'go'].includes(extension.value));
+const isCode = computed(() => ['js', 'ts', 'vue', 'py', 'json', 'md', 'txt', 'html', 'css', 'go', 'yaml', 'yml', 'ini', 'config', 'cfg', 'toml', 'env', 'sh', 'bash', 'xml', 'sql', 'dockerfile', 'makefile', 'log', 'csv', 'rs', 'rb', 'php', 'java', 'c', 'cpp', 'h', 'hpp', 'swift', 'kt', 'r', 'lua', 'pl', 'ex', 'exs', 'zig', 'nim', 'conf', 'properties'].includes(extension.value));
 const isPdf = computed(() => ['pdf'].includes(extension.value));
 const isVideo = computed(() => ['mp4', 'webm', 'ogg', 'mkv'].includes(extension.value));
 const isImage = computed(() => ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(extension.value));
