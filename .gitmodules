@@ -1,0 +1,3 @@
+[submodule "app/file_browser/backend/storage"]
+	path = app/file_browser/backend/storage
+	url = https://github.com/w32zhong/tonyi-example-files.git
