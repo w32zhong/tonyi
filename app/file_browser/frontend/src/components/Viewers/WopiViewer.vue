@@ -14,7 +14,7 @@ const formRef = ref<HTMLFormElement | null>(null);
 const officeServerUrl = ref('http://192.168.232.115:9980/browser/dist/cool.html?WOPISrc=');
 const isConfigured = ref(false);
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8971';
 const backendWopiUrl = `${BACKEND_URL}/wopi/files/${btoa(props.file.path)}`;
 
 const configureAndSubmit = () => {

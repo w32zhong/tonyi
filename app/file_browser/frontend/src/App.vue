@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Cloud, Folder, File, Code, Image as ImageIcon, Film, FileText, ChevronRight, ChevronLeft, UploadCloud, FileMusic, FileType2, ClipboardCopy, Check } from 'lucide-vue-next';
 import ViewerModal from './components/Viewers/ViewerModal.vue';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8971';
 const API_BASE = `${BACKEND_URL}/api`;
 
 const currentDir = ref('/');
