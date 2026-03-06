@@ -20,9 +20,6 @@ app.use(express.json());
 // Ensure storage dir exists
 fs.mkdir(STORAGE_DIR, { recursive: true }).catch(console.error);
 
-// Add WOPI endpoints before other middleware so body parsing doesn't conflict
-wopiRoutes(app, resolveSafePath, MAX_UPLOAD_STRING);
-
 // Hardened path resolver:
 // - Rejects null bytes
 // - Checks path boundary with separator (prevents /storage_evil bypass)
@@ -60,6 +57,9 @@ const resolveSafePath = async (userPath) => {
         throw err;
     }
 };
+
+// Add WOPI endpoints before other middleware so body parsing doesn't conflict
+wopiRoutes(app, resolveSafePath, MAX_UPLOAD_STRING);
 
 // File uploads: writes with .incomplete suffix, renames on success
 const upload = multer({
