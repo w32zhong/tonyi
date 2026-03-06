@@ -101,27 +101,6 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     }
 });
 
-// Clean up orphaned .incomplete files on startup
-(async () => {
-    try {
-        const cleanDir = async (dir) => {
-            const entries = await fs.readdir(dir, { withFileTypes: true });
-            for (const entry of entries) {
-                const fullPath = path.join(dir, entry.name);
-                if (entry.isDirectory()) {
-                    await cleanDir(fullPath);
-                } else if (entry.name.endsWith('.incomplete')) {
-                    console.log(`Cleaning orphaned incomplete upload: ${fullPath}`);
-                    await fs.unlink(fullPath).catch(() => {});
-                }
-            }
-        };
-        await cleanDir(STORAGE_DIR);
-    } catch (err) {
-        console.error('Error cleaning incomplete uploads:', err);
-    }
-})();
-
 // [3] Dir listing with pagination and broken-file tolerance
 app.get('/api/files', async (req, res) => {
     try {
