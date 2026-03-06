@@ -1,11 +1,11 @@
-<script setup lang="ts">
+<script setup>
 import { ref } from 'vue';
 
-const props = defineProps<{
-  fileUrl: string;
-}>();
+const props = defineProps({
+  fileUrl: String
+});
 
-const iframeRef = ref<HTMLIFrameElement | null>(null);
+const iframeRef = ref(null);
 const loading = ref(true);
 
 const handleLoad = () => {

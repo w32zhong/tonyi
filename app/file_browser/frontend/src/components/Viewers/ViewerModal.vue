@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { computed } from 'vue';
 import { X, Download } from 'lucide-vue-next';
 import CodeViewer from './CodeViewer.vue';
@@ -10,10 +10,10 @@ import WopiViewer from './WopiViewer.vue';
 import AudioViewer from './AudioViewer.vue';
 import GenericViewer from './GenericViewer.vue';
 
-const props = defineProps<{
-  file: any;
-  apiBase: string;
-}>();
+const props = defineProps({
+  file: Object,
+  apiBase: String
+});
 
 const emit = defineEmits(['close']);
 
@@ -34,8 +34,8 @@ const fileUrl = computed(() => {
   return `${props.apiBase}/file/content?path=${encodeURIComponent(props.file.path)}`;
 });
 
-const handleBackdropClick = (e: MouseEvent) => {
-  if ((e.target as HTMLElement).classList.contains('viewer-backdrop')) {
+const handleBackdropClick = (e) => {
+  if (e.target.classList.contains('viewer-backdrop')) {
     emit('close');
   }
 };

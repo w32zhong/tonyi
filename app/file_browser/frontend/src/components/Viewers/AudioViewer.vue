@@ -1,20 +1,20 @@
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted } from 'vue';
 import { Play, Pause, Volume2, VolumeX, Music } from 'lucide-vue-next';
 
-const props = defineProps<{
-  fileUrl: string;
-  fileName: string;
-}>();
+const props = defineProps({
+  fileUrl: String,
+  fileName: String
+});
 
-const audioRef = ref<HTMLAudioElement | null>(null);
+const audioRef = ref(null);
 const isPlaying = ref(false);
 const duration = ref(0);
 const currentTime = ref(0);
 const volume = ref(1);
 const isMuted = ref(false);
 
-const formatTime = (seconds: number) => {
+const formatTime = (seconds) => {
   if (isNaN(seconds)) return '0:00';
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
@@ -38,15 +38,15 @@ const toggleMute = () => {
   }
 };
 
-const seek = (e: Event) => {
-  const target = e.target as HTMLInputElement;
+const seek = (e) => {
+  const target = e.target;
   if (audioRef.value) {
     audioRef.value.currentTime = parseFloat(target.value);
   }
 };
 
-const changeVolume = (e: Event) => {
-  const target = e.target as HTMLInputElement;
+const changeVolume = (e) => {
+  const target = e.target;
   if (audioRef.value) {
     audioRef.value.volume = parseFloat(target.value);
     volume.value = audioRef.value.volume;

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import { Cloud, Folder, File, Code, Image as ImageIcon, Film, FileText, ChevronRight, ChevronLeft, UploadCloud, FileMusic, FileType2, ClipboardCopy, Check } from 'lucide-vue-next';
@@ -8,12 +8,12 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8971';
 const API_BASE = `${BACKEND_URL}/api`;
 
 const currentDir = ref('/');
-const files = ref<any[]>([]);
+const files = ref([]);
 const loading = ref(false);
-const selectedFile = ref<any | null>(null);
-const fileInput = ref<HTMLInputElement | null>(null);
+const selectedFile = ref(null);
+const fileInput = ref(null);
 const copied = ref(false);
-const pagination = ref<{ page: number; limit: number; totalItems: number; totalPages: number }>({
+const pagination = ref({
   page: 1, limit: 200, totalItems: 0, totalPages: 1,
 });
 
@@ -26,7 +26,7 @@ const breadcrumbs = computed(() => {
   }));
 });
 
-const fetchFiles = async (dir: string, page = 1) => {
+const fetchFiles = async (dir, page = 1) => {
   loading.value = true;
   try {
     const res = await axios.get(`${API_BASE}/files`, { params: { dir, page } });
@@ -42,7 +42,7 @@ const fetchFiles = async (dir: string, page = 1) => {
   }
 };
 
-const handleDoubleClick = (file: any) => {
+const handleDoubleClick = (file) => {
   if (file.isDir) {
     const newDir = currentDir.value.endsWith('/') 
       ? `${currentDir.value}${file.name}` 
@@ -61,8 +61,8 @@ const goUp = () => {
   fetchFiles(newDir);
 };
 
-const handleFileUpload = async (event: Event) => {
-  const target = event.target as HTMLInputElement;
+const handleFileUpload = async (event) => {
+  const target = event.target;
   if (!target.files || target.files.length === 0) return;
   
   const file = target.files?.[0];
@@ -107,7 +107,7 @@ const copyPath = async () => {
   }
 };
 
-const getIcon = (file: any) => {
+const getIcon = (file) => {
   if (file.isDir) return Folder;
   const ext = file.name.split('.').pop()?.toLowerCase();
   if (['js', 'ts', 'py', 'html', 'css', 'json', 'yaml', 'yml', 'ini', 'config', 'cfg', 'toml', 'env', 'sh', 'bash', 'xml', 'sql', 'dockerfile', 'makefile', 'log', 'csv', 'rs', 'rb', 'php', 'java', 'c', 'cpp', 'h', 'hpp', 'swift', 'kt', 'r', 'lua', 'pl', 'ex', 'exs', 'zig', 'nim', 'conf', 'properties', 'go', 'vue'].includes(ext)) return Code;
@@ -119,7 +119,7 @@ const getIcon = (file: any) => {
   return File;
 };
 
-const getIconColor = (file: any) => {
+const getIconColor = (file) => {
   if (file.isDir) return 'text-blue-500';
   const ext = file.name.split('.').pop()?.toLowerCase();
   if (['js', 'ts', 'py', 'html', 'css', 'json', 'yaml', 'yml', 'ini', 'config', 'cfg', 'toml', 'env', 'sh', 'bash', 'xml', 'sql', 'dockerfile', 'makefile', 'log', 'csv', 'rs', 'rb', 'php', 'java', 'c', 'cpp', 'h', 'hpp', 'swift', 'kt', 'r', 'lua', 'pl', 'ex', 'exs', 'zig', 'nim', 'conf', 'properties', 'go', 'vue'].includes(ext)) return 'text-yellow-500';

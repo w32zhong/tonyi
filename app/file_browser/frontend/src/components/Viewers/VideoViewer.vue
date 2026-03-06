@@ -1,14 +1,14 @@
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import Artplayer from 'artplayer';
 
-const props = defineProps<{
-  fileUrl: string;
-  type: string;
-}>();
+const props = defineProps({
+  fileUrl: String,
+  type: String
+});
 
-const artRef = ref<HTMLDivElement | null>(null);
-let art: Artplayer | null = null;
+const artRef = ref(null);
+let art = null;
 
 onMounted(() => {
   if (artRef.value) {

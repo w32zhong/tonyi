@@ -1,11 +1,11 @@
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted } from 'vue';
 import VuePdfEmbed from 'vue-pdf-embed';
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
 
-const props = defineProps<{
-  fileUrl: string;
-}>();
+const props = defineProps({
+  fileUrl: String
+});
 
 const loading = ref(true);
 const pageCount = ref(0);

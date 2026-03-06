@@ -1,24 +1,24 @@
-<script setup lang="ts">
+<script setup>
 import { ref } from 'vue';
 
-const props = defineProps<{
-  fileUrl: string;
-  fileName: string;
-}>();
+const props = defineProps({
+  fileUrl: String,
+  fileName: String
+});
 
 const scale = ref(1);
 const isDragging = ref(false);
 const position = ref({ x: 0, y: 0 });
 const startPos = ref({ x: 0, y: 0 });
 
-const handleWheel = (e: WheelEvent) => {
+const handleWheel = (e) => {
   e.preventDefault();
   const delta = e.deltaY * -0.001;
   const newScale = Math.min(Math.max(0.1, scale.value + delta), 5);
   scale.value = newScale;
 };
 
-const handleMouseDown = (e: MouseEvent) => {
+const handleMouseDown = (e) => {
   isDragging.value = true;
   startPos.value = {
     x: e.clientX - position.value.x,
@@ -26,7 +26,7 @@ const handleMouseDown = (e: MouseEvent) => {
   };
 };
 
-const handleMouseMove = (e: MouseEvent) => {
+const handleMouseMove = (e) => {
   if (!isDragging.value) return;
   position.value = {
     x: e.clientX - startPos.value.x,

@@ -1,10 +1,10 @@
-<script setup lang="ts">
+<script setup>
 import { FileQuestion, Download } from 'lucide-vue-next';
 
-const props = defineProps<{
-  fileUrl: string;
-  file: any;
-}>();
+const props = defineProps({
+  fileUrl: String,
+  file: Object
+});
 </script>
 
 <template>

@@ -1,13 +1,13 @@
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 import { VueMonacoEditor } from '@guolao/vue-monaco-editor';
 import { FileCode2, Save, Check } from 'lucide-vue-next';
 
-const props = defineProps<{
-  fileUrl: string;
-  language: string;
-}>();
+const props = defineProps({
+  fileUrl: String,
+  language: String
+});
 
 const code = ref('');
 const originalCode = ref('');
@@ -16,7 +16,7 @@ const saving = ref(false);
 const savedSuccess = ref(false);
 const error = ref('');
 
-const extMap: Record<string, string> = {
+const extMap = {
   'js': 'javascript',
   'ts': 'typescript',
   'vue': 'html',
@@ -75,7 +75,7 @@ onMounted(async () => {
   }
 });
 
-const handleKeyDown = (e: KeyboardEvent) => {
+const handleKeyDown = (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === 's') {
     e.preventDefault();
     saveChanges();

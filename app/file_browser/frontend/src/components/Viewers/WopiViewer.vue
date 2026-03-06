@@ -1,11 +1,11 @@
-<script setup lang="ts">
+<script setup>
 import { onMounted, ref } from 'vue';
 
-const props = defineProps<{
-  file: any;
-}>();
+const props = defineProps({
+  file: Object
+});
 
-const formRef = ref<HTMLFormElement | null>(null);
+const formRef = ref(null);
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8971';
 const backendWopiUrl = `${BACKEND_URL}/wopi/files/${btoa(props.file.path)}`;
