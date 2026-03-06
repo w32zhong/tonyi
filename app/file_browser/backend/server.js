@@ -57,7 +57,7 @@ const resolveSafePath = async (userPath) => {
 fs.mkdir(STORAGE_DIR, { recursive: true }).catch(console.error);
 
 // Add WOPI endpoints before other middleware so body parsing doesn't conflict
-wopiRoutes(app, STORAGE_DIR, resolveSafePath);
+wopiRoutes(app, resolveSafePath);
 
 // [5] File uploads: writes with .incomplete suffix, renames on success
 const upload = multer({

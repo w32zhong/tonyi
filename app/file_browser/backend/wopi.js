@@ -6,17 +6,17 @@ const crypto = require('crypto');
 // In-memory lock store: fileId -> { lockId, timestamp }
 const locks = new Map();
 
-module.exports = function(app, STORAGE_DIR, resolveSafePath) {
+module.exports = function(app, resolveSafePath) {
     // 1. CheckFileInfo
     app.get('/wopi/files/:id', async (req, res) => {
         try {
             const filePath = Buffer.from(req.params.id, 'base64').toString('utf8');
             const targetPath = await resolveSafePath(filePath);
-            
+
             const stat = await fs.stat(targetPath);
             const fileName = path.basename(targetPath);
             const version = stat.mtimeMs.toString();
-            
+
             const wopiInfo = {
                 BaseFileName: fileName,
                 OwnerId: "user1",
@@ -28,7 +28,7 @@ module.exports = function(app, STORAGE_DIR, resolveSafePath) {
                 SupportsUpdate: true,
                 SupportsLocks: true,
             };
-            
+
             res.json(wopiInfo);
         } catch (err) {
             console.error(err);
@@ -115,12 +115,12 @@ module.exports = function(app, STORAGE_DIR, resolveSafePath) {
         try {
             const filePath = Buffer.from(req.params.id, 'base64').toString('utf8');
             const targetPath = await resolveSafePath(filePath);
-            
+
             // Atomic write: temp file then rename
             tmpPath = targetPath + '.tmp.' + crypto.randomBytes(6).toString('hex');
             await fs.writeFile(tmpPath, req.body);
             await fs.rename(tmpPath, targetPath);
-            
+
             // Return the updated file info as required by the WOPI spec
             const stat = await fs.stat(targetPath);
             res.status(200).json({
