@@ -1,3 +1,15 @@
+/**
+ * File Browser API Endpoints
+ * --------------------------------------------------------------------------------
+ * METHOD | API PATH                     | DESCRIPTION
+ * --------------------------------------------------------------------------------
+ * POST   | /api/upload                  | File uploads
+ * GET    | /api/files                   | Directory listing with pagination
+ * GET    | /api/file/content            | Download/view file content
+ * PUT    | /api/file/content            | Atomic write/save file
+ * --------------------------------------------------------------------------------
+ */
+
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs/promises');

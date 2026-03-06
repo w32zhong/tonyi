@@ -1,3 +1,15 @@
+/**
+ * WOPI API Endpoints
+ * --------------------------------------------------------------------------------
+ * METHOD | API PATH                     | DESCRIPTION
+ * --------------------------------------------------------------------------------
+ * GET    | /wopi/files/:id              | CheckFileInfo (returns file metadata)
+ * POST   | /wopi/files/:id              | Lock/Unlock/RefreshLock operations
+ * GET    | /wopi/files/:id/contents     | GetFile (downloads file content)
+ * POST   | /wopi/files/:id/contents     | PutFile (atomic write/save file)
+ * --------------------------------------------------------------------------------
+ */
+
 const express = require('express');
 const fs = require('fs/promises');
 const path = require('path');
