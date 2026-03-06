@@ -8,6 +8,9 @@ const wopiRoutes = require('./wopi');
 const app = express();
 const PORT = process.env.PORT || 8971;
 const PAGE_LIMIT = parseInt(process.env.PAGE_LIMIT) || 20;
+const MAX_UPLOAD_MB = parseInt(process.env.MAX_UPLOAD_MB) || 50;
+const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
+const MAX_UPLOAD_STRING = `${MAX_UPLOAD_MB}mb`;
 
 app.use(cors());
 app.use(express.json());
@@ -57,7 +60,7 @@ const resolveSafePath = async (userPath) => {
 fs.mkdir(STORAGE_DIR, { recursive: true }).catch(console.error);
 
 // Add WOPI endpoints before other middleware so body parsing doesn't conflict
-wopiRoutes(app, resolveSafePath);
+wopiRoutes(app, resolveSafePath, MAX_UPLOAD_STRING);
 
 // [5] File uploads: writes with .incomplete suffix, renames on success
 const upload = multer({
@@ -75,7 +78,7 @@ const upload = multer({
             cb(null, file.originalname + '.incomplete');
         }
     }),
-    limits: { fileSize: 50 * 1024 * 1024 } // 50MB
+    limits: { fileSize: MAX_UPLOAD_BYTES }
 });
 
 app.post('/api/upload', upload.single('file'), async (req, res) => {
@@ -171,7 +174,7 @@ app.get('/api/file/content', async (req, res) => {
 });
 
 // [4] Atomic write: temp file then rename
-app.put('/api/file/content', express.text({ type: '*/*', limit: '50mb' }), async (req, res) => {
+app.put('/api/file/content', express.text({ type: '*/*', limit: MAX_UPLOAD_STRING }), async (req, res) => {
     let tmpPath;
     try {
         const filePath = req.query.path;

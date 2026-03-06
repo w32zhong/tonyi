@@ -6,7 +6,7 @@ const crypto = require('crypto');
 // In-memory lock store: fileId -> { lockId, timestamp }
 const locks = new Map();
 
-module.exports = function(app, resolveSafePath) {
+module.exports = function(app, resolveSafePath, maxUploadString = '50mb') {
     // 1. CheckFileInfo
     app.get('/wopi/files/:id', async (req, res) => {
         try {
@@ -39,7 +39,7 @@ module.exports = function(app, resolveSafePath) {
     // 2. Lock/Unlock/RefreshLock operations
     // Collabora sends POST /wopi/files/:id with X-WOPI-Override header
     // to LOCK, UNLOCK, REFRESH_LOCK, or GET_LOCK before saving.
-    app.post('/wopi/files/:id', express.raw({ type: '*/*', limit: '50mb' }), (req, res) => {
+    app.post('/wopi/files/:id', express.raw({ type: '*/*', limit: maxUploadString }), (req, res) => {
         const fileId = req.params.id;
         const override = (req.headers['x-wopi-override'] || '').toUpperCase();
         const requestLock = req.headers['x-wopi-lock'] || '';
@@ -110,7 +110,7 @@ module.exports = function(app, resolveSafePath) {
     });
 
     // 4. PutFile — atomic write
-    app.post('/wopi/files/:id/contents', express.raw({ type: '*/*', limit: '50mb' }), async (req, res) => {
+    app.post('/wopi/files/:id/contents', express.raw({ type: '*/*', limit: maxUploadString }), async (req, res) => {
         let tmpPath;
         try {
             const filePath = Buffer.from(req.params.id, 'base64').toString('utf8');
