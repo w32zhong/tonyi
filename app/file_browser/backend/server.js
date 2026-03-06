@@ -7,7 +7,7 @@ const crypto = require('crypto');
 const wopiRoutes = require('./wopi');
 const app = express();
 const PORT = process.env.PORT || 3001;
-const DEFAULT_PAGE_LIMIT = parseInt(process.env.PAGE_LIMIT) || 20;
+const PAGE_LIMIT = parseInt(process.env.PAGE_LIMIT) || 20;
 
 app.use(cors());
 app.use(express.json());
@@ -107,20 +107,17 @@ app.get('/api/files', async (req, res) => {
         const dir = req.query.dir || '/';
         const targetPath = await resolveSafePath(dir);
         const page = parseInt(req.query.page) || 1;
-        const limit = Math.min(parseInt(req.query.limit) || DEFAULT_PAGE_LIMIT, 1000);
+        const limit = PAGE_LIMIT;
 
         const entries = await fs.readdir(targetPath, { withFileTypes: true });
 
-        // Filter out in-progress uploads
-        const filtered = entries.filter(f => !f.name.endsWith('.incomplete'));
-
-        const totalItems = filtered.length;
+        const totalItems = entries.length;
         const totalPages = Math.ceil(totalItems / limit) || 1;
         const startIndex = (page - 1) * limit;
-        const paged = filtered.slice(startIndex, startIndex + limit);
+        const pagedItems = entries.slice(startIndex, startIndex + limit);
 
         // Promise.allSettled: one broken symlink/deleted file won't crash the listing
-        const results = await Promise.allSettled(paged.map(async (f) => {
+        const results = await Promise.allSettled(pagedItems.map(async (f) => {
             const fullPath = path.join(targetPath, f.name);
             const stat = await fs.stat(fullPath);
             return {
