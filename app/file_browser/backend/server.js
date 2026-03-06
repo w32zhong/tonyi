@@ -6,7 +6,7 @@ const multer = require('multer');
 const crypto = require('crypto');
 const wopiRoutes = require('./wopi');
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 8971;
 const PAGE_LIMIT = parseInt(process.env.PAGE_LIMIT) || 20;
 
 app.use(cors());
@@ -191,6 +191,10 @@ app.put('/api/file/content', express.text({ type: '*/*', limit: '50mb' }), async
     }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`Minimal Storage Backend running on http://0.0.0.0:${PORT}`);
+});
+
+server.on('error', (err) => {
+    console.error('Server error event:', err);
 });
