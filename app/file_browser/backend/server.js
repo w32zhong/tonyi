@@ -5,37 +5,42 @@ const path = require('path');
 const multer = require('multer');
 const crypto = require('crypto');
 const wopiRoutes = require('./wopi');
-const app = express();
+
 const PORT = process.env.PORT || 8971;
 const PAGE_LIMIT = parseInt(process.env.PAGE_LIMIT) || 20;
 const MAX_UPLOAD_MB = parseInt(process.env.MAX_UPLOAD_MB) || 50;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 const MAX_UPLOAD_STRING = `${MAX_UPLOAD_MB}mb`;
+const STORAGE_DIR = path.resolve(process.env.ROOT || path.join(__dirname, 'storage'));
 
+const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ROOT env var points to any local filesystem path; defaults to ./storage
-const STORAGE_DIR = path.resolve(process.env.ROOT || path.join(__dirname, 'storage'));
+// Ensure storage dir exists
+fs.mkdir(STORAGE_DIR, { recursive: true }).catch(console.error);
+
+// Add WOPI endpoints before other middleware so body parsing doesn't conflict
+wopiRoutes(app, resolveSafePath, MAX_UPLOAD_STRING);
 
 // Hardened path resolver:
-// 1. Rejects null bytes
-// 2. Checks path boundary with separator (prevents /storage_evil bypass)
-// 3. Resolves symlinks to prevent escape via symlink
+// - Rejects null bytes
+// - Checks path boundary with separator (prevents /storage_evil bypass)
+// - Resolves symlinks to prevent escape via symlink
 const resolveSafePath = async (userPath) => {
-    // [7] Null byte sanitization
+    // Null byte sanitization
     if (userPath.includes('\0')) {
         throw new Error('Invalid path: null byte detected');
     }
 
     const safePath = path.resolve(STORAGE_DIR, userPath.replace(/^\//, ''));
 
-    // [2] Boundary check with separator to prevent off-by-one
+    // Boundary check with separator to prevent off-by-one
     if (safePath !== STORAGE_DIR && !safePath.startsWith(STORAGE_DIR + path.sep)) {
         throw new Error('Invalid path');
     }
 
-    // [1] Resolve symlinks to check the real destination
+    // Resolve symlinks to check the real destination
     try {
         const realPath = await fs.realpath(safePath);
         if (realPath !== STORAGE_DIR && !realPath.startsWith(STORAGE_DIR + path.sep)) {
@@ -56,13 +61,7 @@ const resolveSafePath = async (userPath) => {
     }
 };
 
-// Ensure storage dir exists
-fs.mkdir(STORAGE_DIR, { recursive: true }).catch(console.error);
-
-// Add WOPI endpoints before other middleware so body parsing doesn't conflict
-wopiRoutes(app, resolveSafePath, MAX_UPLOAD_STRING);
-
-// [5] File uploads: writes with .incomplete suffix, renames on success
+// File uploads: writes with .incomplete suffix, renames on success
 const upload = multer({
     storage: multer.diskStorage({
         destination: async (req, file, cb) => {
@@ -105,7 +104,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     }
 });
 
-// [3] Dir listing with pagination and broken-file tolerance
+// Dir listing with pagination and broken-file tolerance
 app.get('/api/files', async (req, res) => {
     try {
         const dir = req.query.dir || '/';
@@ -147,7 +146,7 @@ app.get('/api/files', async (req, res) => {
     }
 });
 
-// [6] Content-Disposition + nosniff + cache-control
+// Content-Disposition + nosniff + cache-control
 app.get('/api/file/content', async (req, res) => {
     try {
         const filePath = req.query.path;
@@ -174,7 +173,7 @@ app.get('/api/file/content', async (req, res) => {
     }
 });
 
-// [4] Atomic write: temp file then rename
+// Atomic write: temp file then rename
 app.put('/api/file/content', express.text({ type: '*/*', limit: MAX_UPLOAD_STRING }), async (req, res) => {
     let tmpPath;
     try {

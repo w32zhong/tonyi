@@ -17,7 +17,7 @@ const pagination = ref<{ page: number; limit: number; totalItems: number; totalP
   page: 1, limit: 200, totalItems: 0, totalPages: 1,
 });
 
-// [8] Breadcrumb segments computed from currentDir
+// Breadcrumb segments computed from currentDir
 const breadcrumbs = computed(() => {
   const parts = currentDir.value.split('/').filter(Boolean);
   return parts.map((part, index) => ({
@@ -88,7 +88,7 @@ const triggerUpload = () => {
   fileInput.value?.click();
 };
 
-// [8] Copy current path to clipboard
+// Copy current path to clipboard
 const copyPath = async () => {
   try {
     await navigator.clipboard.writeText(currentDir.value);
