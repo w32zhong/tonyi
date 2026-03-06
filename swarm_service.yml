@@ -138,6 +138,29 @@ services:
     networks:
       - gateway_net
 
+  chromium:
+    image: lscr.io/linuxserver/chromium:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - CHROME_CLI=https://www.google.com/
+      - HARDEN_DESKTOP=true
+      - HARDEN_OPENBOX=true
+      - SELKIES_UI_SHOW_SIDEBAR=false
+    volumes:
+      - ./mnt/chromium:/config
+      - ./app/browser/openbox/:/config/.config/openbox
+    #ports:
+    #  - 3001:3001 # https port, TEST ONLY!
+    shm_size: "1gb"
+    deploy:
+      labels:
+        gateway.route: browser
+        gateway.port: 3000
+    networks:
+      - gateway_net
+
 networks:
   gateway_net:
     driver: overlay
