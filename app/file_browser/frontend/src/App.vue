@@ -11,7 +11,7 @@ const currentDir = ref('/');
 const files = ref([]);
 const loading = ref(false);
 const selectedFile = ref(null);
-const fileInput = ref(null);
+const fileInput = ref(null); /* upload file in the hidden form */
 const copied = ref(false);
 const pagination = ref({
   page: 1, limit: 200, totalItems: 0, totalPages: 1,
@@ -30,7 +30,7 @@ const fetchFiles = async (dir, page = 1) => {
   loading.value = true;
   try {
     const res = await axios.get(`${API_BASE}/files`, { params: { dir, page } });
-    files.value = res.data.items ?? res.data;
+    files.value = res.data.items;
     if (res.data.pagination) {
       pagination.value = res.data.pagination;
     }
