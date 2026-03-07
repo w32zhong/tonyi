@@ -31,9 +31,7 @@ const fetchFiles = async (dir, page = 1) => {
   try {
     const res = await axios.get(`${API_BASE}/files`, { params: { dir, page } });
     files.value = res.data.items;
-    if (res.data.pagination) {
-      pagination.value = res.data.pagination;
-    }
+    pagination.value = res.data.pagination;
     currentDir.value = dir;
   } catch (error) {
     console.error('Failed to fetch files:', error);
