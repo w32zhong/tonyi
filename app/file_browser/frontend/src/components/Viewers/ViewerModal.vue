@@ -39,6 +39,14 @@ const handleBackdropClick = (e) => {
     emit('close');
   }
 };
+
+const formatSize = (bytes) => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+};
 </script>
 
 <template>
@@ -53,7 +61,7 @@ const handleBackdropClick = (e) => {
         <div class="flex items-center justify-between px-4 py-3 bg-gray-950 border-b border-gray-800">
           <div class="flex items-center space-x-3 truncate">
             <span class="font-medium text-gray-200 truncate">{{ file.name }}</span>
-            <span class="text-xs text-gray-500 bg-gray-800 px-2 py-1 rounded-md">{{ (file.size / 1024).toFixed(1) }} KB</span>
+            <span class="text-xs text-gray-500 bg-gray-800 px-2 py-1 rounded-md">{{ formatSize(file.size) }}</span>
           </div>
           <div class="flex items-center space-x-2">
             <a :href="fileUrl" target="_blank" download class="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white" title="Download">

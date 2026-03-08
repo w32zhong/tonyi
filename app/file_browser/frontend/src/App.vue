@@ -124,6 +124,7 @@ const getIconColor = (file) => {
   if (icon === Film) return 'text-purple-500';
   if (icon === FileMusic) return 'text-emerald-500';
   if (icon === FileType2) return 'text-sky-500';
+
   if (icon === FileText) {
     const ext = file.name.split('.').pop()?.toLowerCase();
     if (ext === 'pdf') return 'text-red-500';
@@ -133,6 +134,14 @@ const getIconColor = (file) => {
   }
 
   return 'text-gray-500';
+};
+
+const formatSize = (bytes) => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 };
 
 onMounted(() => {
@@ -197,6 +206,7 @@ onMounted(() => {
           <div v-if="loading" class="p-8 text-center text-gray-500 animate-pulse">Loading files...</div>
 
           <table v-else class="w-full text-left border-collapse">
+
             <thead>
               <tr class="border-b border-gray-100 text-gray-500 text-sm">
                 <th class="py-3 px-4 font-medium">Name</th>
@@ -204,7 +214,9 @@ onMounted(() => {
                 <th class="py-3 px-4 font-medium w-48">Modified</th>
               </tr>
             </thead>
+
             <tbody>
+              <!-- first row, goUp? -->
               <tr v-if="currentDir !== '/'"
                   @dblclick="goUp()"
                   class="border-b border-gray-50 hover:bg-blue-50 cursor-pointer transition-colors select-none group">
@@ -215,6 +227,8 @@ onMounted(() => {
                 <td class="py-3 px-4 text-gray-400 text-sm">-</td>
                 <td class="py-3 px-4 text-gray-400 text-sm">-</td>
               </tr>
+
+              <!-- rest rows, file entries -->
               <tr v-for="file in files" :key="file.name"
                   @dblclick="handleDoubleClick(file)"
                   class="border-b border-gray-50 hover:bg-blue-50 cursor-pointer transition-colors select-none group">
@@ -223,16 +237,19 @@ onMounted(() => {
                   <span class="text-gray-700 font-medium group-hover:text-blue-700 transition-colors">{{ file.name }}</span>
                 </td>
                 <td class="py-3 px-4 text-gray-500 text-sm">
-                  {{ file.isDir ? '-' : (file.size / 1024).toFixed(1) + ' KB' }}
+                  {{ file.isDir ? '-' : formatSize(file.size) }}
                 </td>
                 <td class="py-3 px-4 text-gray-500 text-sm">
                   {{ new Date(file.mtime).toLocaleDateString() }}
                 </td>
               </tr>
+
+              <!-- if no entry, put a note -->
               <tr v-if="files.length === 0">
                 <td colspan="3" class="py-12 text-center text-gray-400">This folder is empty.</td>
               </tr>
             </tbody>
+
           </table>
         </div>
 
