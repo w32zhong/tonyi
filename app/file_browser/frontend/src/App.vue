@@ -11,6 +11,7 @@ const currentDir = ref('/');
 const files = ref([]);
 const loading = ref(false);
 const selectedFile = ref(null);
+const highlightedFile = ref(null);
 const fileInput = ref(null); /* upload file in the hidden form */
 const copied = ref(false);
 const pagination = ref({
@@ -71,6 +72,7 @@ const breadcrumbs = computed(() => {
 
 const fetchFiles = async (dir, page = 1) => {
   loading.value = true;
+  highlightedFile.value = null; // Clear highlight on navigation
   try {
     const res = await axios.get(`${API_BASE}/files`, { params: { dir, page } });
     files.value = res.data.items;
@@ -83,10 +85,38 @@ const fetchFiles = async (dir, page = 1) => {
   }
 };
 
+const locateFile = async (path, openViewer = false, download = false) => {
+  loading.value = true;
+  try {
+    const res = await axios.get(`${API_BASE}/locate`, { params: { path } });
+    files.value = res.data.items;
+    pagination.value = res.data.pagination;
+    currentDir.value = res.data.dir;
+    
+    if (res.data.file) {
+      highlightedFile.value = res.data.file;
+      
+      if (openViewer) {
+        if (download) {
+          const downloadUrl = `${API_BASE}/file/content?path=${encodeURIComponent(res.data.file.path)}`;
+          window.open(downloadUrl, '_blank');
+        } else {
+          selectedFile.value = res.data.file;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Failed to locate file:', error);
+    fetchFiles('/');
+  } finally {
+    loading.value = false;
+  }
+};
+
 const handleDoubleClick = (file) => {
   if (file.isDir) {
-    const newDir = currentDir.value.endsWith('/')
-      ? `${currentDir.value}${file.name}`
+    const newDir = currentDir.value.endsWith('/') 
+      ? `${currentDir.value}${file.name}` 
       : `${currentDir.value}/${file.name}`;
     fetchFiles(newDir);
   } else {
@@ -105,12 +135,12 @@ const goUp = () => {
 const handleFileUpload = async (event) => {
   const target = event.target;
   if (!target.files || target.files.length === 0) return;
-
+  
   const file = target.files?.[0];
   if (!file) return;
   const formData = new FormData();
   formData.append('file', file);
-
+  
   try {
     await axios.post(`${API_BASE}/upload`, formData, {
       params: { dir: currentDir.value },
@@ -188,7 +218,16 @@ const formatSize = (bytes) => {
 };
 
 onMounted(() => {
-  fetchFiles('/');
+  const params = new URLSearchParams(window.location.search);
+  const pathParam = params.get('path');
+  const viewParam = params.get('view') === 'true';
+  const downloadParam = params.get('download') === 'true';
+
+  if (pathParam) {
+    locateFile(pathParam, viewParam || downloadParam, downloadParam);
+  } else {
+    fetchFiles('/');
+  }
 });
 </script>
 
@@ -274,7 +313,8 @@ onMounted(() => {
               <!-- rest rows, file entries -->
               <tr v-for="file in files" :key="file.name"
                   @dblclick="handleDoubleClick(file)"
-                  class="border-b border-gray-50 hover:bg-blue-50 cursor-pointer transition-colors select-none group">
+                  class="border-b border-gray-50 hover:bg-blue-50 cursor-pointer transition-colors select-none group"
+                  :class="{ 'bg-yellow-50': highlightedFile && highlightedFile.path === file.path }">
                 <td class="py-3 px-4 flex items-center">
                   <component :is="getIcon(file)" class="w-6 h-6 mr-3 transition-colors" :class="[getIconColor(file), 'group-hover:opacity-80']" />
                   <span class="text-gray-700 font-medium group-hover:text-blue-700 transition-colors">{{ file.name }}</span>
@@ -333,6 +373,7 @@ onMounted(() => {
       v-if="selectedFile"
       :file="selectedFile"
       :api-base="API_BASE"
+      :current-dir="currentDir"
       :has-next="hasNextFile"
       :has-prev="hasPrevFile"
       @next="goToNextFile"

@@ -6,7 +6,9 @@ import { VueMonacoEditor } from '@guolao/vue-monaco-editor';
 import { FileCode2, Save, Check, Eye, Code as CodeIcon } from 'lucide-vue-next';
 
 const props = defineProps({
-  fileUrl: String
+  fileUrl: String,
+  currentDir: String,
+  apiBase: String
 });
 
 const code = ref('');
@@ -22,6 +24,27 @@ const md = new MarkdownIt({
   linkify: true,
   typographer: true
 });
+
+// Custom renderer rule for images to handle relative paths
+const defaultImageRender = md.renderer.rules.image || function (tokens, idx, options, env, self) {
+  return self.renderToken(tokens, idx, options);
+};
+
+md.renderer.rules.image = (tokens, idx, options, env, self) => {
+  const token = tokens[idx];
+  const srcIndex = token.attrIndex('src');
+  if (srcIndex !== -1) {
+    let src = token.attrs[srcIndex][1];
+    // Check if it's a relative path (doesn't start with http, https, or /)
+    if (!src.match(/^(https?:\/\/|\/)/)) {
+      // Clean currentDir and join with relative src
+      const basePath = props.currentDir.endsWith('/') ? props.currentDir : props.currentDir + '/';
+      const fullPath = (basePath + src).replace(/\/\/+/g, '/');
+      token.attrs[srcIndex][1] = `${props.apiBase}/file/content?path=${encodeURIComponent(fullPath)}`;
+    }
+  }
+  return defaultImageRender(tokens, idx, options, env, self);
+};
 
 const renderedHtml = computed(() => {
   return md.render(code.value);

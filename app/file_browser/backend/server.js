@@ -5,6 +5,7 @@
  * --------------------------------------------------------------------------------
  * POST   | /api/upload                  | File uploads
  * GET    | /api/files                   | Directory listing with pagination
+ * GET    | /api/locate                  | Locate a specific file and return its page
  * GET    | /api/file/content            | Download/view file content
  * PUT    | /api/file/content            | Atomic write/save file
  * --------------------------------------------------------------------------------
@@ -125,6 +126,13 @@ app.get('/api/files', async (req, res) => {
         const limit = PAGE_LIMIT;
 
         const entries = await fs.readdir(targetPath, { withFileTypes: true });
+        
+        // Consistent sorting: directories first, then alphabetically
+        entries.sort((a, b) => {
+            if (a.isDirectory() && !b.isDirectory()) return -1;
+            if (!a.isDirectory() && b.isDirectory()) return 1;
+            return a.name.localeCompare(b.name);
+        });
 
         const totalItems = entries.length;
         const totalPages = Math.ceil(totalItems / limit) || 1;
@@ -155,6 +163,70 @@ app.get('/api/files', async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Cannot read directory' });
+    }
+});
+
+// Locate a specific file and return the directory content on the correct page
+app.get('/api/locate', async (req, res) => {
+    try {
+        const userPath = req.query.path;
+        if (!userPath) return res.status(400).json({ error: 'Path is required' });
+
+        const fullPath = await resolveSafePath(userPath);
+        const stat = await fs.stat(fullPath);
+        
+        const isDir = stat.isDirectory();
+        const dirPath = isDir ? userPath : path.dirname(userPath);
+        const fileName = isDir ? null : path.basename(userPath);
+        
+        const targetDir = await resolveSafePath(dirPath);
+        const entries = await fs.readdir(targetDir, { withFileTypes: true });
+        
+        entries.sort((a, b) => {
+            if (a.isDirectory() && !b.isDirectory()) return -1;
+            if (!a.isDirectory() && b.isDirectory()) return 1;
+            return a.name.localeCompare(b.name);
+        });
+
+        const limit = PAGE_LIMIT;
+        let page = 1;
+        
+        if (fileName) {
+            const index = entries.findIndex(e => e.name === fileName);
+            if (index !== -1) {
+                page = Math.floor(index / limit) + 1;
+            }
+        }
+
+        const totalItems = entries.length;
+        const totalPages = Math.ceil(totalItems / limit) || 1;
+        const startIndex = (page - 1) * limit;
+        const pagedItems = entries.slice(startIndex, startIndex + limit);
+
+        const results = await Promise.allSettled(pagedItems.map(async (f) => {
+            const fPath = path.join(targetDir, f.name);
+            const fStat = await fs.stat(fPath);
+            return {
+                name: f.name,
+                isDir: f.isDirectory(),
+                size: fStat.size,
+                mtime: fStat.mtime,
+                path: path.join(dirPath, f.name).replace(/\\/g, '/')
+            };
+        }));
+
+        const fileList = results.filter(r => r.status === 'fulfilled').map(r => r.value);
+        const targetFile = fileList.find(f => f.name === fileName);
+
+        res.json({
+            dir: dirPath,
+            file: targetFile,
+            items: fileList,
+            pagination: { page, limit, totalItems, totalPages }
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(404).json({ error: 'File not found' });
     }
 });
 

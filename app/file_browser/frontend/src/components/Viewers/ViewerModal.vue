@@ -15,7 +15,8 @@ const props = defineProps({
   file: Object,
   apiBase: String,
   hasNext: Boolean,
-  hasPrev: Boolean
+  hasPrev: Boolean,
+  currentDir: String
 });
 
 const emit = defineEmits(['close', 'next', 'prev']);
@@ -116,15 +117,15 @@ const handleBackdropClick = (e) => {
 
         <!-- Viewer Content Area -->
         <div class="flex-1 overflow-hidden relative bg-black/50">
-          <MarkdownViewer v-if="isMarkdown" :file-url="fileUrl" />
-          <CodeViewer v-else-if="isCode" :file-url="fileUrl" :language="extension" />
-          <PdfViewer v-else-if="isPdf" :file-url="fileUrl" />
-          <VideoViewer v-else-if="isVideo" :file-url="fileUrl" :type="extension" />
-          <ImageViewer v-else-if="isImage" :file-url="fileUrl" :file-name="file.name" />
-          <PhotopeaViewer v-else-if="isPhotopea" :file-url="fileUrl" />
-          <WopiViewer v-else-if="isOffice" :file="file" />
-          <AudioViewer v-else-if="isAudio" :file-url="fileUrl" :file-name="file.name" />
-          <GenericViewer v-else :file="file" :file-url="fileUrl" />
+          <MarkdownViewer v-if="isMarkdown" :key="fileUrl" :file-url="fileUrl" :current-dir="currentDir" :api-base="apiBase" />
+          <CodeViewer v-else-if="isCode" :key="fileUrl" :file-url="fileUrl" :language="extension" />
+          <PdfViewer v-else-if="isPdf" :key="fileUrl" :file-url="fileUrl" />
+          <VideoViewer v-else-if="isVideo" :key="fileUrl" :file-url="fileUrl" :type="extension" />
+          <ImageViewer v-else-if="isImage" :key="fileUrl" :file-url="fileUrl" :file-name="file.name" />
+          <PhotopeaViewer v-else-if="isPhotopea" :key="fileUrl" :file-url="fileUrl" />
+          <WopiViewer v-else-if="isOffice" :key="fileUrl" :file="file" />
+          <AudioViewer v-else-if="isAudio" :key="fileUrl" :file-url="fileUrl" :file-name="file.name" />
+          <GenericViewer v-else :key="fileUrl" :file="file" :file-url="fileUrl" />
         </div>
       </div>
     </div>
