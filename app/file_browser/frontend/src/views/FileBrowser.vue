@@ -270,8 +270,9 @@ const formatSize = (bytes) => {
 
 const closeViewer = () => {
   selectedFile.value = null;
-  // Preserve sorting when closing viewer
-  router.push({ path: currentDir.value, query: { ...route.query, mode: undefined } });
+  // Simply remove the mode parameter from the current URL.
+  // This maintains the current path (even if we navigated via Next/Prev).
+  router.push({ path: route.path, query: { ...route.query, mode: undefined } });
 };
 
 // Main Router Watcher
