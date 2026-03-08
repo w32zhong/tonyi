@@ -105,9 +105,9 @@ const handleBackdropClick = (e) => {
             <div class="w-px h-6 bg-gray-800"></div>
 
             <div class="flex items-center space-x-2">
-              <router-link :to="{ path: file.path, query: { mode: 'download' } }" class="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white" title="Download">
+              <a :href="fileUrl" target="_blank" download class="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white" title="Download">
                 <Download class="w-5 h-5" />
-              </router-link>
+              </a>
               <button @click="emit('close')" class="p-2 hover:bg-red-500/20 hover:text-red-400 rounded-lg transition-colors text-gray-400" title="Close (Esc)">
                 <X class="w-5 h-5" />
               </button>
