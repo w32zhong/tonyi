@@ -65,7 +65,7 @@ const reset = () => {
     <img 
       :src="fileUrl" 
       :alt="fileName"
-      class="max-w-none transition-transform duration-75 select-none"
+      class="max-w-full max-h-full transition-transform duration-75 select-none"
       :style="{
         transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
         cursor: isDragging ? 'grabbing' : 'grab'
