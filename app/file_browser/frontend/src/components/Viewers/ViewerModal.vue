@@ -89,13 +89,13 @@ const handleBackdropClick = (e) => {
 <template>
   <Teleport to="body">
     <div 
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[1px] viewer-backdrop p-4 md:p-8"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[1px] viewer-backdrop md:p-8"
       @click="handleBackdropClick"
     >
-      <div class="relative w-full h-full max-w-6xl max-h-[90vh] bg-gray-900 text-white rounded-xl shadow-2xl flex flex-col overflow-hidden border border-gray-700">
+      <div class="relative w-full h-full md:max-w-6xl md:max-h-[90vh] bg-gray-900 text-white md:rounded-xl shadow-2xl flex flex-col overflow-hidden md:border md:border-gray-700">
         
         <!-- Header -->
-        <div class="flex items-center justify-between px-4 py-3 bg-gray-950 border-b border-gray-800">
+        <div class="flex flex-col md:flex-row md:items-center justify-between px-4 py-3 bg-gray-950 border-b border-gray-800 gap-3 md:gap-0">
           <div class="flex items-center space-x-2 truncate">
             <span class="font-medium text-gray-200 truncate">{{ file.name }}</span>
             <button
@@ -108,7 +108,7 @@ const handleBackdropClick = (e) => {
             </button>
           </div>
           
-          <div class="flex items-center space-x-4">
+          <div class="flex items-center justify-between md:justify-end space-x-4">
             <!-- Navigation -->
             <div class="flex items-center bg-gray-900 rounded-lg p-1 border border-gray-800">
               <button 
