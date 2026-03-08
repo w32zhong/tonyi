@@ -232,14 +232,20 @@ const closeViewer = () => {
 
 // Main Router Watcher
 watch(
-  () => ({ path: route.path, query: route.query }),
-  (newRoute) => {
+  () => ({ path: route.path, query: { ...route.query } }),
+  (newRoute, oldRoute) => {
     const path = newRoute.path || '/';
+    const page = parseInt(newRoute.query.page) || 1;
     const view = newRoute.query.view === 'true';
     const download = newRoute.query.download === 'true';
-    const page = parseInt(newRoute.query.page) || 1;
 
-    // If path changed or it's the first load
+    // If it's just a page change within the same directory path, use fetchFiles
+    if (oldRoute && newRoute.path === oldRoute.path && page !== (parseInt(oldRoute.query.page) || 1)) {
+      fetchFiles(path, page);
+      return;
+    }
+
+    // Otherwise (path change or initial load), locate the item and let the backend determine the page
     locateFile(path, view || download, download);
   },
   { immediate: true }
