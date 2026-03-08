@@ -1,6 +1,6 @@
 <script setup>
-import { computed } from 'vue';
-import { X, Download } from 'lucide-vue-next';
+import { onMounted, onUnmounted, computed } from 'vue';
+import { X, Download, ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import CodeViewer from './CodeViewer.vue';
 import PdfViewer from './PdfViewer.vue';
 import VideoViewer from './VideoViewer.vue';
@@ -13,10 +13,33 @@ import MarkdownViewer from './MarkdownViewer.vue';
 
 const props = defineProps({
   file: Object,
-  apiBase: String
+  apiBase: String,
+  hasNext: Boolean,
+  hasPrev: Boolean
 });
 
-const emit = defineEmits(['close']);
+const emit = defineEmits(['close', 'next', 'prev']);
+
+const handleKeydown = (e) => {
+  // Only trigger if not typing in an input/textarea (like Monaco editor)
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  
+  if (e.key === 'ArrowRight' && props.hasNext) {
+    emit('next');
+  } else if (e.key === 'ArrowLeft' && props.hasPrev) {
+    emit('prev');
+  } else if (e.key === 'Escape') {
+    emit('close');
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown);
+});
 
 const extension = computed(() => {
   if (!props.file.name.includes('.')) return '';
@@ -56,13 +79,38 @@ const handleBackdropClick = (e) => {
           <div class="flex items-center space-x-3 truncate">
             <span class="font-medium text-gray-200 truncate">{{ file.name }}</span>
           </div>
-          <div class="flex items-center space-x-2">
-            <a :href="fileUrl" target="_blank" download class="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white" title="Download">
-              <Download class="w-5 h-5" />
-            </a>
-            <button @click="emit('close')" class="p-2 hover:bg-red-500/20 hover:text-red-400 rounded-lg transition-colors text-gray-400">
-              <X class="w-5 h-5" />
-            </button>
+          
+          <div class="flex items-center space-x-4">
+            <!-- Navigation -->
+            <div class="flex items-center bg-gray-900 rounded-lg p-1 border border-gray-800">
+              <button 
+                @click="emit('prev')" 
+                :disabled="!hasPrev"
+                class="p-1.5 hover:bg-gray-800 rounded-md transition-colors text-gray-400 hover:text-white disabled:opacity-20 disabled:hover:bg-transparent"
+                title="Previous file (Left Arrow)"
+              >
+                <ChevronLeft class="w-5 h-5" />
+              </button>
+              <button 
+                @click="emit('next')" 
+                :disabled="!hasNext"
+                class="p-1.5 hover:bg-gray-800 rounded-md transition-colors text-gray-400 hover:text-white disabled:opacity-20 disabled:hover:bg-transparent"
+                title="Next file (Right Arrow)"
+              >
+                <ChevronRight class="w-5 h-5" />
+              </button>
+            </div>
+
+            <div class="w-px h-6 bg-gray-800"></div>
+
+            <div class="flex items-center space-x-2">
+              <a :href="fileUrl" target="_blank" download class="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white" title="Download">
+                <Download class="w-5 h-5" />
+              </a>
+              <button @click="emit('close')" class="p-2 hover:bg-red-500/20 hover:text-red-400 rounded-lg transition-colors text-gray-400" title="Close (Esc)">
+                <X class="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
 

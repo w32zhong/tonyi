@@ -17,6 +17,49 @@ const pagination = ref({
   page: 1, limit: 200, totalItems: 0, totalPages: 1,
 });
 
+// Navigation for ViewerModal
+const hasNextFile = computed(() => {
+  if (!selectedFile.value) return false;
+  const currentIndex = files.value.findIndex(f => f.path === selectedFile.value.path);
+  const hasNextInList = files.value.slice(currentIndex + 1).some(f => !f.isDir);
+  return hasNextInList || pagination.value.page < pagination.value.totalPages;
+});
+
+const hasPrevFile = computed(() => {
+  if (!selectedFile.value) return false;
+  const currentIndex = files.value.findIndex(f => f.path === selectedFile.value.path);
+  const hasPrevInList = files.value.slice(0, currentIndex).some(f => !f.isDir);
+  return hasPrevInList || pagination.value.page > 1;
+});
+
+const goToNextFile = async () => {
+  if (!selectedFile.value) return;
+  const currentIndex = files.value.findIndex(f => f.path === selectedFile.value.path);
+  const nextInList = files.value.slice(currentIndex + 1).find(f => !f.isDir);
+
+  if (nextInList) {
+    selectedFile.value = nextInList;
+  } else if (pagination.value.page < pagination.value.totalPages) {
+    await fetchFiles(currentDir.value, pagination.value.page + 1);
+    const firstInNew = files.value.find(f => !f.isDir);
+    if (firstInNew) selectedFile.value = firstInNew;
+  }
+};
+
+const goToPrevFile = async () => {
+  if (!selectedFile.value) return;
+  const currentIndex = files.value.findIndex(f => f.path === selectedFile.value.path);
+  const prevInList = [...files.value.slice(0, currentIndex)].reverse().find(f => !f.isDir);
+
+  if (prevInList) {
+    selectedFile.value = prevInList;
+  } else if (pagination.value.page > 1) {
+    await fetchFiles(currentDir.value, pagination.value.page - 1);
+    const lastInNew = [...files.value].reverse().find(f => !f.isDir);
+    if (lastInNew) selectedFile.value = lastInNew;
+  }
+};
+
 // Breadcrumb segments computed from currentDir
 const breadcrumbs = computed(() => {
   const parts = currentDir.value.split('/').filter(Boolean);
@@ -290,6 +333,10 @@ onMounted(() => {
       v-if="selectedFile"
       :file="selectedFile"
       :api-base="API_BASE"
+      :has-next="hasNextFile"
+      :has-prev="hasPrevFile"
+      @next="goToNextFile"
+      @prev="goToPrevFile"
       @close="selectedFile = null"
     />
   </div>
