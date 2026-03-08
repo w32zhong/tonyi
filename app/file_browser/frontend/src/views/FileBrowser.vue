@@ -8,7 +8,14 @@ import ViewerModal from '../components/Viewers/ViewerModal.vue';
 const route = useRoute();
 const router = useRouter();
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8971';
+// Dynamically determine backend URL based on current access
+const getBackendUrl = () => {
+  if (import.meta.env.VITE_BACKEND_URL) return import.meta.env.VITE_BACKEND_URL;
+  const hostname = window.location.hostname; // Supports IP-based access
+  return `http://${hostname}:8971`;
+};
+
+const BACKEND_URL = getBackendUrl();
 const API_BASE = `${BACKEND_URL}/api`;
 
 const currentDir = ref('/');
@@ -93,9 +100,12 @@ const locateFile = async (path, mode) => {
   loading.value = true;
   const isPreview = mode === 'preview';
   const isDownload = mode === 'download';
+  
+  // Explicitly decode the path to handle Chinese characters correctly
+  const decodedPath = decodeURIComponent(path);
 
   try {
-    const res = await axios.get(`${API_BASE}/locate`, { params: { path } });
+    const res = await axios.get(`${API_BASE}/locate`, { params: { path: decodedPath } });
     files.value = res.data.items;
     pagination.value = res.data.pagination;
     currentDir.value = res.data.dir;
@@ -232,7 +242,9 @@ watch(
   (newRoute) => {
     const path = newRoute.path || '/';
     const mode = newRoute.query.mode;
-    locateFile(path, mode);
+    
+    // Always decode path from URL to handle raw pastes correctly
+    locateFile(decodeURIComponent(path), mode);
   },
   { immediate: true }
 );
