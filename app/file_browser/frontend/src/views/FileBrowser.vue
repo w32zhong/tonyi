@@ -387,7 +387,7 @@ watch(
             </thead>
             <tbody>
               <tr v-if="currentDir !== '/'"
-                  @dblclick="goUp()"
+                  @click="goUp()"
                   class="border-b border-gray-50 hover:bg-blue-50 cursor-pointer transition-colors select-none group">
                 <td class="py-3 px-4 flex items-center">
                   <Folder class="w-6 h-6 mr-3 text-blue-400 group-hover:text-blue-500 transition-colors" />
@@ -398,7 +398,7 @@ watch(
               </tr>
 
               <tr v-for="file in files" :key="file.path"
-                  @dblclick="handleDoubleClick(file)"
+                  @click="handleDoubleClick(file)"
                   class="border-b border-gray-50 hover:bg-blue-50 cursor-pointer transition-colors select-none group"
                   :class="{ 'bg-yellow-50': highlightedFile && highlightedFile.path === file.path }">
                 <td class="py-3 px-4 flex items-center">
