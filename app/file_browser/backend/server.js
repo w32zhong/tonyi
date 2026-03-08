@@ -124,23 +124,13 @@ app.get('/api/files', async (req, res) => {
         const targetPath = await resolveSafePath(dir);
         const page = parseInt(req.query.page) || 1;
         const limit = PAGE_LIMIT;
+        const sortBy = req.query.sortBy || 'name'; // name, size, mtime
+        const sortOrder = req.query.sortOrder || 'asc'; // asc, desc
 
         const entries = await fs.readdir(targetPath, { withFileTypes: true });
         
-        // Consistent sorting: directories first, then alphabetically
-        entries.sort((a, b) => {
-            if (a.isDirectory() && !b.isDirectory()) return -1;
-            if (!a.isDirectory() && b.isDirectory()) return 1;
-            return a.name.localeCompare(b.name);
-        });
-
-        const totalItems = entries.length;
-        const totalPages = Math.ceil(totalItems / limit) || 1;
-        const startIndex = (page - 1) * limit;
-        const pagedItems = entries.slice(startIndex, startIndex + limit);
-
-        // Promise.allSettled: one broken symlink/deleted file won't crash the listing
-        const results = await Promise.allSettled(pagedItems.map(async (f) => {
+        // To sort by size or mtime, we need stats for all files in the directory
+        const allItems = await Promise.allSettled(entries.map(async (f) => {
             const fullPath = path.join(targetPath, f.name);
             const stat = await fs.stat(fullPath);
             return {
@@ -152,12 +142,35 @@ app.get('/api/files', async (req, res) => {
             };
         }));
 
-        const fileList = results
+        let fileList = allItems
             .filter(r => r.status === 'fulfilled')
             .map(r => r.value);
 
+        // Sorting logic
+        fileList.sort((a, b) => {
+            // Always keep directories at the top
+            if (a.isDir && !b.isDir) return -1;
+            if (!a.isDir && b.isDir) return 1;
+
+            let comparison = 0;
+            if (sortBy === 'size') {
+                comparison = a.size - b.size;
+            } else if (sortBy === 'mtime') {
+                comparison = new Date(a.mtime) - new Date(b.mtime);
+            } else {
+                comparison = a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+            }
+
+            return sortOrder === 'desc' ? -comparison : comparison;
+        });
+
+        const totalItems = fileList.length;
+        const totalPages = Math.ceil(totalItems / limit) || 1;
+        const startIndex = (page - 1) * limit;
+        const pagedItems = fileList.slice(startIndex, startIndex + limit);
+
         res.json({
-            items: fileList,
+            items: pagedItems,
             pagination: { page, limit, totalItems, totalPages },
         });
     } catch (err) {
@@ -169,8 +182,10 @@ app.get('/api/files', async (req, res) => {
 // Locate a specific file and return the directory content on the correct page
 app.get('/api/locate', async (req, res) => {
     try {
-        const userPath = req.query.path;
+        const userPath = decodeURIComponent(req.query.path || '');
         if (!userPath) return res.status(400).json({ error: 'Path is required' });
+        const sortBy = req.query.sortBy || 'name';
+        const sortOrder = req.query.sortOrder || 'asc';
 
         const fullPath = await resolveSafePath(userPath);
         const stat = await fs.stat(fullPath);
@@ -182,28 +197,7 @@ app.get('/api/locate', async (req, res) => {
         const targetDir = await resolveSafePath(dirPath);
         const entries = await fs.readdir(targetDir, { withFileTypes: true });
         
-        entries.sort((a, b) => {
-            if (a.isDirectory() && !b.isDirectory()) return -1;
-            if (!a.isDirectory() && b.isDirectory()) return 1;
-            return a.name.localeCompare(b.name);
-        });
-
-        const limit = PAGE_LIMIT;
-        let page = 1;
-        
-        if (fileName) {
-            const index = entries.findIndex(e => e.name === fileName);
-            if (index !== -1) {
-                page = Math.floor(index / limit) + 1;
-            }
-        }
-
-        const totalItems = entries.length;
-        const totalPages = Math.ceil(totalItems / limit) || 1;
-        const startIndex = (page - 1) * limit;
-        const pagedItems = entries.slice(startIndex, startIndex + limit);
-
-        const results = await Promise.allSettled(pagedItems.map(async (f) => {
+        const allItems = await Promise.allSettled(entries.map(async (f) => {
             const fPath = path.join(targetDir, f.name);
             const fStat = await fs.stat(fPath);
             return {
@@ -215,13 +209,46 @@ app.get('/api/locate', async (req, res) => {
             };
         }));
 
-        const fileList = results.filter(r => r.status === 'fulfilled').map(r => r.value);
+        let fileList = allItems
+            .filter(r => r.status === 'fulfilled')
+            .map(r => r.value);
+
+        // Apply same sorting logic
+        fileList.sort((a, b) => {
+            if (a.isDir && !b.isDir) return -1;
+            if (!a.isDir && b.isDir) return 1;
+            let comparison = 0;
+            if (sortBy === 'size') {
+                comparison = a.size - b.size;
+            } else if (sortBy === 'mtime') {
+                comparison = new Date(a.mtime) - new Date(b.mtime);
+            } else {
+                comparison = a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+            }
+            return sortOrder === 'desc' ? -comparison : comparison;
+        });
+
+        const limit = PAGE_LIMIT;
+        let page = 1;
+        
+        if (fileName) {
+            const index = fileList.findIndex(e => e.name === fileName);
+            if (index !== -1) {
+                page = Math.floor(index / limit) + 1;
+            }
+        }
+
+        const totalItems = fileList.length;
+        const totalPages = Math.ceil(totalItems / limit) || 1;
+        const startIndex = (page - 1) * limit;
+        const pagedItems = fileList.slice(startIndex, startIndex + limit);
+
         const targetFile = fileList.find(f => f.name === fileName);
 
         res.json({
             dir: dirPath,
             file: targetFile,
-            items: fileList,
+            items: pagedItems,
             pagination: { page, limit, totalItems, totalPages }
         });
     } catch (err) {

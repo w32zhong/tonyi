@@ -56,11 +56,11 @@ const goToNextFile = async () => {
   const nextInList = files.value.slice(currentIndex + 1).find(f => !f.isDir);
 
   if (nextInList) {
-    router.push({ path: nextInList.path, query: { mode: 'preview' } });
+    router.push({ path: nextInList.path, query: { ...route.query, mode: 'preview' } });
   } else if (pagination.value.page < pagination.value.totalPages) {
     await fetchFiles(currentDir.value, pagination.value.page + 1);
     const firstInNew = files.value.find(f => !f.isDir);
-    if (firstInNew) router.push({ path: firstInNew.path, query: { mode: 'preview' } });
+    if (firstInNew) router.push({ path: firstInNew.path, query: { ...route.query, mode: 'preview' } });
   }
 };
 
@@ -70,11 +70,11 @@ const goToPrevFile = async () => {
   const prevInList = [...files.value.slice(0, currentIndex)].reverse().find(f => !f.isDir);
 
   if (prevInList) {
-    router.push({ path: prevInList.path, query: { mode: 'preview' } });
+    router.push({ path: prevInList.path, query: { ...route.query, mode: 'preview' } });
   } else if (pagination.value.page > 1) {
     await fetchFiles(currentDir.value, pagination.value.page - 1);
     const lastInNew = [...files.value].reverse().find(f => !f.isDir);
-    if (lastInNew) router.push({ path: lastInNew.path, query: { mode: 'preview' } });
+    if (lastInNew) router.push({ path: lastInNew.path, query: { ...route.query, mode: 'preview' } });
   }
 };
 
@@ -90,13 +90,18 @@ const breadcrumbs = computed(() => {
 const fetchFiles = async (dir, page = 1) => {
   loading.value = true;
   highlightedFile.value = null;
+  
+  // Use sorting from current route or default
+  const sBy = route.query.sortBy || 'name';
+  const sOrder = route.query.sortOrder || 'asc';
+
   try {
     const res = await axios.get(`${API_BASE}/files`, { 
       params: { 
         dir, 
         page,
-        sortBy: sortBy.value,
-        sortOrder: sortOrder.value
+        sortBy: sBy,
+        sortOrder: sOrder
       } 
     });
     files.value = res.data.items;
@@ -109,7 +114,7 @@ const fetchFiles = async (dir, page = 1) => {
   }
 };
 
-const locateFile = async (path, mode) => {
+const locateFile = async (path, mode, sortParams = {}) => {
   loading.value = true;
   const isPreview = mode === 'preview';
   const isDownload = mode === 'download';
@@ -121,8 +126,8 @@ const locateFile = async (path, mode) => {
     const res = await axios.get(`${API_BASE}/locate`, { 
       params: { 
         path: decodedPath,
-        sortBy: sortBy.value,
-        sortOrder: sortOrder.value
+        sortBy: sortParams.sortBy || 'name',
+        sortOrder: sortParams.sortOrder || 'asc'
       } 
     });
     files.value = res.data.items;
@@ -137,7 +142,7 @@ const locateFile = async (path, mode) => {
       } else if (isDownload) {
         const downloadUrl = `${API_BASE}/file/content?path=${encodeURIComponent(res.data.file.path)}`;
         window.open(downloadUrl, '_blank');
-        router.replace({ path: res.data.file.path });
+        router.replace({ path: res.data.file.path, query: { ...route.query, mode: undefined } });
       } else {
         selectedFile.value = null;
       }
@@ -154,27 +159,30 @@ const locateFile = async (path, mode) => {
 
 const handleDoubleClick = (file) => {
   if (file.isDir) {
-    router.push(file.path);
+    router.push({ path: file.path, query: route.query });
   } else {
-    router.push({ path: file.path, query: { mode: 'preview' } });
+    router.push({ path: file.path, query: { ...route.query, mode: 'preview' } });
   }
 };
 
 const toggleSort = (field) => {
-  if (sortBy.value === field) {
-    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
-  } else {
-    sortBy.value = field;
-    sortOrder.value = 'asc';
+  let newOrder = 'asc';
+  if (route.query.sortBy === field) {
+    newOrder = route.query.sortOrder === 'asc' ? 'desc' : 'asc';
   }
-  fetchFiles(currentDir.value, 1);
+  
+  // Push to URL, the watcher will trigger data load
+  router.push({ 
+    path: route.path, 
+    query: { ...route.query, sortBy: field, sortOrder: newOrder } 
+  });
 };
 
 const goUp = () => {
   if (currentDir.value === '/') return;
   const parts = currentDir.value.split('/').filter(Boolean);
   parts.pop();
-  router.push('/' + parts.join('/'));
+  router.push({ path: '/' + parts.join('/'), query: route.query });
 };
 
 const handleFileUpload = async (event) => {
@@ -262,7 +270,8 @@ const formatSize = (bytes) => {
 
 const closeViewer = () => {
   selectedFile.value = null;
-  router.push(currentDir.value);
+  // Preserve sorting when closing viewer
+  router.push({ path: currentDir.value, query: { ...route.query, mode: undefined } });
 };
 
 // Main Router Watcher
@@ -272,8 +281,15 @@ watch(
     const path = newRoute.path || '/';
     const mode = newRoute.query.mode;
     
-    // Always decode path from URL to handle raw pastes correctly
-    locateFile(decodeURIComponent(path), mode);
+    // Sync internal refs with URL for UI icons
+    sortBy.value = newRoute.query.sortBy || 'name';
+    sortOrder.value = newRoute.query.sortOrder || 'asc';
+    
+    // Locate the item and let the backend determine the correct page
+    locateFile(decodeURIComponent(path), mode, {
+      sortBy: sortBy.value,
+      sortOrder: sortOrder.value
+    });
   },
   { immediate: true }
 );
@@ -294,7 +310,7 @@ watch(
       <div class="flex items-center justify-between mb-6">
         <div class="flex items-center text-sm text-gray-600 bg-white p-3 rounded-lg shadow-sm border border-gray-100 min-w-0 overflow-x-auto">
           <!-- Root button -->
-          <button @click="router.push('/')" class="hover:bg-gray-100 px-2 py-1 rounded transition-colors flex items-center shrink-0"
+          <button @click="router.push({ path: '/', query: route.query })" class="hover:bg-gray-100 px-2 py-1 rounded transition-colors flex items-center shrink-0"
                   :class="{ 'bg-blue-50 text-blue-700 font-semibold': currentDir === '/' }">
             Home
           </button>
@@ -303,7 +319,7 @@ watch(
           <template v-for="(crumb, index) in breadcrumbs" :key="crumb.path">
             <ChevronRight class="w-4 h-4 mx-1 text-gray-400 shrink-0" />
             <button
-              @click="router.push(crumb.path)"
+              @click="router.push({ path: crumb.path, query: route.query })"
               class="px-2 py-1 rounded transition-colors font-medium shrink-0 hover:bg-gray-100"
               :class="index === breadcrumbs.length - 1 && !selectedFile ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-600'"
             >
