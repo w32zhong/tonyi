@@ -1,6 +1,6 @@
 <script setup>
-import { onMounted, onUnmounted, computed } from 'vue';
-import { X, Download, ChevronLeft, ChevronRight } from 'lucide-vue-next';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { X, Download, ChevronLeft, ChevronRight, ClipboardCopy, Check } from 'lucide-vue-next';
 import CodeViewer from './CodeViewer.vue';
 import PdfViewer from './PdfViewer.vue';
 import VideoViewer from './VideoViewer.vue';
@@ -20,6 +20,25 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close', 'next', 'prev']);
+
+const copied = ref(false);
+
+const copyPath = async () => {
+  try {
+    await navigator.clipboard.writeText(props.file.path);
+  } catch {
+    // Fallback for insecure contexts
+    const ta = document.createElement('textarea');
+    ta.value = props.file.path;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  } finally {
+    copied.value = true;
+    setTimeout(() => { copied.value = false; }, 1500);
+  }
+};
 
 const handleKeydown = (e) => {
   // Only trigger if not typing in an input/textarea (like Monaco editor)
@@ -70,15 +89,23 @@ const handleBackdropClick = (e) => {
 <template>
   <Teleport to="body">
     <div 
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[2px] viewer-backdrop p-4 md:p-8"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[1px] viewer-backdrop p-4 md:p-8"
       @click="handleBackdropClick"
     >
       <div class="relative w-full h-full max-w-6xl max-h-[90vh] bg-gray-900 text-white rounded-xl shadow-2xl flex flex-col overflow-hidden border border-gray-700">
         
         <!-- Header -->
         <div class="flex items-center justify-between px-4 py-3 bg-gray-950 border-b border-gray-800">
-          <div class="flex items-center space-x-3 truncate">
+          <div class="flex items-center space-x-2 truncate">
             <span class="font-medium text-gray-200 truncate">{{ file.name }}</span>
+            <button
+              @click="copyPath"
+              class="p-1 rounded hover:bg-gray-800 transition-colors shrink-0"
+              :title="copied ? 'Copied!' : 'Copy full path to clipboard'"
+            >
+              <Check v-if="copied" class="w-4 h-4 text-green-500" />
+              <ClipboardCopy v-else class="w-4 h-4 text-gray-500 hover:text-gray-300" />
+            </button>
           </div>
           
           <div class="flex items-center space-x-4">
