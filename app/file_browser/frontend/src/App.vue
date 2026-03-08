@@ -21,7 +21,7 @@ const pagination = ref({
 const breadcrumbs = computed(() => {
   const parts = currentDir.value.split('/').filter(Boolean);
   return parts.map((part, index) => ({
-    label: part,
+    part: part,
     path: '/' + parts.slice(0, index + 1).join('/'),
   }));
 });
@@ -42,8 +42,8 @@ const fetchFiles = async (dir, page = 1) => {
 
 const handleDoubleClick = (file) => {
   if (file.isDir) {
-    const newDir = currentDir.value.endsWith('/') 
-      ? `${currentDir.value}${file.name}` 
+    const newDir = currentDir.value.endsWith('/')
+      ? `${currentDir.value}${file.name}`
       : `${currentDir.value}/${file.name}`;
     fetchFiles(newDir);
   } else {
@@ -62,12 +62,12 @@ const goUp = () => {
 const handleFileUpload = async (event) => {
   const target = event.target;
   if (!target.files || target.files.length === 0) return;
-  
+
   const file = target.files?.[0];
   if (!file) return;
   const formData = new FormData();
   formData.append('file', file);
-  
+
   try {
     await axios.post(`${API_BASE}/upload`, formData, {
       params: { dir: currentDir.value },
@@ -145,19 +145,19 @@ onMounted(() => {
     <!-- Header -->
     <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center shadow-sm">
       <Cloud class="w-8 h-8 text-blue-600 mr-3" />
-      <h1 class="text-xl font-bold text-gray-800 tracking-tight">VueReve</h1>
+      <h1 class="text-xl font-bold text-gray-800 tracking-tight">File Browser</h1>
     </header>
 
     <!-- Main Workspace -->
     <main class="flex-1 overflow-hidden flex flex-col p-6">
-      
+
       <!-- Breadcrumbs and Actions -->
       <div class="flex items-center justify-between mb-6">
         <div class="flex items-center text-sm text-gray-600 bg-white p-3 rounded-lg shadow-sm border border-gray-100 min-w-0 overflow-x-auto">
           <!-- Root button -->
           <button @click="fetchFiles('/')" class="hover:bg-gray-100 px-2 py-1 rounded transition-colors flex items-center shrink-0"
                   :class="{ 'bg-blue-50 text-blue-700 font-semibold': currentDir === '/' }">
-            <Cloud class="w-4 h-4 mr-1"/> Root
+            Home
           </button>
 
           <!-- Clickable breadcrumb for each path segment -->
@@ -168,7 +168,7 @@ onMounted(() => {
               class="px-2 py-1 rounded transition-colors font-medium shrink-0 hover:bg-gray-100"
               :class="index === breadcrumbs.length - 1 ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-600'"
             >
-              {{ crumb.label }}
+              {{ crumb.part }}
             </button>
           </template>
 
@@ -195,7 +195,7 @@ onMounted(() => {
         <!-- Scrollable table area -->
         <div class="flex-1 overflow-auto">
           <div v-if="loading" class="p-8 text-center text-gray-500 animate-pulse">Loading files...</div>
-          
+
           <table v-else class="w-full text-left border-collapse">
             <thead>
               <tr class="border-b border-gray-100 text-gray-500 text-sm">
@@ -205,7 +205,7 @@ onMounted(() => {
               </tr>
             </thead>
             <tbody>
-              <tr v-if="currentDir !== '/'" 
+              <tr v-if="currentDir !== '/'"
                   @dblclick="goUp()"
                   class="border-b border-gray-50 hover:bg-blue-50 cursor-pointer transition-colors select-none group">
                 <td class="py-3 px-4 flex items-center">
@@ -215,7 +215,7 @@ onMounted(() => {
                 <td class="py-3 px-4 text-gray-400 text-sm">-</td>
                 <td class="py-3 px-4 text-gray-400 text-sm">-</td>
               </tr>
-              <tr v-for="file in files" :key="file.name" 
+              <tr v-for="file in files" :key="file.name"
                   @dblclick="handleDoubleClick(file)"
                   class="border-b border-gray-50 hover:bg-blue-50 cursor-pointer transition-colors select-none group">
                 <td class="py-3 px-4 flex items-center">
@@ -269,11 +269,11 @@ onMounted(() => {
     </main>
 
     <!-- Viewer Modal -->
-    <ViewerModal 
-      v-if="selectedFile" 
-      :file="selectedFile" 
+    <ViewerModal
+      v-if="selectedFile"
+      :file="selectedFile"
       :api-base="API_BASE"
-      @close="selectedFile = null" 
+      @close="selectedFile = null"
     />
   </div>
 </template>
