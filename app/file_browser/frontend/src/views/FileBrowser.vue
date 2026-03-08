@@ -233,19 +233,13 @@ const closeViewer = () => {
 // Main Router Watcher
 watch(
   () => ({ path: route.path, query: { ...route.query } }),
-  (newRoute, oldRoute) => {
+  (newRoute) => {
     const path = newRoute.path || '/';
-    const page = parseInt(newRoute.query.page) || 1;
     const view = newRoute.query.view === 'true';
     const download = newRoute.query.download === 'true';
 
-    // If it's just a page change within the same directory path, use fetchFiles
-    if (oldRoute && newRoute.path === oldRoute.path && page !== (parseInt(oldRoute.query.page) || 1)) {
-      fetchFiles(path, page);
-      return;
-    }
-
-    // Otherwise (path change or initial load), locate the item and let the backend determine the page
+    // Locate the item and let the backend determine the correct page
+    // Note: pagination.page is managed internally via fetchFiles/locateFile
     locateFile(path, view || download, download);
   },
   { immediate: true }
@@ -354,7 +348,7 @@ watch(
         <div v-if="pagination.totalPages > 1" class="shrink-0 flex flex-col items-center gap-2 px-4 py-3 border-t border-gray-100 bg-white">
           <div class="flex items-center gap-2">
             <button
-              @click="router.push({ query: { ...route.query, page: pagination.page - 1 } })"
+              @click="fetchFiles(currentDir, pagination.page - 1)"
               :disabled="pagination.page <= 1"
               class="flex items-center px-3 py-1.5 text-sm rounded-md border transition-colors disabled:opacity-30"
             >
@@ -362,7 +356,7 @@ watch(
             </button>
             <span class="text-sm text-gray-500 px-2">{{ pagination.page }} / {{ pagination.totalPages }}</span>
             <button
-              @click="router.push({ query: { ...route.query, page: pagination.page + 1 } })"
+              @click="fetchFiles(currentDir, pagination.page + 1)"
               :disabled="pagination.page >= pagination.totalPages"
               class="flex items-center px-3 py-1.5 text-sm rounded-md border transition-colors disabled:opacity-30"
             >
