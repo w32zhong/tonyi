@@ -43,13 +43,11 @@ const goToNextFile = async () => {
   const nextInList = files.value.slice(currentIndex + 1).find(f => !f.isDir);
 
   if (nextInList) {
-    // Just update route, let watcher handle the rest
-    router.push({ path: nextInList.path, query: { view: 'true' } });
+    router.push({ path: nextInList.path, query: { mode: 'preview' } });
   } else if (pagination.value.page < pagination.value.totalPages) {
-    // Need to fetch next page first to find the file
     await fetchFiles(currentDir.value, pagination.value.page + 1);
     const firstInNew = files.value.find(f => !f.isDir);
-    if (firstInNew) router.push({ path: firstInNew.path, query: { view: 'true' } });
+    if (firstInNew) router.push({ path: firstInNew.path, query: { mode: 'preview' } });
   }
 };
 
@@ -59,11 +57,11 @@ const goToPrevFile = async () => {
   const prevInList = [...files.value.slice(0, currentIndex)].reverse().find(f => !f.isDir);
 
   if (prevInList) {
-    router.push({ path: prevInList.path, query: { view: 'true' } });
+    router.push({ path: prevInList.path, query: { mode: 'preview' } });
   } else if (pagination.value.page > 1) {
     await fetchFiles(currentDir.value, pagination.value.page - 1);
     const lastInNew = [...files.value].reverse().find(f => !f.isDir);
-    if (lastInNew) router.push({ path: lastInNew.path, query: { view: 'true' } });
+    if (lastInNew) router.push({ path: lastInNew.path, query: { mode: 'preview' } });
   }
 };
 
@@ -91,8 +89,11 @@ const fetchFiles = async (dir, page = 1) => {
   }
 };
 
-const locateFile = async (path, openViewer = false, download = false) => {
+const locateFile = async (path, mode) => {
   loading.value = true;
+  const isPreview = mode === 'preview';
+  const isDownload = mode === 'download';
+
   try {
     const res = await axios.get(`${API_BASE}/locate`, { params: { path } });
     files.value = res.data.items;
@@ -102,20 +103,16 @@ const locateFile = async (path, openViewer = false, download = false) => {
     if (res.data.file) {
       highlightedFile.value = res.data.file;
       
-      if (openViewer) {
-        if (download) {
-          const downloadUrl = `${API_BASE}/file/content?path=${encodeURIComponent(res.data.file.path)}`;
-          window.open(downloadUrl, '_blank');
-          // Clear the download flag from URL to prevent infinite download on refresh
-          router.replace({ path: res.data.file.path });
-        } else {
-          selectedFile.value = res.data.file;
-        }
+      if (isPreview) {
+        selectedFile.value = res.data.file;
+      } else if (isDownload) {
+        const downloadUrl = `${API_BASE}/file/content?path=${encodeURIComponent(res.data.file.path)}`;
+        window.open(downloadUrl, '_blank');
+        router.replace({ path: res.data.file.path });
       } else {
         selectedFile.value = null;
       }
     } else {
-      // It was a directory
       selectedFile.value = null;
     }
   } catch (error) {
@@ -130,7 +127,7 @@ const handleDoubleClick = (file) => {
   if (file.isDir) {
     router.push(file.path);
   } else {
-    router.push({ path: file.path, query: { view: 'true' } });
+    router.push({ path: file.path, query: { mode: 'preview' } });
   }
 };
 
@@ -226,7 +223,6 @@ const formatSize = (bytes) => {
 
 const closeViewer = () => {
   selectedFile.value = null;
-  // Sync URL back to directory path
   router.push(currentDir.value);
 };
 
@@ -235,12 +231,8 @@ watch(
   () => ({ path: route.path, query: { ...route.query } }),
   (newRoute) => {
     const path = newRoute.path || '/';
-    const view = newRoute.query.view === 'true';
-    const download = newRoute.query.download === 'true';
-
-    // Locate the item and let the backend determine the correct page
-    // Note: pagination.page is managed internally via fetchFiles/locateFile
-    locateFile(path, view || download, download);
+    const mode = newRoute.query.mode;
+    locateFile(path, mode);
   },
   { immediate: true }
 );
