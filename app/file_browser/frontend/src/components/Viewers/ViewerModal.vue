@@ -70,7 +70,7 @@ const handleBackdropClick = (e) => {
 <template>
   <Teleport to="body">
     <div 
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm viewer-backdrop p-4 md:p-8"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[2px] viewer-backdrop p-4 md:p-8"
       @click="handleBackdropClick"
     >
       <div class="relative w-full h-full max-w-6xl max-h-[90vh] bg-gray-900 text-white rounded-xl shadow-2xl flex flex-col overflow-hidden border border-gray-700">
