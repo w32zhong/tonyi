@@ -9,6 +9,7 @@ import PhotopeaViewer from './PhotopeaViewer.vue';
 import WopiViewer from './WopiViewer.vue';
 import AudioViewer from './AudioViewer.vue';
 import GenericViewer from './GenericViewer.vue';
+import MarkdownViewer from './MarkdownViewer.vue';
 
 const props = defineProps({
   file: Object,
@@ -22,7 +23,8 @@ const extension = computed(() => {
   return props.file.name.split('.').pop().toLowerCase();
 });
 
-const isCode = computed(() => ['js', 'ts', 'vue', 'py', 'json', 'md', 'txt', 'html', 'css', 'go', 'yaml', 'yml', 'ini', 'config', 'cfg', 'toml', 'env', 'sh', 'bash', 'xml', 'sql', 'dockerfile', 'makefile', 'log', 'csv', 'rs', 'rb', 'php', 'java', 'c', 'cpp', 'h', 'hpp', 'swift', 'kt', 'r', 'lua', 'pl', 'ex', 'exs', 'zig', 'nim', 'conf', 'properties'].includes(extension.value));
+const isMarkdown = computed(() => extension.value === 'md');
+const isCode = computed(() => !isMarkdown.value && ['js', 'ts', 'vue', 'py', 'json', 'txt', 'html', 'css', 'go', 'yaml', 'yml', 'ini', 'config', 'cfg', 'toml', 'env', 'sh', 'bash', 'xml', 'sql', 'dockerfile', 'makefile', 'log', 'csv', 'rs', 'rb', 'php', 'java', 'c', 'cpp', 'h', 'hpp', 'swift', 'kt', 'r', 'lua', 'pl', 'ex', 'exs', 'zig', 'nim', 'conf', 'properties'].includes(extension.value));
 const isPdf = computed(() => ['pdf'].includes(extension.value));
 const isVideo = computed(() => ['mp4', 'webm', 'ogg', 'mkv'].includes(extension.value));
 const isImage = computed(() => ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(extension.value));
@@ -66,7 +68,8 @@ const handleBackdropClick = (e) => {
 
         <!-- Viewer Content Area -->
         <div class="flex-1 overflow-hidden relative bg-black/50">
-          <CodeViewer v-if="isCode" :file-url="fileUrl" :language="extension" />
+          <MarkdownViewer v-if="isMarkdown" :file-url="fileUrl" />
+          <CodeViewer v-else-if="isCode" :file-url="fileUrl" :language="extension" />
           <PdfViewer v-else-if="isPdf" :file-url="fileUrl" />
           <VideoViewer v-else-if="isVideo" :file-url="fileUrl" :type="extension" />
           <ImageViewer v-else-if="isImage" :file-url="fileUrl" :file-name="file.name" />
