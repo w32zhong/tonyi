@@ -118,7 +118,14 @@ const locateFile = async (path, mode) => {
       } else if (isDownload) {
         const downloadUrl = `${API_BASE}/file/content?path=${encodeURIComponent(res.data.file.path)}`;
         window.open(downloadUrl, '_blank');
-        router.replace({ path: res.data.file.path });
+        
+        // If the viewer was already open, return to preview mode to keep it open.
+        // Otherwise, clear the mode to just highlight the file.
+        if (selectedFile.value) {
+          router.replace({ path: res.data.file.path, query: { mode: 'preview' } });
+        } else {
+          router.replace({ path: res.data.file.path });
+        }
       } else {
         selectedFile.value = null;
       }
