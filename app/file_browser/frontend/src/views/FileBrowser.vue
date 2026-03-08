@@ -2,7 +2,11 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
-import { Cloud, Folder, File, Code, Image as ImageIcon, Film, FileText, ChevronRight, ChevronLeft, UploadCloud, FileMusic, FileType2, ClipboardCopy, Check } from 'lucide-vue-next';
+import { 
+  Cloud, Folder, File, Code, Image as ImageIcon, Film, FileText, 
+  ChevronRight, ChevronLeft, UploadCloud, FileMusic, FileType2, 
+  ClipboardCopy, Check, ArrowUp, ArrowDown 
+} from 'lucide-vue-next';
 import ViewerModal from '../components/Viewers/ViewerModal.vue';
 
 const route = useRoute();
@@ -25,6 +29,8 @@ const selectedFile = ref(null);
 const highlightedFile = ref(null);
 const fileInput = ref(null);
 const copied = ref(false);
+const sortBy = ref('name');
+const sortOrder = ref('asc');
 const pagination = ref({
   page: 1, limit: 200, totalItems: 0, totalPages: 1,
 });
@@ -85,7 +91,14 @@ const fetchFiles = async (dir, page = 1) => {
   loading.value = true;
   highlightedFile.value = null;
   try {
-    const res = await axios.get(`${API_BASE}/files`, { params: { dir, page } });
+    const res = await axios.get(`${API_BASE}/files`, { 
+      params: { 
+        dir, 
+        page,
+        sortBy: sortBy.value,
+        sortOrder: sortOrder.value
+      } 
+    });
     files.value = res.data.items;
     pagination.value = res.data.pagination;
     currentDir.value = dir;
@@ -105,7 +118,13 @@ const locateFile = async (path, mode) => {
   const decodedPath = decodeURIComponent(path);
 
   try {
-    const res = await axios.get(`${API_BASE}/locate`, { params: { path: decodedPath } });
+    const res = await axios.get(`${API_BASE}/locate`, { 
+      params: { 
+        path: decodedPath,
+        sortBy: sortBy.value,
+        sortOrder: sortOrder.value
+      } 
+    });
     files.value = res.data.items;
     pagination.value = res.data.pagination;
     currentDir.value = res.data.dir;
@@ -118,7 +137,6 @@ const locateFile = async (path, mode) => {
       } else if (isDownload) {
         const downloadUrl = `${API_BASE}/file/content?path=${encodeURIComponent(res.data.file.path)}`;
         window.open(downloadUrl, '_blank');
-        // Clear the mode from URL after triggering the tab
         router.replace({ path: res.data.file.path });
       } else {
         selectedFile.value = null;
@@ -140,6 +158,16 @@ const handleDoubleClick = (file) => {
   } else {
     router.push({ path: file.path, query: { mode: 'preview' } });
   }
+};
+
+const toggleSort = (field) => {
+  if (sortBy.value === field) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortBy.value = field;
+    sortOrder.value = 'asc';
+  }
+  fetchFiles(currentDir.value, 1);
 };
 
 const goUp = () => {
@@ -309,9 +337,36 @@ watch(
           <table v-else class="w-full text-left border-collapse">
             <thead>
               <tr class="border-b border-gray-100 text-gray-500 text-sm">
-                <th class="py-3 px-4 font-medium">Name</th>
-                <th class="py-3 px-4 font-medium w-32">Size</th>
-                <th class="py-3 px-4 font-medium w-48">Modified</th>
+                <th @click="toggleSort('name')" class="py-3 px-4 font-medium cursor-pointer hover:text-blue-600 transition-colors group select-none">
+                  <div class="flex items-center">
+                    Name
+                    <span class="ml-1.5 inline-flex">
+                      <ArrowUp v-if="sortBy === 'name' && sortOrder === 'asc'" class="w-3.5 h-3.5 text-blue-500" />
+                      <ArrowDown v-else-if="sortBy === 'name' && sortOrder === 'desc'" class="w-3.5 h-3.5 text-blue-500" />
+                      <div v-else class="w-3.5 h-3.5"></div>
+                    </span>
+                  </div>
+                </th>
+                <th @click="toggleSort('size')" class="py-3 px-4 font-medium w-32 cursor-pointer hover:text-blue-600 transition-colors group select-none">
+                  <div class="flex items-center">
+                    Size
+                    <span class="ml-1.5 inline-flex">
+                      <ArrowUp v-if="sortBy === 'size' && sortOrder === 'asc'" class="w-3.5 h-3.5 text-blue-500" />
+                      <ArrowDown v-else-if="sortBy === 'size' && sortOrder === 'desc'" class="w-3.5 h-3.5 text-blue-500" />
+                      <div v-else class="w-3.5 h-3.5"></div>
+                    </span>
+                  </div>
+                </th>
+                <th @click="toggleSort('mtime')" class="py-3 px-4 font-medium w-48 cursor-pointer hover:text-blue-600 transition-colors group select-none">
+                  <div class="flex items-center">
+                    Modified
+                    <span class="ml-1.5 inline-flex">
+                      <ArrowUp v-if="sortBy === 'mtime' && sortOrder === 'asc'" class="w-3.5 h-3.5 text-blue-500" />
+                      <ArrowDown v-else-if="sortBy === 'mtime' && sortOrder === 'desc'" class="w-3.5 h-3.5 text-blue-500" />
+                      <div v-else class="w-3.5 h-3.5"></div>
+                    </span>
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody>
