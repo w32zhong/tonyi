@@ -90,8 +90,6 @@ const triggerUpload = () => {
 const copyPath = async () => {
   try {
     await navigator.clipboard.writeText(currentDir.value);
-    copied.value = true;
-    setTimeout(() => { copied.value = false; }, 1500);
   } catch {
     // Fallback for insecure contexts
     const ta = document.createElement('textarea');
@@ -100,6 +98,7 @@ const copyPath = async () => {
     ta.select();
     document.execCommand('copy');
     document.body.removeChild(ta);
+  } finally {
     copied.value = true;
     setTimeout(() => { copied.value = false; }, 1500);
   }
@@ -118,17 +117,21 @@ const getIcon = (file) => {
 };
 
 const getIconColor = (file) => {
-  if (file.isDir) return 'text-blue-500';
-  const ext = file.name.split('.').pop()?.toLowerCase();
-  if (['js', 'ts', 'py', 'html', 'css', 'json', 'yaml', 'yml', 'ini', 'config', 'cfg', 'toml', 'env', 'sh', 'bash', 'xml', 'sql', 'dockerfile', 'makefile', 'log', 'csv', 'rs', 'rb', 'php', 'java', 'c', 'cpp', 'h', 'hpp', 'swift', 'kt', 'r', 'lua', 'pl', 'ex', 'exs', 'zig', 'nim', 'conf', 'properties', 'go', 'vue'].includes(ext)) return 'text-yellow-500';
-  if (['jpg', 'png', 'gif', 'jpeg', 'webp', 'svg'].includes(ext)) return 'text-pink-500';
-  if (['mp4', 'mkv', 'webm', 'mov'].includes(ext)) return 'text-purple-500';
-  if (['mp3', 'wav', 'flac', 'aac', 'm4a'].includes(ext)) return 'text-emerald-500';
-  if (['md'].includes(ext)) return 'text-sky-500';
-  if (['pdf'].includes(ext)) return 'text-red-500';
-  if (['docx', 'doc'].includes(ext)) return 'text-blue-600';
-  if (['xlsx', 'xls'].includes(ext)) return 'text-green-600';
-  if (['pptx', 'ppt'].includes(ext)) return 'text-orange-500';
+  const icon = getIcon(file);
+  if (icon === Folder) return 'text-blue-500';
+  if (icon === Code) return 'text-yellow-500';
+  if (icon === ImageIcon) return 'text-pink-500';
+  if (icon === Film) return 'text-purple-500';
+  if (icon === FileMusic) return 'text-emerald-500';
+  if (icon === FileType2) return 'text-sky-500';
+  if (icon === FileText) {
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (ext === 'pdf') return 'text-red-500';
+    if (['docx', 'doc'].includes(ext)) return 'text-blue-600';
+    if (['xlsx', 'xls'].includes(ext)) return 'text-green-600';
+    if (['pptx', 'ppt'].includes(ext)) return 'text-orange-500';
+  }
+
   return 'text-gray-500';
 };
 
@@ -157,7 +160,7 @@ onMounted(() => {
             <Cloud class="w-4 h-4 mr-1"/> Root
           </button>
 
-          <!-- [8] Clickable breadcrumb for each path segment -->
+          <!-- Clickable breadcrumb for each path segment -->
           <template v-for="(crumb, index) in breadcrumbs" :key="crumb.path">
             <ChevronRight class="w-4 h-4 mx-1 text-gray-400 shrink-0" />
             <button
@@ -169,7 +172,7 @@ onMounted(() => {
             </button>
           </template>
 
-          <!-- [8] Copy path button -->
+          <!-- Copy path button -->
           <button
             @click="copyPath"
             class="ml-2 p-1 rounded hover:bg-gray-100 transition-colors shrink-0"
