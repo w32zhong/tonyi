@@ -1,0 +1,11 @@
+scrape_configs:
+  - job_name: "prometheus_self_scrape"
+    scrape_interval: 5s
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: "gateway_scrape"
+    scrape_interval: 5s
+    metrics_path: "/apisix/prometheus/metrics"
+    static_configs:
+      - targets: ["gateway:9091"]

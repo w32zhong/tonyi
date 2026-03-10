@@ -1,28 +1,67 @@
 services:
 
-  gateway:
-    image: gateway:latest
-    build:
-      context: ./app/gateway
-      dockerfile: Dockerfile
+  etcd:
+    image: bitnamilegacy/etcd:3.5.11
+    restart: always
+    volumes:
+      - etcd_data:/bitnami/etcd
     environment:
-      - REDIRECT_URL=/auth-test/login
-      - REDIRECT_URL_ARGKEY=next
-      - DEFAULT_REQ_RATE=$GATEWAY_DEFAULT_REQ_RATE
-      - DEFAULT_BURST=$GATEWAY_DEFAULT_BURST
-      - DEFAULT_CONN_MAX=$GATEWAY_DEFAULT_CONN_MAX
-      - JWT_COOKIE_NAME=jwt_token # ngx.var.cookie_* must be lower-case and no-hyphen
-      - JWT_SECRET_URL=auth:19721/secret
-      - DOMAIN=$GATEWAY_DOMAIN
-    ports:
-      - target: 443
-        published: 80
-        mode: host # to pass in REAL IP
-    deploy:
-      mode: global
+      ETCD_ENABLE_V2: "true"
+      ALLOW_NONE_AUTHENTICATION: "yes"
+      ETCD_ADVERTISE_CLIENT_URLS: "http://etcd:2379"
+      ETCD_LISTEN_CLIENT_URLS: "http://0.0.0.0:2379"
     networks:
       - gateway_net
-    entrypoint: ["./entrypoint.sh", "$DOMAIN"]
+
+  prometheus:
+    image: prom/prometheus:v2.25.0
+    restart: always
+    volumes:
+      - ./app/gateway2/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      gateway_net:
+
+  gateway:
+    image: apache/apisix:3.15.0-debian
+    restart: always
+    ports:
+      - "80:9080/tcp"
+      - "443:9443/tcp"
+      - "9180:9180/tcp" # route admin API, or /ui for a built-in UI
+      - "9091:9091/tcp" # Prometheus metrics
+    environment:
+      - APISIX_ADMIN_KEY=${GATEWAY_ADMIN_KEY}
+      - APISIX_VIEWER_KEY=${GATEWAY_VIEWER_KEY}
+    volumes:
+      - ./app/gateway2/apisix.yml:/usr/local/apisix/conf/config.yaml:ro
+    depends_on:
+      - etcd
+    networks:
+      - gateway_net
+
+  #gateway:
+  #  image: gateway:latest
+  #  build:
+  #    context: ./app/gateway
+  #    dockerfile: Dockerfile
+  #  environment:
+  #    - REDIRECT_URL=/auth-test/login
+  #    - REDIRECT_URL_ARGKEY=next
+  #    - DEFAULT_REQ_RATE=$GATEWAY_DEFAULT_REQ_RATE
+  #    - DEFAULT_BURST=$GATEWAY_DEFAULT_BURST
+  #    - DEFAULT_CONN_MAX=$GATEWAY_DEFAULT_CONN_MAX
+  #    - JWT_COOKIE_NAME=jwt_token # ngx.var.cookie_* must be lower-case and no-hyphen
+  #    - JWT_SECRET_URL=auth:19721/secret
+  #    - DOMAIN=$GATEWAY_DOMAIN
+  #  ports:
+  #    - target: 443
+  #      published: 80
+  #      mode: host # to pass in REAL IP
+  #  deploy:
+  #    mode: global
+  #  networks:
+  #    - gateway_net
+  #  entrypoint: ["./entrypoint.sh", "$DOMAIN"]
 
   echo1:
     image: approach0/echo-httpd
@@ -147,3 +186,6 @@ networks:
   proxy_net:
     external: true
     name: sandbox_user_0_proxy_net
+
+volumes:
+  etcd_data:
