@@ -27,30 +27,24 @@ async function discover() {
     if (gatewayDomain) await bootstrapSSLCertificate(gatewayDomain);
 
     const services = await docker.listServices();
-    let found404 = false;
-
-    // 1. Gather all expected service names from Swarm
     const activeServiceNames = new Set();
 
     for (const service of services) {
       const labels = service.Spec.Labels || {};
       if (labels['gateway.route']) {
         activeServiceNames.add(service.Spec.Name);
-        if (labels['gateway.route'] === '_404_') found404 = true;
         await syncServiceRoute(service, labels);
       }
     }
 
-    // 2. Fetch existing routes from APISIX and prune orphaned ones
+    // Fetch existing routes from APISIX and prune orphaned ones
     try {
       const existingRoutes = await axios.get(`${ADMIN_URL}/routes`, { headers: { 'X-API-KEY': ADMIN_KEY } });
       const routes = existingRoutes.data?.list || [];
 
       for (const route of routes) {
-        // We only manage routes created by discovery (they use the serviceName as ID)
-        // Skip default-404 as it is handled separately
         const routeId = route.value.id;
-        if (routeId !== 'default-404' && !activeServiceNames.has(routeId)) {
+        if (!activeServiceNames.has(routeId)) {
           console.log(`[Cleanup] Removing orphaned route: ${routeId}`);
           await axios.delete(`${ADMIN_URL}/routes/${routeId}`, { headers: { 'X-API-KEY': ADMIN_KEY } });
         }
@@ -59,7 +53,6 @@ async function discover() {
       console.error(`[Cleanup] Failed to fetch/prune existing routes: ${e.message}`);
     }
 
-    await handleDefault404Fallback(found404);
   } catch (err) {
     console.error(`Error during discovery: ${err.message}`);
   }
@@ -85,7 +78,7 @@ async function bootstrapSSLCertificate(domain) {
       try {
         const d = {
           snis: [domain, `www.${domain}`],
-          key: "placeholder-key", // APISIX acme plugin requires placeholders here
+          key: "placeholder-key",
           cert: "placeholder-cert",
           plugin_name: "acme"
         };
@@ -108,14 +101,14 @@ async function syncServiceRoute(service, labels) {
 
   const d = {
     name: `${serviceName}-route`,
-    uri: getRouteUri(routePath),
+    uris: getRouteUris(routePath),
     priority: getRoutePriority(routePath),
     enable_websocket: true,
     upstream: getUpstreamConfig(serviceName, port),
     plugins: getPluginsConfig(routePath, labels)
   };
 
-  console.log(`[${d.priority}]: ${d.uri} => ${serviceName}:${port}`);
+  console.log(`[${d.priority}]: ${d.uris} => ${serviceName}:${port}`);
   const logPlugins = { ...d.plugins };
   delete logPlugins['serverless-pre-function'];
   console.log(JSON.stringify(logPlugins, null, 2));
@@ -129,10 +122,10 @@ async function syncServiceRoute(service, labels) {
   }
 }
 
-function getRouteUri(routePath) {
-  if (routePath === '_root_') return "/";
-  if (routePath === '_404_') return "/*";
-  return `/${routePath}/*`;
+function getRouteUris(routePath) {
+  if (routePath === '_root_') return ["/"];
+  if (routePath === '_404_') return ["/*"];
+  return [`/${routePath}`, `/${routePath}/*` ];
 }
 
 function getRoutePriority(routePath) {
@@ -155,7 +148,7 @@ function getPluginsConfig(routePath, labels) {
   const is404 = routePath === '_404_';
   if (!isRoot && !is404) {
     plugins["proxy-rewrite"] = {
-      "regex_uri": [`^/${routePath}/(.*)`, "/$1"]
+      "regex_uri": [`^/${routePath}(/.*|$)`, "/$1"]
     };
   }
 
@@ -256,29 +249,6 @@ function applyJwtProtectPlugin(plugins, protectLabel) {
 
   } catch (e) {
     console.error(`Protect paths parse error: ${e.message}`);
-  }
-}
-
-async function handleDefault404Fallback(found404) {
-  const fallbackId = 'default-404';
-  if (!found404) {
-    const d = {
-      uri: "/*",
-      name: "default-404-fallback",
-      priority: -1,
-      plugins: {
-        "return": {
-          "code": 404,
-          "body": "<html><body><h2>404 Page not found</h2></body></html>",
-          "headers": { "Content-Type": "text/html; charset=utf-8" }
-        }
-      }
-    };
-    await axios.put(`${ADMIN_URL}/routes/${fallbackId}`, d, { headers: { 'X-API-KEY': ADMIN_KEY } });
-  } else {
-    try {
-      await axios.delete(`${ADMIN_URL}/routes/${fallbackId}`, { headers: { 'X-API-KEY': ADMIN_KEY } });
-    } catch (e) { /* ignore */ }
   }
 }
 
