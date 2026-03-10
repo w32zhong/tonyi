@@ -5,15 +5,17 @@ const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 const ADMIN_URL = process.env.APISIX_ADMIN_URL;
 const ADMIN_KEY = process.env.APISIX_ADMIN_KEY;
 
-let jwtSecret = null;
-const jwtCookieName = process.env.JWT_COOKIE_NAME;
 const redirectUrl = process.env.REDIRECT_URL;
 const redirectUrlArgkey = process.env.REDIRECT_URL_ARGKEY;
+
+let jwtSecret = null;
 const jwtSecretUrl = process.env.JWT_SECRET_URL;
+const jwtCookieName = process.env.JWT_COOKIE_NAME;
 
 const defaultReqRate = parseInt(process.env.DEFAULT_REQ_RATE);
 const defaultBurst = parseInt(process.env.DEFAULT_BURST);
 const defaultConnMax = parseInt(process.env.DEFAULT_CONN_MAX);
+
 const gatewayDomain = process.env.GATEWAY_DOMAIN;
 
 /**

@@ -40,11 +40,12 @@ services:
     networks:
       - gateway_net
 
-  discovery:
+  gateway_config_and_service_discovery:
     image: node:18-slim
+    working_dir: /app
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./app/gateway/discovery.js:/discovery.js
+      - ./app/gateway/discovery.js:/app/discovery.js
     environment:
       - APISIX_ADMIN_URL=http://gateway:9180/apisix/admin
       - APISIX_ADMIN_KEY=${APISIX_ADMIN_KEY}
@@ -58,7 +59,12 @@ services:
       - GATEWAY_DOMAIN=${GATEWAY_DOMAIN}
     networks:
       - gateway_net
-    entrypoint: ["bash", "-c", "npm install dockerode axios && node /discovery.js"]
+    entrypoint:
+      - "bash"
+      - "-c"
+      - |
+        npm install dockerode axios
+        node discovery.js
     deploy:
       placement:
         constraints:
@@ -124,7 +130,7 @@ services:
         gateway.route: auth
         gateway.port: 19721
         gateway.limits: '{"rate": 1, "burst": 10, "conn": 10}'
-        gateway.internal: '["^/auth/secret(/.*)?$"]'
+        gateway.internal: '["^/auth/secret(/.*)?$$"]'
     networks:
       - gateway_net
       - proxy_net
