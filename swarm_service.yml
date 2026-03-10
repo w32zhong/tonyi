@@ -19,11 +19,7 @@ services:
         published: 80
         mode: host # to pass in REAL IP
     deploy:
-      placement:
-        constraints:
-          - node.role == manager # to access swarm docker.sock
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      mode: global
     networks:
       - gateway_net
     entrypoint: ["./entrypoint.sh", "$DOMAIN"]
@@ -38,6 +34,7 @@ services:
         gateway.route: foo
         gateway.port: 8080
         gateway.limits: '{"rate": 10, "burst": 10, "conn": 1}'
+      endpoint_mode: dnsrr
 
   echo2:
     image: approach0/echo-httpd

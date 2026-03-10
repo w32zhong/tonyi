@@ -120,7 +120,7 @@ services:
       - SELKIES_UI_SHOW_SIDEBAR=false
     volumes:
       - ./mnt/web_browser:/config
-      - ./app/browser/openbox/:/config/.config/openbox
+      - ./app/web_browser/openbox/:/config/.config/openbox
     ports:
       - 9222:9223 # devtools port, TEST ONLY!
       - 3001:3001 # https port, TEST ONLY!

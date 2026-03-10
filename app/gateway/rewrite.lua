@@ -38,7 +38,7 @@ if route_meta_str then
     -- route-specific rate limits
     rate_limit(route, route_meta.conn, route_meta.rate, route_meta.burst)
 
-    ngx.var.service_addr = round_robin(route, route_meta)
+    ngx.var.rewritten_addr = round_robin(route, route_meta)
 
 else
     print('[route] service for "', route, '" not found, '.. '404 page.')
@@ -56,7 +56,7 @@ else
     else
         -- Pass to the dedicated 404 backend service
         local root_meta = cjson.decode(root_meta_str)
-        ngx.var.service_addr = round_robin('_404_', root_meta)
+        ngx.var.rewritten_addr = round_robin('_404_', root_meta)
         ngx.var.modified_uri = full_req_uri
     end
 end
@@ -129,4 +129,4 @@ end
 --- Print Passed Route ---
 --------------------------
 print('[route] pass: ', full_req_uri, ' ==> ',
-    ngx.var.service_addr, ngx.var.modified_uri, query_params)
+    ngx.var.rewritten_addr, ngx.var.modified_uri, query_params)
