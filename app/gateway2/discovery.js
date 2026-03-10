@@ -93,6 +93,7 @@ async function syncServiceRoute(service, labels) {
     name: `${serviceName}-route`,
     uri: getRouteUri(routePath),
     priority: getRoutePriority(routePath),
+    enable_websocket: true,
     upstream: getUpstreamConfig(serviceName, port),
     plugins: getPluginsConfig(labels, cleanPath, isRoot, is404)
   };

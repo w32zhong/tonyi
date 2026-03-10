@@ -34,7 +34,29 @@ plugin_attr:
     account_email: "${{ACME_EMAIL}}"
 
 nginx_config:
+  worker_rlimit_nofile: 65535
+  events:
+    worker_connections: 20480
   http:
     real_ip_header: "X-Forwarded-For"
     real_ip_from:
       - "0.0.0.0/0"
+  http_snippet: |
+    # optimize large file performance
+    sendfile             on;
+    output_buffers   1 128k;
+    sendfile_max_chunk 512k;
+
+    # gzip configs
+    gzip on;
+    gzip_disable "msie6";
+    gzip_min_length 1000;
+    gzip_comp_level 5;
+    gzip_proxied any;
+    gzip_types text/plain text/css text/javascript application/javascript application/json image/gif image/png image/jpeg image/svg+xml image/x-icon;
+
+    # proxy settings for streaming and uploads
+    proxy_cache off;
+    proxy_redirect off;
+    proxy_buffering off;
+    client_max_body_size 100m;
