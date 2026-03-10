@@ -108,8 +108,31 @@ services:
     networks:
       - proxy_net
 
+  web_browser:
+    image: lscr.io/linuxserver/chromium:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - CHROME_CLI=--no-sandbox --user-data-dir=/config/.config/chromium --remote-debugging-address=0.0.0.0 --remote-debugging-port=9222 --remote-allow-origins=* https://www.google.com/
+      - HARDEN_DESKTOP=true
+      - HARDEN_OPENBOX=true
+      - SELKIES_UI_SHOW_SIDEBAR=false
+    volumes:
+      - ./mnt/web_browser:/config
+      - ./app/browser/openbox/:/config/.config/openbox
+    ports:
+      - 9222:9222
+      - 3001:3001 # https port, TEST ONLY!
+    shm_size: "1gb"
+    networks:
+      - sandbox_net
+
 networks:
   proxy_net:
     name: proxy_net
     driver: overlay
     attachable: true
+
+  sandbox_net:
+    driver: bridge
