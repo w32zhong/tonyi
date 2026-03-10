@@ -18,6 +18,10 @@ services:
       - target: 443
         published: 80
         mode: host # to pass in REAL IP
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager # to access swarm docker.sock
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
