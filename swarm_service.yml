@@ -17,7 +17,7 @@ services:
     image: prom/prometheus:v2.25.0
     restart: always
     volumes:
-      - ./app/gateway2/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./app/gateway/prometheus.yml:/etc/prometheus/prometheus.yml
     networks:
       gateway_net:
 
@@ -34,7 +34,7 @@ services:
       - APISIX_VIEWER_KEY=${GATEWAY_VIEWER_KEY}
       - ACME_EMAIL=${ACME_EMAIL}
     volumes:
-      - ./app/gateway2/apisix.yml:/usr/local/apisix/conf/config.yaml:ro
+      - ./app/gateway/apisix.yml:/usr/local/apisix/conf/config.yaml:ro
     depends_on:
       - etcd
     networks:
@@ -44,7 +44,7 @@ services:
     image: node:18-slim
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./app/gateway2/discovery.js:/discovery.js
+      - ./app/gateway/discovery.js:/discovery.js
     environment:
       - APISIX_ADMIN_URL=http://gateway:9180/apisix/admin
       - APISIX_ADMIN_KEY=${APISIX_ADMIN_KEY}
