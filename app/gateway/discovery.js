@@ -165,7 +165,7 @@ function applyRateLimitPlugins(plugins, limitsLabel) {
     plugins['limit-req'] = { rate: rate, burst: burst, key_type: "var", key: "remote_addr" };
   }
   if (conn > 0) {
-    plugins['limit-conn'] = { conn: conn, burst: 0, key_type: "var", key: "remote_addr" };
+    plugins['limit-conn'] = { conn: conn, burst: 0, default_conn_delay: 0.1, key_type: "var", key: "remote_addr" };
   }
 }
 

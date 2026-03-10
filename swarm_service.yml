@@ -58,7 +58,7 @@ services:
       - ./app/gateway/discovery.js:/app/discovery.js
     environment:
       - APISIX_ADMIN_URL=http://gateway:9180/apisix/admin
-      - APISIX_ADMIN_KEY=${APISIX_ADMIN_KEY}
+      - APISIX_ADMIN_KEY=${GATEWAY_ADMIN_KEY}
       - JWT_SECRET_URL=auth:19721/secret
       - JWT_COOKIE_NAME=JWT_Token
       - REDIRECT_URL=/login
