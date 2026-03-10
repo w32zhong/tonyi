@@ -32,6 +32,7 @@ Test S3:
 aws s3 --endpoint-url http://${SEAWEED_HOST0}:8333 mb s3://test-bucket
 aws s3 --endpoint-url http://${SEAWEED_HOST0}:8333 cp ~/.bashrc s3://test-bucket
 aws s3 --endpoint-url http://${SEAWEED_HOST0}:8333 ls s3://test-bucket
+aws s3 --endpoint-url http://${SEAWEED_HOST0}:8333 rb s3://test-bucket
 ```
 
 Test WireGuard:
