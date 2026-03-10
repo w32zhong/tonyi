@@ -84,27 +84,20 @@ async function syncServiceRoute(service, labels) {
   const routePath = labels['gateway.route'];
   const port = labels['gateway.port'] || '80';
 
-  const isRoot = routePath === '_root_';
-  const is404 = routePath === '_404_';
-
-  const cleanPath = (isRoot || is404) ? "" : routePath;
-
-  console.log(`Syncing: ${serviceName} -> ${isRoot ? '/' : (is404 ? '_404_' : '/' + routePath)}`);
-
   const routeData = {
     name: `${serviceName}-route`,
     uri: getRouteUri(routePath),
     priority: getRoutePriority(routePath),
     enable_websocket: true,
     upstream: getUpstreamConfig(serviceName, port),
-    plugins: getPluginsConfig(labels, cleanPath, isRoot, is404)
+    plugins: getPluginsConfig(routePath, labels)
   };
+  console.log(`${routeData.uri} => ${routeData.upstream}`)
 
   try {
     await axios.put(`${ADMIN_URL}/routes/${serviceName}`, routeData, {
       headers: { 'X-API-KEY': ADMIN_KEY }
     });
-    console.log(`Successfully synced ${serviceName}`);
   } catch (err) {
     console.error(`Failed to sync ${serviceName}: ${err.message}`);
   }
@@ -129,19 +122,20 @@ function getUpstreamConfig(serviceName, port) {
   };
 }
 
-function getPluginsConfig(labels, cleanPath, isRoot, is404) {
+function getPluginsConfig(routePath, labels) {
   const plugins = {};
 
+  const isRoot = routePath === '_root_';
+  const is404 = routePath === '_404_';
   if (!isRoot && !is404) {
     plugins["proxy-rewrite"] = {
-      "regex_uri": [`^/${cleanPath}/(.*)`, "/$1"]
+      "regex_uri": [`^/${routePath}/(.*)`, "/$1"]
     };
   }
 
   applyRateLimitPlugins(plugins, labels['gateway.limits']);
   applyUriBlockerPlugin(plugins, labels['gateway.internal']);
   applyJwtProtectPlugin(plugins, labels['gateway.protect']);
-
   return plugins;
 }
 
