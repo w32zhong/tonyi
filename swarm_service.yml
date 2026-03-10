@@ -32,6 +32,7 @@ services:
     environment:
       - APISIX_ADMIN_KEY=${GATEWAY_ADMIN_KEY}
       - APISIX_VIEWER_KEY=${GATEWAY_VIEWER_KEY}
+      - ACME_EMAIL=${ACME_EMAIL}
     volumes:
       - ./app/gateway2/apisix.yml:/usr/local/apisix/conf/config.yaml:ro
     depends_on:
@@ -51,6 +52,10 @@ services:
       - JWT_COOKIE_NAME=JWT_Token
       - REDIRECT_URL=/login
       - REDIRECT_URL_ARGKEY=next
+      - DEFAULT_REQ_RATE=${GATEWAY_DEFAULT_REQ_RATE}
+      - DEFAULT_BURST=${GATEWAY_DEFAULT_BURST}
+      - DEFAULT_CONN_MAX=${GATEWAY_DEFAULT_CONN_MAX}
+      - GATEWAY_DOMAIN=${GATEWAY_DOMAIN}
     networks:
       - gateway_net
     entrypoint: ["bash", "-c", "npm install dockerode axios && node /discovery.js"]
@@ -58,30 +63,6 @@ services:
       placement:
         constraints:
           - node.role == manager
-
-  #gateway:
-  #  image: gateway:latest
-  #  build:
-  #    context: ./app/gateway
-  #    dockerfile: Dockerfile
-  #  environment:
-  #    - REDIRECT_URL=/auth-test/login
-  #    - REDIRECT_URL_ARGKEY=next
-  #    - DEFAULT_REQ_RATE=$GATEWAY_DEFAULT_REQ_RATE
-  #    - DEFAULT_BURST=$GATEWAY_DEFAULT_BURST
-  #    - DEFAULT_CONN_MAX=$GATEWAY_DEFAULT_CONN_MAX
-  #    - JWT_COOKIE_NAME=jwt_token # ngx.var.cookie_* must be lower-case and no-hyphen
-  #    - JWT_SECRET_URL=auth:19721/secret
-  #    - DOMAIN=$GATEWAY_DOMAIN
-  #  ports:
-  #    - target: 443
-  #      published: 80
-  #      mode: host # to pass in REAL IP
-  #  deploy:
-  #    mode: global
-  #  networks:
-  #    - gateway_net
-  #  entrypoint: ["./entrypoint.sh", "$DOMAIN"]
 
   echo1:
     image: approach0/echo-httpd
@@ -115,7 +96,7 @@ services:
       labels:
         gateway.route: baz
         gateway.port: 8080
-        gateway.protect: '["baz/protected","baz/private"]'
+        gateway.protect: '["/baz/protected","/baz/private"]'
 
   auth:
     image: auth:latest
@@ -143,7 +124,7 @@ services:
         gateway.route: auth
         gateway.port: 19721
         gateway.limits: '{"rate": 1, "burst": 10, "conn": 10}'
-        gateway.internal: '["auth/secret"]'
+        gateway.internal: '["^/auth/secret(/.*)?$"]'
     networks:
       - gateway_net
       - proxy_net

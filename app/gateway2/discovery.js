@@ -11,12 +11,18 @@ const redirectUrl = process.env.REDIRECT_URL;
 const redirectUrlArgkey = process.env.REDIRECT_URL_ARGKEY;
 const jwtSecretUrl = process.env.JWT_SECRET_URL;
 
+const defaultReqRate = parseInt(process.env.DEFAULT_REQ_RATE);
+const defaultBurst = parseInt(process.env.DEFAULT_BURST);
+const defaultConnMax = parseInt(process.env.DEFAULT_CONN_MAX);
+const gatewayDomain = process.env.GATEWAY_DOMAIN;
+
 /**
  * Main discovery loop
  */
 async function discover() {
   try {
     await updateJwtSecret();
+    if (gatewayDomain) await bootstrapSSLCertificate(gatewayDomain);
 
     const services = await docker.listServices();
     let found404 = false;
@@ -42,6 +48,29 @@ async function updateJwtSecret() {
     console.log(`[JWT] secret loaded: ${jwtSecret.substring(0, 5)}...`);
   } catch (err) {
     console.error(`[JWT] secret unavailable: ${err.message}`);
+  }
+}
+
+async function bootstrapSSLCertificate(domain) {
+  const sslId = "main-domain-ssl";
+  try {
+    await axios.get(`${ADMIN_URL}/ssl/${sslId}`, { headers: { 'X-API-KEY': ADMIN_KEY } });
+  } catch (err) {
+    if (err.response && err.response.status === 404) {
+      console.log(`[SSL] Provisioning Let's Encrypt certificate for ${domain}...`);
+      try {
+        const sslData = {
+          snis: [domain, `www.${domain}`],
+          key: "placeholder-key", // APISIX acme plugin requires placeholders here
+          cert: "placeholder-cert",
+          plugin_name: "acme"
+        };
+        await axios.put(`${ADMIN_URL}/ssl/${sslId}`, sslData, { headers: { 'X-API-KEY': ADMIN_KEY } });
+        console.log(`[SSL] Successfully configured APISIX to fetch certificates for ${domain}.`);
+      } catch (putErr) {
+        console.error(`[SSL] Failed to configure certificate: ${putErr.message}`);
+      }
+    }
   }
 }
 
@@ -114,26 +143,34 @@ function getPluginsConfig(labels, cleanPath, isRoot, is404) {
 }
 
 function applyRateLimitPlugins(plugins, limitsLabel) {
-  if (!limitsLabel) return;
-  try {
-    const limits = JSON.parse(limitsLabel);
-    if (limits.rate) {
-      plugins['limit-req'] = { rate: limits.rate, burst: limits.burst || 0, key_type: "var", key: "remote_addr" };
+  let rate = defaultReqRate;
+  let burst = defaultBurst;
+  let conn = defaultConnMax;
+
+  if (limitsLabel) {
+    try {
+      const limits = JSON.parse(limitsLabel);
+      if (limits.rate !== undefined) rate = limits.rate;
+      if (limits.burst !== undefined) burst = limits.burst;
+      if (limits.conn !== undefined) conn = limits.conn;
+    } catch (e) {
+      console.error(`Limit parse error: ${e.message}`);
     }
-    if (limits.conn) {
-      plugins['limit-conn'] = { conn: limits.conn, burst: 0, key_type: "var", key: "remote_addr" };
-    }
-  } catch (e) {
-    console.error(`Limit parse error: ${e.message}`);
+  }
+
+  if (rate > 0) {
+    plugins['limit-req'] = { rate: rate, burst: burst, key_type: "var", key: "remote_addr" };
+  }
+  if (conn > 0) {
+    plugins['limit-conn'] = { conn: conn, burst: 0, key_type: "var", key: "remote_addr" };
   }
 }
 
 function applyUriBlockerPlugin(plugins, internalLabel) {
   if (!internalLabel) return;
   try {
-    const paths = JSON.parse(internalLabel);
     plugins['uri-blocker'] = {
-      block_rules: paths.map(p => `^/${p.replace(/^\/+/, '')}(\\/.*|$)`),
+      block_rules: JSON.parse(internalLabel),
       rejected_code: 403
     };
   } catch (e) {
@@ -153,7 +190,7 @@ function applyJwtProtectPlugin(plugins, protectLabel) {
 
         local check_path = ngx.var.uri
         local is_protected = false
-        local protect_paths = { ${paths.map(p => `["/${p}"] = true`).join(', ')} }
+        local protect_paths = { ${paths.map(p => `["${p}"] = true`).join(', ')} }
 
         for k, _ in pairs(protect_paths) do
             if string.find(check_path, k, 1, true) == 1 then
@@ -220,11 +257,6 @@ async function handleDefault404Fallback(found404) {
       await axios.delete(`${ADMIN_URL}/routes/${fallbackId}`, { headers: { 'X-API-KEY': ADMIN_KEY } });
     } catch (e) { /* ignore */ }
   }
-}
-
-if (!ADMIN_URL || !ADMIN_KEY || !jwtCookieName || !redirectUrl || !redirectUrlArgkey || !jwtSecretUrl) {
-  console.error("Missing required environment variables (APISIX_ADMIN_URL, APISIX_ADMIN_KEY, JWT_COOKIE_NAME, REDIRECT_URL, REDIRECT_URL_ARGKEY, JWT_SECRET_URL).");
-  process.exit(1);
 }
 
 console.log('Starting Discovery...');
