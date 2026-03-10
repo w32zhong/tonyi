@@ -137,7 +137,6 @@ services:
 
 networks:
   proxy_net:
-    name: proxy_net
     driver: overlay
     attachable: true
 

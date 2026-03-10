@@ -44,6 +44,10 @@ docker exec wg_client ping -c 1 10.8.0.2
 ```
 
 ## Sandbox Server
+```sh
+docker compose -f sandbox_server.yml -p sandbox_user_0 up --remove-orphans
+```
+
 Test WireGuard:
 ```sh
 docker exec wg_server ip addr

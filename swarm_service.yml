@@ -142,6 +142,7 @@ networks:
   gateway_net:
     driver: overlay
     attachable: true
+
   proxy_net:
     external: true
-    name: proxy_net
+    name: sandbox_user_0_proxy_net
