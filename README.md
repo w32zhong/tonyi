@@ -65,19 +65,12 @@ Test DB:
 docker exec wg_server nc -zv 10.8.0.1 5432
 ```
 
-## Backend Server
-Test:
-```sh
-curl -X POST http://yetiarch:8001/hello -H "Content-Type: application/json" -d '{"name": "Leo", "age": "18"}'
-```
-
-For local development when it requires a browser visiting localhost with HTTPS-only functionalities
-but the localhost does not have a browser, set up an SSH tunnel:
-```sh
-ssh -N -L 3001:localhost:3001 -L 3002:localhost:3002 user@remotehost
-```
-
 ## Swarm Service
+Remove stack:
+```sh
+docker stack rm demo
+```
+
 Declare stack:
 ```sh
 docker-compose -f swarm_service.yml build

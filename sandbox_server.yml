@@ -55,19 +55,20 @@ services:
 
   jfs_format:
     image: juicedata/mount
-    entrypoint: /bin/sh -c
-    command: >
-      "if juicefs status redis://redis_srv:6379/1 >/dev/null 2>&1; then
-        echo '✅ JuiceFS already initialized (skipping format).';
-      else
-        juicefs format
-        --storage s3
-        --bucket http://wireguard_server:8333/jfs-bucket-1
-        --access-key any --secret-key any
-        --capacity ${JFS_CAPACITY_GB}
-        redis://redis_srv:6379/1
-        ${JFS_NAME};
-      fi"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if juicefs status redis://redis_srv:6379/1; then
+          echo '✅ JuiceFS already initialized (skipping format).'
+        else
+          juicefs format \
+            --storage s3 \
+            --bucket http://wireguard_server:8333/jfs-bucket-2 \
+            --access-key any --secret-key any \
+            --capacity ${JFS_CAPACITY_GB} \
+            redis://redis_srv:6379/1 \
+            ${JFS_NAME}
+        fi
     depends_on:
       redis_srv:
         condition: service_healthy
