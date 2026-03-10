@@ -29,12 +29,34 @@ async function discover() {
     const services = await docker.listServices();
     let found404 = false;
 
+    // 1. Gather all expected service names from Swarm
+    const activeServiceNames = new Set();
+
     for (const service of services) {
       const labels = service.Spec.Labels || {};
       if (labels['gateway.route']) {
+        activeServiceNames.add(service.Spec.Name);
         if (labels['gateway.route'] === '_404_') found404 = true;
         await syncServiceRoute(service, labels);
       }
+    }
+
+    // 2. Fetch existing routes from APISIX and prune orphaned ones
+    try {
+      const existingRoutes = await axios.get(`${ADMIN_URL}/routes`, { headers: { 'X-API-KEY': ADMIN_KEY } });
+      const routes = existingRoutes.data?.list || [];
+
+      for (const route of routes) {
+        // We only manage routes created by discovery (they use the serviceName as ID)
+        // Skip default-404 as it is handled separately
+        const routeId = route.value.id;
+        if (routeId !== 'default-404' && !activeServiceNames.has(routeId)) {
+          console.log(`[Cleanup] Removing orphaned route: ${routeId}`);
+          await axios.delete(`${ADMIN_URL}/routes/${routeId}`, { headers: { 'X-API-KEY': ADMIN_KEY } });
+        }
+      }
+    } catch (e) {
+      console.error(`[Cleanup] Failed to fetch/prune existing routes: ${e.message}`);
     }
 
     await handleDefault404Fallback(found404);
@@ -247,7 +269,7 @@ async function handleDefault404Fallback(found404) {
       plugins: {
         "return": {
           "code": 404,
-          "body": "<html><body><h2>404 Page not found</h2><p>Please check out later if you keep seeing this.</p></body></html>",
+          "body": "<html><body><h2>404 Page not found</h2></body></html>",
           "headers": { "Content-Type": "text/html; charset=utf-8" }
         }
       }
