@@ -61,13 +61,13 @@ async function bootstrapSSLCertificate(domain) {
     if (err.response && err.response.status === 404) {
       console.log(`[SSL] Provisioning Let's Encrypt certificate for ${domain}...`);
       try {
-        const sslData = {
+        const d = {
           snis: [domain, `www.${domain}`],
           key: "placeholder-key", // APISIX acme plugin requires placeholders here
           cert: "placeholder-cert",
           plugin_name: "acme"
         };
-        await axios.put(`${ADMIN_URL}/ssl/${sslId}`, sslData, { headers: { 'X-API-KEY': ADMIN_KEY } });
+        await axios.put(`${ADMIN_URL}/ssl/${sslId}`, d, { headers: { 'X-API-KEY': ADMIN_KEY } });
         console.log(`[SSL] Successfully configured APISIX to fetch certificates for ${domain}.`);
       } catch (putErr) {
         console.error(`[SSL] Failed to configure certificate: ${putErr.message}`);
@@ -84,7 +84,7 @@ async function syncServiceRoute(service, labels) {
   const routePath = labels['gateway.route'];
   const port = labels['gateway.port'] || '80';
 
-  const routeData = {
+  const d = {
     name: `${serviceName}-route`,
     uri: getRouteUri(routePath),
     priority: getRoutePriority(routePath),
@@ -92,10 +92,14 @@ async function syncServiceRoute(service, labels) {
     upstream: getUpstreamConfig(serviceName, port),
     plugins: getPluginsConfig(routePath, labels)
   };
-  console.log(`${routeData.uri} => ${routeData.upstream}`)
+
+  console.log(`[${d.priority}]: ${d.uri} => ${serviceName}:${port}`);
+  const logPlugins = { ...d.plugins };
+  delete logPlugins['serverless-pre-function'];
+  console.log(JSON.stringify(logPlugins, null, 2));
 
   try {
-    await axios.put(`${ADMIN_URL}/routes/${serviceName}`, routeData, {
+    await axios.put(`${ADMIN_URL}/routes/${serviceName}`, d, {
       headers: { 'X-API-KEY': ADMIN_KEY }
     });
   } catch (err) {
@@ -236,7 +240,7 @@ function applyJwtProtectPlugin(plugins, protectLabel) {
 async function handleDefault404Fallback(found404) {
   const fallbackId = 'default-404';
   if (!found404) {
-    const fallbackRoute = {
+    const d = {
       uri: "/*",
       name: "default-404-fallback",
       priority: -1,
@@ -248,7 +252,7 @@ async function handleDefault404Fallback(found404) {
         }
       }
     };
-    await axios.put(`${ADMIN_URL}/routes/${fallbackId}`, fallbackRoute, { headers: { 'X-API-KEY': ADMIN_KEY } });
+    await axios.put(`${ADMIN_URL}/routes/${fallbackId}`, d, { headers: { 'X-API-KEY': ADMIN_KEY } });
   } else {
     try {
       await axios.delete(`${ADMIN_URL}/routes/${fallbackId}`, { headers: { 'X-API-KEY': ADMIN_KEY } });
