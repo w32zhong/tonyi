@@ -28,7 +28,7 @@ services:
       - "80:9080/tcp"
       - "443:9443/tcp"
       - "9180:9180/tcp" # route admin API, or /ui for a built-in UI
-      - "9091:9091/tcp" # Prometheus metrics
+      #- "9091:9091/tcp" # Prometheus metrics, /apisix/prometheus/metrics
     environment:
       - APISIX_ADMIN_KEY=${GATEWAY_ADMIN_KEY}
       - APISIX_VIEWER_KEY=${GATEWAY_VIEWER_KEY}
@@ -38,6 +38,26 @@ services:
       - etcd
     networks:
       - gateway_net
+
+  discovery:
+    image: node:18-slim
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./app/gateway2/discovery.js:/discovery.js
+    environment:
+      - APISIX_ADMIN_URL=http://gateway:9180/apisix/admin
+      - APISIX_ADMIN_KEY=${APISIX_ADMIN_KEY}
+      - JWT_SECRET_URL=auth:19721/secret
+      - JWT_COOKIE_NAME=JWT_Token
+      - REDIRECT_URL=/login
+      - REDIRECT_URL_ARGKEY=next
+    networks:
+      - gateway_net
+    entrypoint: ["bash", "-c", "npm install dockerode axios && node /discovery.js"]
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
 
   #gateway:
   #  image: gateway:latest
@@ -95,7 +115,7 @@ services:
       labels:
         gateway.route: baz
         gateway.port: 8080
-        gateway.protect: /protected,/private
+        gateway.protect: '["baz/protected","baz/private"]'
 
   auth:
     image: auth:latest
@@ -123,7 +143,7 @@ services:
         gateway.route: auth
         gateway.port: 19721
         gateway.limits: '{"rate": 1, "burst": 10, "conn": 10}'
-        gateway.internal: /secret
+        gateway.internal: '["auth/secret"]'
     networks:
       - gateway_net
       - proxy_net

@@ -2,6 +2,8 @@ apisix:
   node_listen: 9080
   enable_ipv6: false
   enable_control: true
+  dns_resolver:
+    - 127.0.0.11
   control:
     ip: "0.0.0.0"
     port: 9092
@@ -31,6 +33,6 @@ plugin_attr:
 
 nginx_config:
   http:
-    real_ip_header: "X-Forwarded-For" 
+    real_ip_header: "X-Forwarded-For"
     real_ip_from:
       - "0.0.0.0/0"
