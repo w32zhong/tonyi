@@ -65,7 +65,7 @@ services:
       - APISIX_ADMIN_KEY=${GATEWAY_ADMIN_KEY}
       - JWT_SECRET_URL=auth:19721/secret
       - JWT_COOKIE_NAME=JWT_Token
-      - REDIRECT_URL=/login
+      - REDIRECT_URL=/u/login
       - REDIRECT_URL_ARGKEY=next
       - DEFAULT_REQ_RATE=${GATEWAY_DEFAULT_REQ_RATE}
       - DEFAULT_BURST=${GATEWAY_DEFAULT_BURST}
@@ -140,7 +140,7 @@ services:
       - LOGIN_MAX_ATTEMPTS=10
       - JWT_EXPIRE_DAYS=5
       - JWT_COOKIE_NAME=JWT_Token
-      - REDIRECT_URL=/login
+      - REDIRECT_URL=/u/login
       - REDIRECT_URL_ARGKEY=next
       - OAUTH2_PROVIDERS=google,github
       - OAUTH2_CALLBK_PREFIX=https://__REQ_DOMAIN__/auth
