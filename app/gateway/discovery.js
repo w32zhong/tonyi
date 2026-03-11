@@ -25,24 +25,19 @@ const gatewayDomain = process.env.GATEWAY_DOMAIN;
  */
 async function discover() {
   try {
+    console.log('--- service discover ---');
     await updateJwtSecret();
     const sslOpen = await syncSsl();
 
-    const services = await docker.listServices();
     const activeRouteIds = new Set();
-
-    // Redirect and disable plain HTTP if HTTPS is on
-    if (sslOpen) {
-      console.log(`[50]: HTTP => HTTPS`);
-      activeRouteIds.add('global-http-redirect');
-    }
+    const services = await docker.listServices();
 
     // Discover new routes
     for (const service of services) {
       const labels = service.Spec.Labels || {};
       if (labels['gateway.route']) {
         activeRouteIds.add(service.Spec.Name);
-        await rewriteRoute(service, labels);
+        await rewriteRoute(service, labels, sslOpen);
       }
     }
 
@@ -77,18 +72,22 @@ async function updateJwtSecret() {
   }
 }
 
-async function rewriteRoute(service, labels) {
+async function rewriteRoute(service, labels, sslOpen) {
   const serviceName = service.Spec.Name;
   const routePath = labels['gateway.route'];
   const port = labels['gateway.port'] || '80';
+  const priority = getRoutePriority(routePath, labels['gateway.route_priority']);
+
+  // Redirect HTTP to HTTPS if SSL is on, EXCEPT for high priority routes
+  const forceHttps = (sslOpen && priority !== 100)
 
   const d = {
     name: `${serviceName}-route`,
     uris: getRouteUris(routePath),
-    priority: getRoutePriority(routePath, labels['gateway.route_priority']),
+    priority: priority,
     enable_websocket: true,
     upstream: getUpstreamConfig(serviceName, port),
-    plugins: getPluginsConfig(routePath, labels)
+    plugins: getPluginsConfig(routePath, labels, forceHttps)
   };
 
   console.log(`[${d.priority}]: ${d.uris} => ${serviceName}:${port}`);
@@ -122,8 +121,13 @@ function getUpstreamConfig(serviceName, port) {
   };
 }
 
-function getPluginsConfig(routePath, labels) {
+function getPluginsConfig(routePath, labels, forceHttps) {
   const plugins = {};
+  if (forceHttps) {
+    plugins["redirect"] = {
+      "http_to_https": true
+    };
+  }
 
   const isRoot = routePath === '_root_';
   const is404 = routePath === '_404_';
@@ -286,25 +290,6 @@ async function syncSsl() {
       headers: { 'X-API-KEY': ADMIN_KEY }
     });
     console.log(`[SSL] synced for ${gatewayDomain} from ${domainDir}`);
-
-    // Create global HTTP -> HTTPS redirect if SSL is on
-    if (sslOpen) {
-      const d = {
-        id: "global-http-redirect",
-        uris: ["/*"],
-        priority: 50,
-        vars: [["scheme", "==", "http"]],
-        plugins: {
-          redirect: {
-            http_to_https: true
-          }
-        }
-      };
-      await axios.put(`${ADMIN_URL}/routes/global-http-redirect`, d, {
-        headers: { 'X-API-KEY': ADMIN_KEY }
-      });
-    }
-
     return true;
 
   } catch (err) {
@@ -313,6 +298,5 @@ async function syncSsl() {
   }
 }
 
-console.log('Starting Discovery...');
-setInterval(discover, 10000);
+setInterval(discover, 10 * 1000);
 discover();
