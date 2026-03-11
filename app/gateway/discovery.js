@@ -242,10 +242,10 @@ function applyJwtProtectPlugin(plugins, protectLabel) {
       end
     `;
 
-    plugins['serverless-pre-function'] = {
-      phase: "rewrite",
-      functions: [luaScript]
-    };
+    if (!plugins['serverless-pre-function']) {
+      plugins['serverless-pre-function'] = { phase: "rewrite", functions: [] };
+    }
+    plugins['serverless-pre-function'].functions.push(luaScript);
 
   } catch (e) {
     console.error(`Protect paths parse error: ${e.message}`);
@@ -264,14 +264,14 @@ async function syncSsl() {
   );
 
   if (!domainDir) {
-    console.warn(`[SSL] no acme directory found for ${gatewayDomain}`);
+    console.warn(`[SSL] skipping, no acme directory ${gatewayDomain}`);
     return false;
   }
 
   const certPath = path.join(acmeRoot, domainDir, 'fullchain.cer');
   const keyPath = path.join(acmeRoot, domainDir, `${gatewayDomain}.key`);
   if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) {
-    console.warn(`[SSL] skipping sync, cert/key not found in ${domainDir}`);
+    console.warn(`[SSL] skipping, cert/key not found in ${domainDir}`);
     return false;
   }
 
@@ -289,11 +289,11 @@ async function syncSsl() {
     await axios.put(`${ADMIN_URL}/ssls/gateway-ssl`, sslData, {
       headers: { 'X-API-KEY': ADMIN_KEY }
     });
-    console.log(`[SSL] synced for ${gatewayDomain} from ${domainDir}`);
+    console.log(`[SSL] SSL is on: ${gatewayDomain} from ${domainDir}`);
     return true;
 
   } catch (err) {
-    console.error(`[SSL] sync failed: ${err.message}`);
+    console.error(`[SSL] SSL setup failed: ${err.message}`);
     return false;
   }
 }
