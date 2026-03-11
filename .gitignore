@@ -1,3 +1,4 @@
 mnt/
 secrets/
 __pycache__/
+*.swp

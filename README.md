@@ -85,9 +85,9 @@ docker stack deploy --prune --compose-file swarm_service.yml demo --detach=false
 Update a service from source:
 ```sh
 docker-compose -f swarm_service.yml build && docker service update --force demo_gateway
-docker service logs -f demo_gateway
+docker service logs -ft demo_gateway
 # alternative, use lower-level docker logs discarding the print prefix:
-docker logs -f $(docker ps -q --filter "name=gateway")
+docker logs -ft $(docker ps -q --filter "name=gateway")
 ```
 
 Testing gateway rate limits:

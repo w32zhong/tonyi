@@ -1,5 +1,7 @@
 const Docker = require('dockerode');
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 
 const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 const ADMIN_URL = process.env.APISIX_ADMIN_URL;
@@ -24,7 +26,7 @@ const gatewayDomain = process.env.GATEWAY_DOMAIN;
 async function discover() {
   try {
     await updateJwtSecret();
-    if (gatewayDomain) await bootstrapSSLCertificate(gatewayDomain);
+    await syncSsl();
 
     const services = await docker.listServices();
     const activeServiceNames = new Set();
@@ -65,29 +67,6 @@ async function updateJwtSecret() {
     console.log(`[JWT] secret loaded: ${jwtSecret.substring(0, 5)}...`);
   } catch (err) {
     console.error(`[JWT] secret unavailable: ${err.message}`);
-  }
-}
-
-async function bootstrapSSLCertificate(domain) {
-  const sslId = "main-domain-ssl";
-  try {
-    await axios.get(`${ADMIN_URL}/ssl/${sslId}`, { headers: { 'X-API-KEY': ADMIN_KEY } });
-  } catch (err) {
-    if (err.response && err.response.status === 404) {
-      console.log(`[SSL] Provisioning Let's Encrypt certificate for ${domain}...`);
-      try {
-        const d = {
-          snis: [domain, `www.${domain}`],
-          key: "placeholder-key",
-          cert: "placeholder-cert",
-          plugin_name: "acme"
-        };
-        await axios.put(`${ADMIN_URL}/ssl/${sslId}`, d, { headers: { 'X-API-KEY': ADMIN_KEY } });
-        console.log(`[SSL] Successfully configured APISIX to fetch certificates for ${domain}.`);
-      } catch (putErr) {
-        console.error(`[SSL] Failed to configure certificate: ${putErr.message}`);
-      }
-    }
   }
 }
 
@@ -264,6 +243,50 @@ function applyJwtProtectPlugin(plugins, protectLabel) {
 
   } catch (e) {
     console.error(`Protect paths parse error: ${e.message}`);
+  }
+}
+
+async function syncSsl() {
+  if (!gatewayDomain) return;
+
+  const acmeRoot = '/acme.sh';
+  if (!fs.existsSync(acmeRoot)) return;
+
+  // Find directory matching domain (exact or with _ecc suffix)
+  const domainDir = fs.readdirSync(acmeRoot).find(d =>
+    d === gatewayDomain || d === `${gatewayDomain}_ecc`
+  );
+
+  if (!domainDir) {
+    console.warn(`[SSL] no acme directory found for ${gatewayDomain}`);
+    return;
+  }
+
+  const certPath = path.join(acmeRoot, domainDir, 'fullchain.cer');
+  const keyPath = path.join(acmeRoot, domainDir, `${gatewayDomain}.key`);
+
+  if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) {
+    console.warn(`[SSL] skipping sync, cert/key not found in ${domainDir}`);
+    return;
+  }
+
+  try {
+    const cert = fs.readFileSync(certPath, 'utf8');
+    const key = fs.readFileSync(keyPath, 'utf8');
+
+    const sslData = {
+      id: "gateway-ssl",
+      cert: cert,
+      key: key,
+      snis: [gatewayDomain, `www.${gatewayDomain}`]
+    };
+
+    await axios.put(`${ADMIN_URL}/ssls/gateway-ssl`, sslData, {
+      headers: { 'X-API-KEY': ADMIN_KEY }
+    });
+    console.log(`[SSL] synced for ${gatewayDomain} from ${domainDir}`);
+  } catch (err) {
+    console.error(`[SSL] sync failed: ${err.message}`);
   }
 }
 

@@ -1,5 +1,9 @@
 apisix:
   node_listen: 9080
+  ssl:
+    enable: true
+    listen:
+      - port: 9443
   enable_ipv6: false
   enable_control: true
   dns_resolver:
@@ -10,6 +14,9 @@ apisix:
 
 deployment:
   admin:
+    admin_listen:
+      ip: 0.0.0.0
+      port: 9180
     allow_admin:
       - 0.0.0.0/0
     admin_key:
@@ -30,8 +37,6 @@ plugin_attr:
     export_addr:
       ip: "0.0.0.0"
       port: 9091
-  acme:
-    account_email: "${{ACME_EMAIL}}"
 
 nginx_config:
   worker_rlimit_nofile: 65535

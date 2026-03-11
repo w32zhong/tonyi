@@ -54,12 +54,59 @@ services:
       # (2) configure DNS A records or a Load Balancer to round-robin each nodes.
       mode: global
 
+  acme:
+    image: neilpang/acme.sh
+    volumes:
+      - acme_data:/acme.sh
+    environment:
+      - DOMAIN=${GATEWAY_DOMAIN}
+    entrypoint:
+      - "sh"
+      - "-c"
+      - |
+        if ! acme.sh --list | grep -q "$$DOMAIN"; then
+          # verify domain ownership by creating .well-known/acme-challenge at /acme.sh
+          acme.sh --issue -d $$DOMAIN -d www.$$DOMAIN --webroot /acme.sh --server letsencrypt
+        else
+          echo "auto renew cronjob is on!"
+          cat /acme.sh/crontab
+        fi
+        echo "======================================================================="
+        echo "To revoke: acme.sh --revoke -d $$DOMAIN -d www.$$DOMAIN"
+        echo "To renew manually: acme.sh --renew -d $$DOMAIN -d www.$$DOMAIN --force"
+        echo "======================================================================="
+        sh entry.sh daemon
+    depends_on:
+      - service_discovery
+
+  well_known:
+    image: busybox:stable
+    volumes:
+      - acme_data:/acme_data
+    ports:
+      - "8080:80"
+    entrypoint:
+      - "sh"
+      - "-c"
+      - |
+        mkdir -p /acme_data/.well-known /www
+        ln -s /acme_data/.well-known /www/.well-known
+        busybox httpd -f -p 80 -h /www/.well-known
+    deploy:
+      labels:
+        gateway.route: .well-known
+    depends_on:
+      - acme
+    networks:
+      - gateway_net
+
   service_discovery:
     image: node:18-slim
     working_dir: /app
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./app/gateway/discovery.js:/app/discovery.js
+      - acme_data:/acme.sh:ro
     environment:
       - APISIX_ADMIN_URL=http://gateway:9180/apisix/admin
       - APISIX_ADMIN_KEY=${GATEWAY_ADMIN_KEY}
@@ -83,28 +130,6 @@ services:
       placement:
         constraints:
           - node.role == manager
-
-  acme:
-    image: neilpang/acme.sh
-    volumes:
-      - ./mnt/acme:/acme.sh
-    environment:
-      - DOMAIN=${GATEWAY_DOMAIN}
-    entrypoint:
-      - "sh"
-      - "-c"
-      - |
-        if [ ! -e /acme.sh/key.pem ]; then
-          # verify domain ownership by creating .well-known/acme-challenge at /acme.sh
-          acme.sh --issue -d $$DOMAIN -d www.$$DOMAIN --webroot /acme.sh --server letsencrypt
-        fi
-        echo "======================================================================="
-        echo "To revoke: acme.sh --revoke -d $$DOMAIN -d www.$$DOMAIN"
-        echo "To renew manually: acme.sh --renew -d $$DOMAIN -d www.$$DOMAIN --force"
-        echo "======================================================================="
-        sh entry.sh daemon
-    depends_on:
-      - service_discovery
 
   echo0:
     image: approach0/echo-httpd
@@ -243,3 +268,4 @@ networks:
 
 volumes:
   etcd_data:
+  acme_data:
