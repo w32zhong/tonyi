@@ -148,7 +148,7 @@ function getPluginsConfig(routePath, labels) {
   const is404 = routePath === '_404_';
   if (!isRoot && !is404) {
     plugins["proxy-rewrite"] = {
-      "regex_uri": [`^/${routePath}(/.*|$)`, "/$1"]
+      "regex_uri": [`^/${routePath}/(.*)`, "/$1", `^/${routePath}$`, "/"]
     };
   }
 
@@ -162,6 +162,8 @@ function applyRateLimitPlugins(plugins, limitsLabel) {
   let rate = defaultReqRate;
   let burst = defaultBurst;
   let conn = defaultConnMax;
+  let rateCode = 429; // Set for Rate Limit
+  let connCode = 503; // Set for Conn Limit
 
   if (limitsLabel) {
     try {
@@ -175,10 +177,23 @@ function applyRateLimitPlugins(plugins, limitsLabel) {
   }
 
   if (rate > 0) {
-    plugins['limit-req'] = { rate: rate, burst: burst, key_type: "var", key: "remote_addr" };
+    plugins['limit-req'] = {
+      rate: rate,
+      burst: burst,
+      rejected_code: rateCode,
+      key_type: "var",
+      key: "remote_addr"
+    };
   }
   if (conn > 0) {
-    plugins['limit-conn'] = { conn: conn, burst: 0, default_conn_delay: 0.1, key_type: "var", key: "remote_addr" };
+    plugins['limit-conn'] = {
+      conn: conn,
+      burst: 0,
+      default_conn_delay: 0.1,
+      rejected_code: connCode,
+      key_type: "var",
+      key: "remote_addr"
+    };
   }
 }
 

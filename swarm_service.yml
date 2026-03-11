@@ -54,7 +54,7 @@ services:
       # (2) configure DNS A records or a Load Balancer to round-robin each nodes.
       mode: global
 
-  gateway_config_and_service_discovery:
+  service_discovery:
     image: node:18-slim
     working_dir: /app
     volumes:
@@ -84,6 +84,16 @@ services:
         constraints:
           - node.role == manager
 
+  echo0:
+    image: approach0/echo-httpd
+    networks:
+      - gateway_net
+    command: "node hello.js echo0"
+    deploy:
+      labels:
+        gateway.route: _root_
+        gateway.port: 8080
+
   echo1:
     image: approach0/echo-httpd
     networks:
@@ -91,7 +101,7 @@ services:
     command: "node hello.js echo1"
     deploy:
       labels:
-        gateway.route: foo
+        gateway.route: test_conn_limit
         gateway.port: 8080
         gateway.limits: '{"rate": 10, "burst": 10, "conn": 1}'
       endpoint_mode: dnsrr
@@ -103,7 +113,7 @@ services:
     command: "node hello.js echo2"
     deploy:
       labels:
-        gateway.route: bar
+        gateway.route: test_rate_limit
         gateway.port: 8080
         gateway.limits: '{"rate": 1, "burst": 0, "conn": 10}'
 
@@ -114,9 +124,10 @@ services:
     command: "node hello.js echo3"
     deploy:
       labels:
-        gateway.route: baz
+        gateway.route: test_permission
         gateway.port: 8080
-        gateway.protect: '["/baz/protected","/baz/private"]'
+        gateway.protect: '["/test_permission/protected", "/test_permission/private"]'
+        gateway.internal: '["^/test_permission/internal(/.*)?$$"]'
 
   auth:
     image: auth:latest

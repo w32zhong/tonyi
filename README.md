@@ -92,9 +92,11 @@ docker logs -f $(docker ps -q --filter "name=gateway")
 
 Testing gateway rate limits:
 ```sh
-curl -4 -X POST localhost/foo/bar -d '{"key":"value"}' --header "Content-Type: application/json"
-curl --parallel --parallel-immediate --parallel-max 10 --limit-rate 100b -4 \
-    localhost/foo/ localhost/foo/ localhost/foo/ # parallel requests
+for i in {1..3}; do curl -sI http://yetiarch/test_conn_limit & done
+for i in {1..3}; do curl -sI http://yetiarch/test_rate_limit & done
+curl -sI http://yetiarch/test_permission/internal/peek
+curl -sI http://yetiarch/test_permission/protected/peek
+curl -sI http://yetiarch/test_permission/private
 ```
 
 Test swarm to backend connection:
