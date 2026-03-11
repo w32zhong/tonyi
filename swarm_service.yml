@@ -84,6 +84,28 @@ services:
         constraints:
           - node.role == manager
 
+  acme:
+    image: neilpang/acme.sh
+    volumes:
+      - ./mnt/acme:/acme.sh
+    environment:
+      - DOMAIN=${GATEWAY_DOMAIN}
+    entrypoint:
+      - "sh"
+      - "-c"
+      - |
+        if [ ! -e /acme.sh/key.pem ]; then
+          # verify domain ownership by creating .well-known/acme-challenge at /acme.sh
+          acme.sh --issue -d $$DOMAIN -d www.$$DOMAIN --webroot /acme.sh --server letsencrypt
+        fi
+        echo "======================================================================="
+        echo "To revoke: acme.sh --revoke -d $$DOMAIN -d www.$$DOMAIN"
+        echo "To renew manually: acme.sh --renew -d $$DOMAIN -d www.$$DOMAIN --force"
+        echo "======================================================================="
+        sh entry.sh daemon
+    depends_on:
+      - service_discovery
+
   echo0:
     image: approach0/echo-httpd
     networks:
