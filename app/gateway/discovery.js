@@ -26,27 +26,34 @@ const gatewayDomain = process.env.GATEWAY_DOMAIN;
 async function discover() {
   try {
     await updateJwtSecret();
-    await syncSsl();
+    const sslOpen = await syncSsl();
 
     const services = await docker.listServices();
-    const activeServiceNames = new Set();
+    const activeRouteIds = new Set();
 
+    // Redirect and disable plain HTTP if HTTPS is on
+    if (sslOpen) {
+      console.log(`[50]: HTTP => HTTPS`);
+      activeRouteIds.add('global-http-redirect');
+    }
+
+    // Discover new routes
     for (const service of services) {
       const labels = service.Spec.Labels || {};
       if (labels['gateway.route']) {
-        activeServiceNames.add(service.Spec.Name);
-        await syncServiceRoute(service, labels);
+        activeRouteIds.add(service.Spec.Name);
+        await rewriteRoute(service, labels);
       }
     }
 
-    // Fetch existing routes from APISIX and prune orphaned ones
+    // Prune existing orphaned routes
     try {
       const existingRoutes = await axios.get(`${ADMIN_URL}/routes`, { headers: { 'X-API-KEY': ADMIN_KEY } });
       const routes = existingRoutes.data?.list || [];
 
       for (const route of routes) {
         const routeId = route.value.id;
-        if (!activeServiceNames.has(routeId)) {
+        if (!activeRouteIds.has(routeId)) {
           console.log(`[Cleanup] Removing orphaned route: ${routeId}`);
           await axios.delete(`${ADMIN_URL}/routes/${routeId}`, { headers: { 'X-API-KEY': ADMIN_KEY } });
         }
@@ -70,10 +77,7 @@ async function updateJwtSecret() {
   }
 }
 
-/**
- * Syncs a single service's configuration to APISIX
- */
-async function syncServiceRoute(service, labels) {
+async function rewriteRoute(service, labels) {
   const serviceName = service.Spec.Name;
   const routePath = labels['gateway.route'];
   const port = labels['gateway.port'] || '80';
@@ -81,16 +85,13 @@ async function syncServiceRoute(service, labels) {
   const d = {
     name: `${serviceName}-route`,
     uris: getRouteUris(routePath),
-    priority: getRoutePriority(routePath),
+    priority: getRoutePriority(routePath, labels['gateway.route_priority']),
     enable_websocket: true,
     upstream: getUpstreamConfig(serviceName, port),
     plugins: getPluginsConfig(routePath, labels)
   };
 
   console.log(`[${d.priority}]: ${d.uris} => ${serviceName}:${port}`);
-  const logPlugins = { ...d.plugins };
-  delete logPlugins['serverless-pre-function'];
-  console.log(JSON.stringify(logPlugins, null, 2));
 
   try {
     await axios.put(`${ADMIN_URL}/routes/${serviceName}`, d, {
@@ -107,7 +108,8 @@ function getRouteUris(routePath) {
   return [`/${routePath}`, `/${routePath}/*` ];
 }
 
-function getRoutePriority(routePath) {
+function getRoutePriority(routePath, customPriority) {
+  if (customPriority) return parseInt(customPriority);
   if (routePath === '_root_') return 0;
   if (routePath === '_404_') return -1;
   return 10;
@@ -247,10 +249,10 @@ function applyJwtProtectPlugin(plugins, protectLabel) {
 }
 
 async function syncSsl() {
-  if (!gatewayDomain) return;
+  if (!gatewayDomain) return false;
 
   const acmeRoot = '/acme.sh';
-  if (!fs.existsSync(acmeRoot)) return;
+  if (!fs.existsSync(acmeRoot)) return false;
 
   // Find directory matching domain (exact or with _ecc suffix)
   const domainDir = fs.readdirSync(acmeRoot).find(d =>
@@ -259,15 +261,14 @@ async function syncSsl() {
 
   if (!domainDir) {
     console.warn(`[SSL] no acme directory found for ${gatewayDomain}`);
-    return;
+    return false;
   }
 
   const certPath = path.join(acmeRoot, domainDir, 'fullchain.cer');
   const keyPath = path.join(acmeRoot, domainDir, `${gatewayDomain}.key`);
-
   if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) {
     console.warn(`[SSL] skipping sync, cert/key not found in ${domainDir}`);
-    return;
+    return false;
   }
 
   try {
@@ -285,8 +286,30 @@ async function syncSsl() {
       headers: { 'X-API-KEY': ADMIN_KEY }
     });
     console.log(`[SSL] synced for ${gatewayDomain} from ${domainDir}`);
+
+    // Create global HTTP -> HTTPS redirect if SSL is on
+    if (sslOpen) {
+      const d = {
+        id: "global-http-redirect",
+        uris: ["/*"],
+        priority: 50,
+        vars: [["scheme", "==", "http"]],
+        plugins: {
+          redirect: {
+            http_to_https: true
+          }
+        }
+      };
+      await axios.put(`${ADMIN_URL}/routes/global-http-redirect`, d, {
+        headers: { 'X-API-KEY': ADMIN_KEY }
+      });
+    }
+
+    return true;
+
   } catch (err) {
     console.error(`[SSL] sync failed: ${err.message}`);
+    return false;
   }
 }
 

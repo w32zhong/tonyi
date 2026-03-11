@@ -33,9 +33,9 @@ services:
         mode: host
 
       # route admin API, or /ui for a built-in UI
-      #- target: 9180
-      #  published: 9180
-      #  mode: ingress
+      - target: 9180
+        published: 9180
+        mode: ingress
 
       # Prometheus metrics, /apisix/prometheus/metrics
       #- "9091:9091/tcp"
@@ -95,6 +95,7 @@ services:
     deploy:
       labels:
         gateway.route: .well-known
+        gateway.route_priority: 100
     depends_on:
       - acme
     networks:
