@@ -220,11 +220,19 @@ function getPluginsConfig(routePath, labels, forceHttps) {
 
   const isRoot = routePath === '_root_';
   const is404 = routePath === '_404_';
+
+  const proxyRewrite = {
+    headers: {
+      "X-Original-URI": "$request_uri",
+      "X-Real-IP": "$remote_addr"
+    }
+  };
+
   if (!isRoot && !is404) {
-    plugins["proxy-rewrite"] = {
-      "regex_uri": [`^/${routePath}/(.*)`, "/$1", `^/${routePath}$`, "/"]
-    };
+    proxyRewrite["regex_uri"] = [`^/${routePath}/(.*)`, "/$1", `^/${routePath}$`, "/"];
   }
+
+  plugins["proxy-rewrite"] = proxyRewrite;
 
   applyRealIpPlugin(plugins);
   applyRateLimitPlugins(plugins, labels['gateway.limits']);

@@ -105,25 +105,17 @@ async function requirePoW(req, res, next) {
     }
 }
 /**
- * Express middleware to require a valid JWT or a trusted Gateway header.
+ * Express middleware to require a valid JWT.
  * Attaches the decoded payload to req.user.
  */
 async function requireAuth(req, res, next) {
-    // 1. Trust Gateway Header (X-Remote-User) as uid if present
-    const remoteUid = req.headers['x-remote-user'];
-    if (remoteUid) {
-        const uid = Number(remoteUid);
-        req.user = { uid, via: 'gateway' };
-        return next();
-    }
-
-    // 2. Check for JWT in cookies
+    // 1. Check for JWT in cookies
     const token = req.cookies?.[JWT_COOKIE_NAME];
     if (!token) {
         return handleAuthFailure(req, res);
     }
 
-    // 3. Verify JWT locally
+    // 2. Verify JWT locally
     const secret = await getJwtSecret();
     if (!secret) {
         return res.status(500).send("Internal Server Error: Auth Secret Unavailable");
