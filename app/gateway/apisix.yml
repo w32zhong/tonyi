@@ -43,10 +43,10 @@ nginx_config:
   events:
     worker_connections: 20480
   http:
-    # in case another load balancer sits in front of the Swarm
-    real_ip_header: "X-Forwarded-For"
-    real_ip_from:
-      - "0.0.0.0/0"
+    # uncomment in case another load balancer sits in front of the Swarm
+    #real_ip_header: "X-Forwarded-For"
+    #real_ip_from:
+    #  - "0.0.0.0/0"
   http_snippet: |
     # optimize large file performance
     sendfile             on;

@@ -91,6 +91,7 @@ services:
       - |
         mkdir -p /acme_data/.well-known /www
         ln -s /acme_data/.well-known /www/.well-known
+        echo test > /www/.well-known/test
         busybox httpd -f -p 80 -h /www/.well-known
     deploy:
       labels:
@@ -113,8 +114,6 @@ services:
       - APISIX_ADMIN_KEY=${GATEWAY_ADMIN_KEY}
       - JWT_SECRET_URL=auth:19721/secret
       - JWT_COOKIE_NAME=JWT_Token
-      - REDIRECT_URL=/u/login
-      - REDIRECT_URL_ARGKEY=next
       - DEFAULT_REQ_RATE=${GATEWAY_DEFAULT_REQ_RATE}
       - DEFAULT_BURST=${GATEWAY_DEFAULT_BURST}
       - DEFAULT_CONN_MAX=${GATEWAY_DEFAULT_CONN_MAX}

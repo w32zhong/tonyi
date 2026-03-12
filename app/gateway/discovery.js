@@ -8,9 +8,6 @@ const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 const ADMIN_URL = process.env.APISIX_ADMIN_URL;
 const ADMIN_KEY = process.env.APISIX_ADMIN_KEY;
 
-const redirectUrl = process.env.REDIRECT_URL;
-const redirectUrlArgkey = process.env.REDIRECT_URL_ARGKEY;
-
 const jwtSecretUrl = process.env.JWT_SECRET_URL;
 const jwtCookieName = process.env.JWT_COOKIE_NAME;
 
