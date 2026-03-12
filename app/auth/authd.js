@@ -65,7 +65,7 @@ async function grantTokenAsSetCookie(res, claims={}, scope=null) {
   });
   res.cookie(JWT_COOKIE_NAME, token, {
     httpOnly: !isDev,
-    secure: true,
+    sameSite: 'Lax',
     maxAge: durationSeconds * 1000
   });
   return { token, payload };
