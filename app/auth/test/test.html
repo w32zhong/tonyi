@@ -71,7 +71,7 @@
         }
 
         /* an utility request submit function */
-        async function submitRequest(url, jsonParam) {
+        async function submitRequest(url, jsonParam, no_redirect=false) {
             let result = null
             try {
                 const resp = await fetch(url, {
@@ -82,7 +82,7 @@
                 result = await resp.json();
                 showResult(result);
 
-                if (result.pass && !USER) {
+                if (!no_redirect && result.pass && !USER) {
                     const next = new URLSearchParams(location.search).get(REDIRECT_URL_ARGKEY);
                     setTimeout(() => location.href = next || '/', 1000);
                 }
@@ -142,7 +142,7 @@
 
                 const emailResult = await submitRequest(`${AUTH_BASE_URL}/email`, {
                     email, challenge, signature, solution
-                });
+                }, true);
                 if (emailResult.pass) {
                     emailSalt = emailResult.salt;
                     showResult(emailResult);
