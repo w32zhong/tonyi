@@ -32,10 +32,10 @@ services:
         published: 443 # HTTPS
         mode: host
 
-      # route admin API, or /ui for a built-in UI
-      - target: 9180
-        published: 9180
-        mode: ingress
+      # # route admin API, or /ui for a built-in UI
+      # - target: 9180
+      #   published: 9180
+      #   mode: ingress
 
       # Prometheus metrics, /apisix/prometheus/metrics
       #- "9091:9091/tcp"
@@ -83,8 +83,8 @@ services:
     image: busybox:stable
     volumes:
       - acme_data:/acme_data
-    ports:
-      - "8080:80"
+    # ports:
+    #   - "8080:80"
     entrypoint:
       - "sh"
       - "-c"
