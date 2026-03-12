@@ -215,8 +215,7 @@ services:
       dockerfile: Dockerfile
     command: ["node", "test/server.js"]
     environment:
-      - JWT_SECRET_URL=auth:19721/secret
-      - JWT_COOKIE_NAME=JWT_Token
+      - JWT_COOKIE_NAME=JWT_Token # for logout to know how to reset cookie
       - AUTH_BASE_URL=/auth
       - REDIRECT_URL=/auth-test/login
       - REDIRECT_URL_ARGKEY=next

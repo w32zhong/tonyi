@@ -133,6 +133,32 @@ async function requireAuth(req, res, next) {
 }
 
 /**
+ * Express middleware to require a JWT that has supposedly been verified by the gateway.
+ * It does NOT verify the signature again (Zero Trust bypassed).
+ */
+async function requireAuthByGatewayOnly(req, res, next) {
+    // Check for JWT in cookies
+    const token = req.cookies?.[JWT_COOKIE_NAME];
+    if (!token) {
+        return handleAuthFailure(req, res);
+    }
+
+    try {
+        // Use decode instead of verify to skip signature check
+        const decoded = jwt.decode(token);
+        if (!decoded || !decoded.uid) {
+            throw new Error("Invalid token payload");
+        }
+        decoded.uid = Number(decoded.uid);
+        req.user = decoded;
+        next();
+    } catch (err) {
+        console.log("Auth Middleware: JWT Decode Failed:", err.message);
+        handleAuthFailure(req, res);
+    }
+}
+
+/**
  * Handle authentication failure by redirecting or returning JSON
  */
 function handleAuthFailure(req, res) {
@@ -153,5 +179,6 @@ function handleAuthFailure(req, res) {
 
 module.exports = {
     requirePoW,
-    requireAuth
+    requireAuth,
+    requireAuthByGatewayOnly
 };
