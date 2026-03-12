@@ -2,6 +2,7 @@ const Docker = require('dockerode');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 const ADMIN_URL = process.env.APISIX_ADMIN_URL;
@@ -10,7 +11,6 @@ const ADMIN_KEY = process.env.APISIX_ADMIN_KEY;
 const redirectUrl = process.env.REDIRECT_URL;
 const redirectUrlArgkey = process.env.REDIRECT_URL_ARGKEY;
 
-let jwtSecret = null;
 const jwtSecretUrl = process.env.JWT_SECRET_URL;
 const jwtCookieName = process.env.JWT_COOKIE_NAME;
 
@@ -26,8 +26,9 @@ const gatewayDomain = process.env.GATEWAY_DOMAIN;
 async function discover() {
   try {
     console.log('--- service discover ---');
-    await updateJwtSecret();
+    const jwtSecret = await fetchJwtSecret();
     const sslOpen = await syncSsl();
+    await updateConsumer(jwtSecret);
 
     const activeRouteIds = new Set();
     const services = await docker.listServices();
@@ -62,13 +63,82 @@ async function discover() {
   }
 }
 
-async function updateJwtSecret() {
+async function fetchJwtSecret() {
   try {
     const res = await axios.get(`http://${jwtSecretUrl}`, { timeout: 6000 });
-    jwtSecret = res.data;
+    const jwtSecret = res.data;
     console.log(`[JWT] secret loaded: ${jwtSecret.substring(0, 5)}...`);
+    return jwtSecret;
+
   } catch (err) {
     console.error(`[JWT] secret unavailable: ${err.message}`);
+    return null;
+  }
+}
+
+async function syncSsl() {
+  if (!gatewayDomain) return false;
+
+  const acmeRoot = '/acme.sh';
+  if (!fs.existsSync(acmeRoot)) return false;
+
+  // Find directory matching domain (exact or with _ecc suffix)
+  const domainDir = fs.readdirSync(acmeRoot).find(d =>
+    d === gatewayDomain || d === `${gatewayDomain}_ecc`
+  );
+
+  if (!domainDir) {
+    console.warn(`[SSL] skipping, no acme directory ${gatewayDomain}`);
+    return false;
+  }
+
+  const certPath = path.join(acmeRoot, domainDir, 'fullchain.cer');
+  const keyPath = path.join(acmeRoot, domainDir, `${gatewayDomain}.key`);
+  if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) {
+    console.warn(`[SSL] skipping, cert/key not found in ${domainDir}`);
+    return false;
+  }
+
+  try {
+    const cert = fs.readFileSync(certPath, 'utf8');
+    const key = fs.readFileSync(keyPath, 'utf8');
+
+    const sslData = {
+      id: "gateway-ssl",
+      cert: cert,
+      key: key,
+      snis: [gatewayDomain, `www.${gatewayDomain}`]
+    };
+
+    await axios.put(`${ADMIN_URL}/ssls/gateway-ssl`, sslData, {
+      headers: { 'X-API-KEY': ADMIN_KEY }
+    });
+    console.log(`[SSL] SSL is on: ${gatewayDomain} from ${domainDir}`);
+    return true;
+
+  } catch (err) {
+    console.error(`[SSL] SSL setup failed: ${err.message}`);
+    return false;
+  }
+}
+
+async function updateConsumer(jwtSecret) {
+  try {
+    const d = {
+      username: "dummy-consumer",
+      plugins: {
+        "jwt-auth": {
+          key: "gateway-auth", /* for `iss: gateway-auth` in a JWT payload */
+          /* the secret is used globally, if it is unset, fallback to random */
+          secret: jwtSecret || crypto.randomBytes(32).toString('hex')
+        }
+      }
+    };
+    await axios.put(`${ADMIN_URL}/consumers`, d, {
+      headers: { 'X-API-KEY': ADMIN_KEY }
+    });
+  } catch (err) {
+    console.error(`[Consumer] sync failed: ${err.message}`);
   }
 }
 
@@ -195,106 +265,22 @@ function applyUriBlockerPlugin(plugins, internalLabel) {
 }
 
 function applyJwtProtectPlugin(plugins, protectLabel) {
-  if (!protectLabel || !jwtSecret) return;
+  if (!protectLabel) return;
   try {
     const paths = JSON.parse(protectLabel);
+    const regex = `^(${paths.join('|')})`;
 
-    const luaScript = `
-      return function()
-        local jwt = require "resty.jwt"
-        local validators = require "resty.jwt-validators"
-
-        local check_path = ngx.var.uri
-        local is_protected = false
-        local protect_paths = { ${paths.map(p => `["${p}"] = true`).join(', ')} }
-
-        for k, _ in pairs(protect_paths) do
-            if string.find(check_path, k, 1, true) == 1 then
-                is_protected = true
-                break
-            end
-        end
-
-        if is_protected then
-            local jwt_secret = "${jwtSecret}"
-            local jwt_token = ngx.var["cookie_${jwtCookieName}"]
-            local pass = false
-
-            if jwt_secret and jwt_token then
-                local claim_spec = { exp = validators.is_not_expired() }
-                local jwt_res = jwt:verify(jwt_secret, jwt_token, claim_spec)
-
-                if jwt_res.valid and jwt_res.verified then
-                    local uid = jwt_res.payload and jwt_res.payload.uid
-                    if uid then
-                        ngx.req.set_header("X-Remote-User", tostring(uid))
-                        pass = true
-                    end
-                end
-            end
-
-            if not pass then
-                local full_req_uri = ngx.var.request_uri
-                local qry = ngx.encode_args({["${redirectUrlArgkey}"] = full_req_uri})
-                ngx.redirect("${redirectUrl}?" .. qry)
-            end
-        end
-      end
-    `;
-
-    if (!plugins['serverless-pre-function']) {
-      plugins['serverless-pre-function'] = { phase: "rewrite", functions: [] };
-    }
-    plugins['serverless-pre-function'].functions.push(luaScript);
-
+    plugins["jwt-auth"] = {
+      cookie: jwtCookieName,
+      key_claim_name: "iss",
+      _meta: {
+        filter: [
+          ["uri", "~~", regex]
+        ]
+      }
+    };
   } catch (e) {
     console.error(`Protect paths parse error: ${e.message}`);
-  }
-}
-
-async function syncSsl() {
-  if (!gatewayDomain) return false;
-
-  const acmeRoot = '/acme.sh';
-  if (!fs.existsSync(acmeRoot)) return false;
-
-  // Find directory matching domain (exact or with _ecc suffix)
-  const domainDir = fs.readdirSync(acmeRoot).find(d =>
-    d === gatewayDomain || d === `${gatewayDomain}_ecc`
-  );
-
-  if (!domainDir) {
-    console.warn(`[SSL] skipping, no acme directory ${gatewayDomain}`);
-    return false;
-  }
-
-  const certPath = path.join(acmeRoot, domainDir, 'fullchain.cer');
-  const keyPath = path.join(acmeRoot, domainDir, `${gatewayDomain}.key`);
-  if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) {
-    console.warn(`[SSL] skipping, cert/key not found in ${domainDir}`);
-    return false;
-  }
-
-  try {
-    const cert = fs.readFileSync(certPath, 'utf8');
-    const key = fs.readFileSync(keyPath, 'utf8');
-
-    const sslData = {
-      id: "gateway-ssl",
-      cert: cert,
-      key: key,
-      snis: [gatewayDomain, `www.${gatewayDomain}`]
-    };
-
-    await axios.put(`${ADMIN_URL}/ssls/gateway-ssl`, sslData, {
-      headers: { 'X-API-KEY': ADMIN_KEY }
-    });
-    console.log(`[SSL] SSL is on: ${gatewayDomain} from ${domainDir}`);
-    return true;
-
-  } catch (err) {
-    console.error(`[SSL] SSL setup failed: ${err.message}`);
-    return false;
   }
 }
 

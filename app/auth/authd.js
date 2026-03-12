@@ -56,6 +56,7 @@ async function grantTokenAsSetCookie(res, claims={}, scope=null) {
   const exp = now + durationSeconds;
   const payload = {
     ...claims,
+    iss: "gateway-auth",
     scope: scope || ["read,write"], exp
   };
   const secret = await database.getJwtSecret();
