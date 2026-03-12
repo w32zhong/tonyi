@@ -42,11 +42,6 @@ nginx_config:
   worker_rlimit_nofile: 65535
   events:
     worker_connections: 20480
-  http:
-    # uncomment in case another load balancer sits in front of the Swarm
-    #real_ip_header: "X-Forwarded-For"
-    #real_ip_from:
-    #  - "0.0.0.0/0"
   http_snippet: |
     # optimize large file performance
     sendfile             on;

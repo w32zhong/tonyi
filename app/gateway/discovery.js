@@ -8,6 +8,9 @@ const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 const ADMIN_URL = process.env.APISIX_ADMIN_URL;
 const ADMIN_KEY = process.env.APISIX_ADMIN_KEY;
 
+let cloudflareIps = [];
+const cfProtect = process.env.GATEWAY_CF_PROTECT === 'true';
+
 const jwtSecretUrl = process.env.JWT_SECRET_URL;
 const jwtCookieName = process.env.JWT_COOKIE_NAME;
 
@@ -57,6 +60,25 @@ async function discover() {
 
   } catch (err) {
     console.error(`Error during discovery: ${err.message}`);
+  }
+}
+
+async function updateCloudflareIps() {
+  try {
+    const [v4, v6] = await Promise.all([
+      axios.get('https://www.cloudflare.com/ips-v4', { timeout: 5000 }),
+      axios.get('https://www.cloudflare.com/ips-v6', { timeout: 5000 })
+    ]);
+    const ips = [...v4.data.split('\n'), ...v6.data.split('\n')]
+      .map(ip => ip.trim())
+      .filter(ip => ip !== '');
+
+    if (ips.length > 0) {
+      cloudflareIps = ips;
+      console.log(`[Cloudflare] Successfully updated ${ips.length} IP ranges.`);
+    }
+  } catch (err) {
+    console.error(`[Cloudflare] Failed: ${err.message}, using ${cloudflareIps.length} cached IPs.`);
   }
 }
 
@@ -204,10 +226,21 @@ function getPluginsConfig(routePath, labels, forceHttps) {
     };
   }
 
+  applyRealIpPlugin(plugins);
   applyRateLimitPlugins(plugins, labels['gateway.limits']);
   applyUriBlockerPlugin(plugins, labels['gateway.internal']);
   applyJwtProtectPlugin(plugins, labels['gateway.protect']);
   return plugins;
+}
+
+function applyRealIpPlugin(plugins) {
+  /* in case another load balancer sits in front of the Swarm */
+  if (cloudflareIps.length > 0) {
+    plugins['real-ip'] = {
+      source: "http_cf_connecting_ip", // restored from CF-Connecting-IP header
+      trusted_addresses: cloudflareIps
+    };
+  }
 }
 
 function applyRateLimitPlugins(plugins, limitsLabel) {
@@ -279,6 +312,11 @@ function applyJwtProtectPlugin(plugins, protectLabel) {
   } catch (e) {
     console.error(`Protect paths parse error: ${e.message}`);
   }
+}
+
+if (cfProtect) {
+  setInterval(updateCloudflareIps, 3600 * 1000);
+  updateCloudflareIps();
 }
 
 setInterval(discover, 10 * 1000);
