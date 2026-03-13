@@ -118,11 +118,24 @@ services:
       - HARDEN_DESKTOP=true
       - HARDEN_OPENBOX=true
       - SELKIES_UI_SHOW_SIDEBAR=false
+      - SELKIES_TURBO=false|locked
+      - SELKIES_MANUAL_WIDTH=800
+      - SELKIES_MANUAL_HEIGHT=600
+      - SELKIES_ENCODER=x264enc-striped
+      - SELKIES_H264_CRF=30
+      - SELKIES_FRAMERATE=6
+      - SELKIES_USE_PAINT_OVERS=false|locked
+      - SELKIES_HIDPI=false|locked
+      - SELKIES_ANTI_ALIASING=false|locked
+      - SELKIES_USE_CSS_CURSORS=true|locked
+      - SELKIES_UI_SCALING=100|locked
+      - SELKIES_SCALE_LOCALLY=true|locked
     volumes:
       - ./mnt/web_browser:/config
       - ./app/web_browser/openbox/:/config/.config/openbox
     ports:
       - 9222:9223 # devtools port, TEST ONLY!
+      - 3000:3000 # http port, must be proxied!
       - 3001:3001 # https port, TEST ONLY!
     shm_size: "1gb"
     networks:
