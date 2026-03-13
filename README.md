@@ -99,6 +99,12 @@ curl -sI http://yetiarch/test_permission/protected/peek
 curl -sI http://yetiarch/test_permission/private
 ```
 
+Testing CloudFlare-Gateway Spoof:
+```sh
+curl -k --resolve your_domain.com:your_ip H "X-Real-IP: 2.2.2.2" -H "CF-Connecting-IP: 1.1.1.1" \
+    https://your_domain.com
+```
+
 Test swarm to backend connection:
 ```sh
 docker run --rm --network proxy_net postgres:18 psql \
