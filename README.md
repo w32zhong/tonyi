@@ -37,7 +37,7 @@ aws s3 --endpoint-url http://${SEAWEED_HOST0}:8333 rb s3://test-bucket
 
 Test WireGuard:
 ```sh
-./app/wg_customized/connect.sh yetiarch tk
+./app/wg_customized/connect.sh tk yetiarch
 docker exec wg_client ip addr
 docker exec wg_client wg show
 docker exec wg_client ping -c 1 10.8.0.2

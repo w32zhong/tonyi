@@ -1,35 +1,38 @@
 #!/bin/bash
 set -e
 usage() {
-    echo "Usage: $0 <REMOTE_IP> [REMOTE_USER] [REMOTE_CONTAINER] [LOCAL_CONTAINER]"
+    echo "Usage: $0 <REMOTE_USER> <REMOTE_IP> [SSH] [REMOTE_CONTAINER] [LOCAL_CONTAINER]"
     echo "Example: $0 1.2.3.4 root wireguard_server wireguard_client"
     exit 1
 }
 
 if [ -z "$1" ]; then usage; fi
 
-REMOTE_IP=$1
-REMOTE_USER=${2:-root}
-REMOTE_SERVER_NAME=${3:-wg_server}
-LOCAL_CLIENT_NAME=${4:-wg_client}
+REMOTE_USER=$1
+REMOTE_IP=$2
+SSH=${3:-"ssh -o ConnectTimeout=5"}
+REMOTE_CONTAINER=${4:-wg_server}
+LOCAL_CONTAINER=${5:-wg_client}
 WG_NET="10.8.0.0/16"
 
-echo "⏳ establishing wg tunnel to [${REMOTE_IP}] ..."
+echo "⏳ establishing wg tunnel to ${REMOTE_USER}@${REMOTE_IP} ..."
+echo "🚃 Using ssh command: $SSH"
 
-LOCAL_PUBKEY=$(docker exec "${LOCAL_CLIENT_NAME}" wg show wg0 public-key)
-REMOTE_PUBKEY=$(ssh -o ConnectTimeout=5 "${REMOTE_USER}@${REMOTE_IP}" \
-    "docker exec ${REMOTE_SERVER_NAME} wg show wg0 public-key")
+LOCAL_PUBKEY=$(docker exec "${LOCAL_CONTAINER}" wg show wg0 public-key)
+REMOTE_PUBKEY=$($SSH "${REMOTE_USER}@${REMOTE_IP}" \
+    "docker exec ${REMOTE_CONTAINER} wg show wg0 public-key")
+echo "🔑 Remote pubkey: $REMOTE_PUBKEY"
 
-docker exec "${LOCAL_CLIENT_NAME}" wg set wg0 \
+docker exec "${LOCAL_CONTAINER}" wg set wg0 \
     peer "${REMOTE_PUBKEY}" \
     endpoint "${REMOTE_IP}:51820" \
     allowed-ips "${WG_NET}" \
     persistent-keepalive 25
-docker exec "${LOCAL_CLIENT_NAME}" bash -c "wg showconf wg0 > /config/wg_confs/wg0.conf"
+docker exec "${LOCAL_CONTAINER}" bash -c "wg showconf wg0 > /config/wg_confs/wg0.conf"
 
-ssh "${REMOTE_USER}@${REMOTE_IP}" \
-    "docker exec ${REMOTE_SERVER_NAME} wg set wg0 peer ${LOCAL_PUBKEY} allowed-ips ${WG_NET}"
-ssh "${REMOTE_USER}@${REMOTE_IP}" \
-    "docker exec ${REMOTE_SERVER_NAME} bash -c 'wg showconf wg0 > /config/wg_confs/wg0.conf'"
+$SSH "${REMOTE_USER}@${REMOTE_IP}" \
+    "docker exec ${REMOTE_CONTAINER} wg set wg0 peer ${LOCAL_PUBKEY} allowed-ips ${WG_NET}"
+$SSH "${REMOTE_USER}@${REMOTE_IP}" \
+    "docker exec ${REMOTE_CONTAINER} bash -c 'wg showconf wg0 > /config/wg_confs/wg0.conf'"
 
-echo "✅ established wg tunnel to [${REMOTE_IP}] ..."
+echo "✅ established wg tunnel to ${REMOTE_IP} ..."
