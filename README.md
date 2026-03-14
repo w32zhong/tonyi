@@ -43,6 +43,15 @@ docker exec wg_client wg show
 docker exec wg_client ping -c 1 10.8.0.2
 ```
 
+Using an external S3 service:
+```
+# cleanup
+export AWS_ACCESS_KEY_ID=$S3_ACCESS_KEY_ID
+export AWS_SECRET_ACCESS_KEY=$S3_SECRET_ACCESS_KEY
+aws s3 rm --recursive s3://foo-bucket --endpoint-url $S3_ENDPOINT
+aws s3 rb s3://foo-bucket --endpoint-url $S3_ENDPOINT
+```
+
 ## Sandbox Server
 ```sh
 docker compose -f sandbox_server.yml -p sandbox_user_0 up --remove-orphans
