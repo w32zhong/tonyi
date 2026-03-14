@@ -2,7 +2,6 @@
 set -e
 usage() {
     echo "Usage: $0 <REMOTE_USER> <REMOTE_IP> [SSH] [REMOTE_CONTAINER] [LOCAL_CONTAINER]"
-    echo "Example: $0 1.2.3.4 root wireguard_server wireguard_client"
     exit 1
 }
 

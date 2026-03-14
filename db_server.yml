@@ -1,0 +1,77 @@
+services:
+
+  wireguard_client:
+    image: lscr.io/linuxserver/wireguard
+    container_name: wg_client
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - WG_IP=${WG_CLIENT_IP}
+    volumes:
+      - ./mnt/wg_config:/config
+      - ./app/wg_customized/client.ini:/_tmp/cfg
+      - ./app/wg_customized/entrypoint.sh:/entrypoint.sh
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    restart: unless-stopped
+    networks:
+      - db_net
+
+  proxy:
+    image: gogost/gost
+    restart: always
+    network_mode: service:wireguard_client
+    environment:
+      - GOST_LOGGER_LEVEL=warn
+    command:
+      - "-L=tcp://:8333/seaweed_filer:8333"
+      - "-L=tcp://:5432/db:5432"
+    depends_on:
+      - wireguard_client
+      - db
+
+  db:
+    image: postgres:18
+    ports:
+      - "5432:5432"
+    shm_size: 1gb
+    environment:
+      - POSTGRES_USER=$DB_USER
+      - POSTGRES_PASSWORD=$DB_PASS
+      - POSTGRES_DB=backend_db # create if not exists
+    command: >
+      postgres
+      -c max_connections=200
+      -c shared_buffers=512MB
+      -c effective_io_concurrency=200
+      -c random_page_cost=1.1
+    volumes:
+      - ./mnt/pg18_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d backend_db"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+    networks:
+      - db_net
+
+  db_webui:
+    image: sosedoff/pgweb
+    restart: always
+    ports:
+      - "5433:8081"
+    environment:
+      - PGWEB_DATABASE_URL=postgresql://${DB_USER}:${DB_PASS}@db:5432/backend_db?sslmode=disable
+      - PGWEB_AUTH_USER=${DB_USER}
+      - PGWEB_AUTH_PASS=${DB_PASS}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - db_net
+    driver: bridge
+
+networks:
+  db_net:
+    driver: bridge
