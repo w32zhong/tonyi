@@ -2,7 +2,7 @@
 Modify `config.env`, and run Portainer:
 ```sh
 source config.env
-docker compose -f portainer.yml up
+docker compose -f portainer.yml up --remove-orphans
 ```
 
 To force restart a container:
@@ -15,41 +15,53 @@ To clearly see service status:
 docker compose -f my_compose.yml ps --format "table {{.Name}}\t{{.Status}}\t{{.Health}}"
 ```
 
-## Disk Server
+## Client Services (Storage Providers)
+Before hosting a client service, double check if an existing one is running.
+All client services will share a host disk mount point at `./mnt`.
+
+To nuke existing host, assuming all running containers are targeted:
 ```sh
-docker compose -f disk_server.yml up --remove-orphans
+docker stop $(docker ps -q)
+docker container prune -f
+docker volume prune -f
+docker network prune -f
+sudo rm -rf ./mnt
 ```
 
-Web UI:
+### Database
 ```sh
-echo https://${SEAWEED_HOST0}:9443 Portainer
-echo http://${SEAWEED_HOST0}:9333 SeaweedFS Master
-echo http://${SEAWEED_HOST0}:8888 SeaweedFS Bucket Filer
+WG_CLIENT_IP=10.8.0.123 docker compose -f db_client.yml -p db123 up --remove-orphans
+docker exec $(docker ps -qf "name=wireguard_client") ip addr # check WG IP
+docker exec $(docker ps -qf "name=wireguard_client") wg show # check WG stats
+docker exec $(docker ps -qf "name=wireguard_client") ping -c 1 10.8.x.x # check WG connection
 ```
 
-Test S3:
+Visit http://localhost:5433 for a `pgweb` WebUI.
+
+### S3
+Here is an example `.yml` to create a distributed S3 service, including vol8081, vol8082, volmeta in `./mnt`:
 ```sh
-aws s3 --endpoint-url http://${SEAWEED_HOST0}:8333 mb s3://test-bucket
-aws s3 --endpoint-url http://${SEAWEED_HOST0}:8333 cp ~/.bashrc s3://test-bucket
-aws s3 --endpoint-url http://${SEAWEED_HOST0}:8333 ls s3://test-bucket
-aws s3 --endpoint-url http://${SEAWEED_HOST0}:8333 rb s3://test-bucket
+WG_CLIENT_IP=10.8.0.321 docker compose -f s3_client.yml -p s3_321 up --remove-orphans
 ```
 
-Test WireGuard:
-```sh
-./app/wg_customized/connect.sh tk yetiarch
-docker exec wg_client ip addr
-docker exec wg_client wg show
-docker exec wg_client ping -c 1 10.8.0.2
-```
+Visit http://localhost:8888 for the SeaweedFS Filer WebUI.
 
-Using an external S3 service:
-```
-# cleanup
-export AWS_ACCESS_KEY_ID=$S3_ACCESS_KEY_ID
-export AWS_SECRET_ACCESS_KEY=$S3_SECRET_ACCESS_KEY
-aws s3 rm --recursive s3://foo-bucket --endpoint-url $S3_ENDPOINT
-aws s3 rb s3://foo-bucket --endpoint-url $S3_ENDPOINT
+Test local or remote S3:
+```sh
+export S3_ACCESS_KEY_ID=any
+export S3_SECRET_ACCESS_KEY=any
+export S3_ENDPOINT=http://$(hostname):8333
+S3="docker run \
+    -e AWS_DEFAULT_REGION=auto \
+    -e AWS_ACCESS_KEY_ID=$S3_ACCESS_KEY_ID \
+    -e AWS_SECRET_ACCESS_KEY=$S3_SECRET_ACCESS_KEY \
+    -it amazon/aws-cli s3 \
+    --endpoint-url $S3_ENDPOINT"
+
+$S3 mb s3://test-bucket
+$S3 cp --recursive /usr/lib s3://test-bucket
+$S3 rm --recursive s3://test-bucket
+$S3 rb s3://test-bucket
 ```
 
 ## Sandbox Server
@@ -57,21 +69,9 @@ aws s3 rb s3://foo-bucket --endpoint-url $S3_ENDPOINT
 docker compose -f sandbox_server.yml -p sandbox_user_0 up --remove-orphans
 ```
 
-Test WireGuard:
-```sh
-docker exec wg_server ip addr
-docker exec wg_server wg show
-docker exec wg_server ping -c 1 10.8.0.1
-```
-
 Test S3:
 ```sh
 docker exec wg_server curl 10.8.0.1:8333
-docker run \
-    --network container:wg_server \
-    -e AWS_ACCESS_KEY_ID=any -e AWS_SECRET_ACCESS_KEY=any \
-    -it amazon/aws-cli s3 --endpoint-url http://10.8.0.1:8333 \
-    ls s3://test-bucket
 ```
 
 Test DB:

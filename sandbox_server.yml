@@ -42,7 +42,7 @@ services:
       - ./mnt/redis_dump:/data
     command: >
       redis-server
-      --maxmemory ${REDIS_MAX_MEMORY:-128mb}
+      --maxmemory ${JFS_REDIS_MAX_MEMORY:-128mb}
       --maxmemory-policy noeviction
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]

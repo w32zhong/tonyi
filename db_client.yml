@@ -7,11 +7,11 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - WG_IP=${WG_CLIENT_IP}
+      - WG_IP=${WG_CLIENT_IP:?10.8.x.x}
     volumes:
-      - ./mnt/wg_config:/config
-      - ./app/wg_customized/client.ini:/_tmp/cfg
-      - ./app/wg_customized/entrypoint.sh:/entrypoint.sh
+      - wg_client_config:/config
+      - ./app/wg_customized/client.ini:/_tmp/cfg:ro
+      - ./app/wg_customized/entrypoint.sh:/entrypoint.sh:ro
     entrypoint: ["/bin/sh", "/entrypoint.sh"]
     restart: unless-stopped
     networks:
@@ -31,8 +31,8 @@ services:
 
   db:
     image: postgres:18
-    ports:
-      - "5432:5432"
+    #ports:
+    #  - "5432:5432"
     shm_size: 1gb
     environment:
       - POSTGRES_USER=$DB_USER
@@ -68,8 +68,10 @@ services:
         condition: service_healthy
     networks:
       - db_net
-    driver: bridge
 
 networks:
   db_net:
     driver: bridge
+
+volumes:
+  wg_client_config:
