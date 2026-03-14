@@ -1,0 +1,11 @@
+[project]
+name = "vps"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "apache-libcloud>=3.9.0",
+    "cryptography>=46.0.5",
+    "paramiko>=4.0.0",
+]
