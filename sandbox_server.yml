@@ -6,7 +6,7 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Etc/UTC
-      - CHROME_CLI=--remote-debugging-port=9222 --remote-allow-origins=* https://www.google.com/
+      - CHROME_CLI=--kiosk --remote-debugging-port=9222 --remote-allow-origins=* https://www.google.com/
       - HARDEN_DESKTOP=true
       - HARDEN_OPENBOX=true
       - SELKIES_UI_SHOW_SIDEBAR=false
