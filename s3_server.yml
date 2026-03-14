@@ -7,7 +7,6 @@ x-seaweed: &seaweed_vols_base
 services:
   wireguard_client:
     image: lscr.io/linuxserver/wireguard
-    container_name: wg_client
     cap_add:
       - NET_ADMIN
     environment:
@@ -40,7 +39,7 @@ services:
     command: "master -volumeSizeLimitMB=${SEAWEED_VOLUME_SIZE_MB}"
     ports:
       - "9333:9333" # HTTP WebUI
-      - "19333:19333"
+      - "19333:19333" # gRPC
     networks:
       - seaweed_net
     healthcheck: # Raft Leader ready?
@@ -84,8 +83,8 @@ services:
       -s3
     ports:
       - "8888:8888"   # WebUI
-      - "8333:8333"   # S3 端口
-      - "18888:18888"
+      - "8333:8333"   # Filer S3
+      - "18888:18888" # gRPC
     volumes:
       - ./mnt/volmeta:/data
     depends_on:

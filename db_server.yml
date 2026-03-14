@@ -2,7 +2,6 @@ services:
 
   wireguard_client:
     image: lscr.io/linuxserver/wireguard
-    container_name: wg_client
     cap_add:
       - NET_ADMIN
     environment:
@@ -25,7 +24,6 @@ services:
     environment:
       - GOST_LOGGER_LEVEL=warn
     command:
-      - "-L=tcp://:8333/seaweed_filer:8333"
       - "-L=tcp://:5432/db:5432"
     depends_on:
       - wireguard_client
