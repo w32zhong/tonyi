@@ -62,7 +62,7 @@ services:
         else
           juicefs format \
             --storage s3 \
-            --bucket ${JFS_S3_ENDPOINT}/${JFS_S3_BUCKET_AND_KEY} \
+            --bucket ${JFS_S3_ENDPOINT:?}/${JFS_S3_BUCKET_AND_KEY:?} \
             --access-key any --secret-key any \
             --capacity ${JFS_CAPACITY_GB} \
             redis://redis_srv:6379/1 \

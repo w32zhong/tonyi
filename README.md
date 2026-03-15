@@ -36,7 +36,6 @@ WG_CLIENT_IP=10.8.0.1 docker compose -f db_client.yml -p db_1 up --remove-orphan
 ```sh
 docker exec $(docker ps -qf "name=wireguard_client") ip addr # check WG IP
 docker exec $(docker ps -qf "name=wireguard_client") wg show # check WG stats
-docker exec $(docker ps -qf "name=wireguard_client") ping -c 1 10.8.x.x # check WG connection
 ```
 
 Visit http://localhost:5433 for a `pgweb` WebUI.
@@ -75,7 +74,7 @@ The server requires docker swarm to be installed:
 docker swarm init
 ```
 
-### Sandbox Service
+### Proxy-Only Service
 Create the g-namespace sandbox service with only WireGuard proxy services:
 ```sh
 WG_SERVER_ID=50 \
@@ -91,27 +90,41 @@ On the client service side, manually establish WireGuard connections via:
 ./app/wg_customized/connect.sh REMOTE_USER REMOTE_IP g-wireguard_server-1 s3_2-wireguard_client-1
 ```
 
-Back to the server side, check the `wg show`:
+Back to the server side, check the `wg show` and connections:
 ```sh
 docker exec $(docker ps -qf "name=wireguard_server") wg show
+docker exec $(docker ps -qf "name=wireguard_server") ping -c 1 10.8.0.1
+docker exec $(docker ps -qf "name=wireguard_server") ping -c 1 10.8.0.2
 ```
 
-Create a `sandbox_001` using self-hosted S3:
+One can further test the actual S3 and DB ports:
 ```sh
+docker exec $(docker ps -qf "name=wireguard_server") curl 10.8.0.2:8333   # S3
+docker exec $(docker ps -qf "name=wireguard_server") nc -zv 10.8.0.1 5432 # DB
+```
+
+### Sandbox Service
+A sandbox service should be a namespaced combo of multiple containers: file browser, web browser, agent CLI, and a search engine.
+Below are examples to create sandbox services alone.
+
+Create a `sandbox_51` using self-hosted S3:
+```sh
+WG_SERVER_ID=51 \
 WG_S3_IP=10.0.0.2 \
-JFS_S3_BUCKET_AND_KEY=test-bucket/sandbox_001 \
-docker compose -f sandbox_server.yml -p sandbox_001 up --remove-orphans
+wireguard_server:8333
+JFS_S3_BUCKET_AND_KEY=test-bucket/sandbox_51 \
+docker compose -f sandbox_server.yml -p sandbox_51 up --remove-orphans
 ```
 
-Test S3:
+Create a `sandbox_52` using 3rd-party S3:
 ```sh
-docker exec wg_server curl 10.8.0.1:8333
+WG_SERVER_ID=52 \
+JFS_S3_ENDPOINT=https://XXXXXX.r2.cloudflarestorage.com \
+JFS_S3_BUCKET_AND_KEY=test-bucket/sandbox_52 \
+docker compose -f sandbox_server.yml -p sandbox_51 up --remove-orphans
 ```
 
-Test DB:
-```sh
-docker exec wg_server nc -zv 10.8.0.1 5432
-```
+We can create sandbox services on demand, but be sure to run `connect.sh` to establish establish WireGuard connections for accessing remote S3.
 
 ### Swarm Service
 Remove stack:
