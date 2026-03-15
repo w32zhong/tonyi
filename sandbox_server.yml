@@ -62,11 +62,11 @@ services:
         else
           juicefs format \
             --storage s3 \
-            --bucket ${JFS_S3_ENDPOINT:?}/${JFS_S3_BUCKET_AND_KEY:?} \
+            --bucket ${JFS_S3_ENDPOINT:?}/${JFS_S3_BUCKET_NAME:?} \
             --access-key any --secret-key any \
             --capacity ${JFS_CAPACITY_GB} \
             redis://redis_srv:6379/1 \
-            ${JFS_NAME}
+            ${JFS_S3_KEY_NAME}
         fi
     depends_on:
       redis_srv:

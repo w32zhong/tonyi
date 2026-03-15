@@ -84,7 +84,7 @@ docker swarm init
 Create the g-namespace sandbox service with only WireGuard proxy services:
 ```sh
 WG_SERVER_ID=50 \
-WG_S3_IP=10.0.0.2 \
+WG_S3_IP=10.8.0.2 \
 docker compose -f sandbox_server.yml -p g up --remove-orphans \
 wireguard_server proxy
 ```
@@ -116,9 +116,10 @@ Below are examples to create sandbox services alone.
 Create a `sandbox_51` using self-hosted S3:
 ```sh
 WG_SERVER_ID=51 \
-WG_S3_IP=10.0.0.2 \
-JFS_S3_ENDPOINT=wireguard_server:8333 \
-JFS_S3_BUCKET_AND_KEY=test-bucket/sandbox_51 \
+WG_S3_IP=10.8.0.2 \
+JFS_S3_ENDPOINT=http://wireguard_server:8333 \
+JFS_S3_BUCKET_NAME=test-bucket \
+JFS_S3_KEY_NAME=sandbox_51
 docker compose -f sandbox_server.yml -p sandbox_51 up --remove-orphans
 ```
 
@@ -126,7 +127,8 @@ Create a `sandbox_52` using 3rd-party S3:
 ```sh
 WG_SERVER_ID=52 \
 JFS_S3_ENDPOINT=https://XXXXXX.r2.cloudflarestorage.com \
-JFS_S3_BUCKET_AND_KEY=test-bucket/sandbox_52 \
+JFS_S3_BUCKET_NAME=test-bucket \
+JFS_S3_KEY_NAME=sandbox_52
 docker compose -f sandbox_server.yml -p sandbox_51 up --remove-orphans
 ```
 
