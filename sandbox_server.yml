@@ -11,7 +11,7 @@ services:
       - PGID=1000
       - WG_SERVER_ID=${WG_SERVER_ID}
     volumes:
-      - ./mnt/wg_config:/config
+      - wg_server_config:/config
       - ./app/wg_customized/server.ini:/_tmp/cfg
       - ./app/wg_customized/entrypoint.sh:/entrypoint.sh
     entrypoint: ["/bin/sh", "/entrypoint.sh"]
@@ -149,8 +149,11 @@ services:
 
 networks:
   proxy_net:
-    driver: overlay
     attachable: true
+    driver: overlay
 
   sandbox_net:
     driver: bridge
+
+volumes:
+  wg_server_config:

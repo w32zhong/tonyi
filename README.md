@@ -68,9 +68,39 @@ $S3 rm --recursive s3://test-bucket
 $S3 rb s3://test-bucket
 ```
 
-## Sandbox Server
+## Public Services
+Public service runs on a publicly hosted server.
+The server requires docker swarm to be installed:
 ```sh
-docker compose -f sandbox_server.yml -p sandbox_user_0 up --remove-orphans
+docker swarm init
+```
+
+### Sandbox Service
+Create the g-namespace sandbox service with only WireGuard proxy services:
+```sh
+WG_SERVER_ID=50 \
+WG_S3_IP=10.0.0.2 \
+docker compose -f sandbox_server.yml -p g up --remove-orphans \
+wireguard_server proxy
+```
+this is used to set up an overlay `g_proxy_net` for a swarm service to talk to client services.
+
+On the client service side, manually establish WireGuard connections via:
+```sh
+./app/wg_customized/connect.sh REMOTE_USER REMOTE_IP g-wireguard_server-1 db_1-wireguard_client-1
+./app/wg_customized/connect.sh REMOTE_USER REMOTE_IP g-wireguard_server-1 s3_2-wireguard_client-1
+```
+
+Back to the server side, check the `wg show`:
+```sh
+docker exec $(docker ps -qf "name=wireguard_server") wg show
+```
+
+Create a `sandbox_001` using self-hosted S3:
+```sh
+WG_S3_IP=10.0.0.2 \
+JFS_S3_BUCKET_AND_KEY=test-bucket/sandbox_001 \
+docker compose -f sandbox_server.yml -p sandbox_001 up --remove-orphans
 ```
 
 Test S3:
@@ -83,7 +113,7 @@ Test DB:
 docker exec wg_server nc -zv 10.8.0.1 5432
 ```
 
-## Swarm Service
+### Swarm Service
 Remove stack:
 ```sh
 docker stack rm demo

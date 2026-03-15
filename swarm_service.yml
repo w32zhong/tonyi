@@ -264,7 +264,7 @@ networks:
 
   proxy_net:
     external: true
-    name: sandbox_user_0_proxy_net
+    name: ${PROXY_NET_NAME:?}
 
 volumes:
   etcd_data:
