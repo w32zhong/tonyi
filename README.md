@@ -28,8 +28,12 @@ sudo rm -rf ./mnt
 ```
 
 ### Database
+To start a PostgreSQL database with WireGuard address `10.8.0.1`:
 ```sh
-WG_CLIENT_IP=10.8.0.123 docker compose -f db_client.yml -p db123 up --remove-orphans
+WG_CLIENT_IP=10.8.0.1 docker compose -f db_client.yml -p db_1 up --remove-orphans
+```
+
+```sh
 docker exec $(docker ps -qf "name=wireguard_client") ip addr # check WG IP
 docker exec $(docker ps -qf "name=wireguard_client") wg show # check WG stats
 docker exec $(docker ps -qf "name=wireguard_client") ping -c 1 10.8.x.x # check WG connection
@@ -40,8 +44,9 @@ Visit http://localhost:5433 for a `pgweb` WebUI.
 ### S3
 Here is an example `.yml` to create a distributed S3 service, including vol8081, vol8082, volmeta in `./mnt`:
 ```sh
-WG_CLIENT_IP=10.8.0.321 docker compose -f s3_client.yml -p s3_321 up --remove-orphans
+WG_CLIENT_IP=10.8.0.2 docker compose -f s3_client.yml -p s3_2 up --remove-orphans
 ```
+where its WireGuard address is `10.8.0.2`.
 
 Visit http://localhost:8888 for the SeaweedFS Filer WebUI.
 
