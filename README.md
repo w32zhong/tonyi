@@ -111,7 +111,7 @@ Create a `sandbox_51` using self-hosted S3:
 ```sh
 WG_SERVER_ID=51 \
 WG_S3_IP=10.0.0.2 \
-wireguard_server:8333
+JFS_S3_ENDPOINT=wireguard_server:8333 \
 JFS_S3_BUCKET_AND_KEY=test-bucket/sandbox_51 \
 docker compose -f sandbox_server.yml -p sandbox_51 up --remove-orphans
 ```
