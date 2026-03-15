@@ -5,6 +5,12 @@ source config.env
 DOCKER_SOCK=$XDG_RUNTIME_DIR/docker.sock docker compose -f portainer.yml up --remove-orphans
 ```
 
+For root docker, use `.env` to pass environment variables (insecure, testing only!)
+```sh
+env > .env
+sudo OVERWRITE_VAR=overwrite_value docker ...
+```
+
 Some commonly used docker-compose commands to look up here:
 ```sh
 docker ps --format 'table {{.Names}} \t {{.Status}}'
