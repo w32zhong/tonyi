@@ -119,7 +119,7 @@ WG_SERVER_ID=51 \
 WG_S3_IP=10.8.0.2 \
 JFS_S3_ENDPOINT=http://wireguard_server:8333 \
 JFS_S3_BUCKET_NAME=test-bucket \
-JFS_S3_KEY_NAME=sandbox_51
+JFS_S3_KEY_NAME=sandbox_51 \
 docker compose -f sandbox_server.yml -p sandbox_51 up --remove-orphans
 ```
 
@@ -128,7 +128,7 @@ Create a `sandbox_52` using 3rd-party S3:
 WG_SERVER_ID=52 \
 JFS_S3_ENDPOINT=https://XXXXXX.r2.cloudflarestorage.com \
 JFS_S3_BUCKET_NAME=test-bucket \
-JFS_S3_KEY_NAME=sandbox_52
+JFS_S3_KEY_NAME=sandbox_52 \
 docker compose -f sandbox_server.yml -p sandbox_51 up --remove-orphans
 ```
 
