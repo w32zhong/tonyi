@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 usage() {
-    echo "Usage: $0 <REMOTE_USER> <REMOTE_IP> [SSH] [REMOTE_CONTAINER] [LOCAL_CONTAINER]"
+    echo "Usage: $0 <REMOTE_USER> <REMOTE_IP> [REMOTE_CONTAINER] [LOCAL_CONTAINER] [SSH]"
     exit 1
 }
 
@@ -9,9 +9,9 @@ if [ -z "$1" ]; then usage; fi
 
 REMOTE_USER=$1
 REMOTE_IP=$2
-SSH=${3:-"ssh -o ConnectTimeout=5"}
-REMOTE_CONTAINER=${4:-wg_server}
-LOCAL_CONTAINER=${5:-wg_client}
+REMOTE_CONTAINER=${3:-wg_server}
+LOCAL_CONTAINER=${4:-wg_client}
+SSH=${5:-"ssh -o ConnectTimeout=5"}
 WG_NET="10.8.0.0/16"
 
 echo "⏳ establishing wg tunnel to ${REMOTE_USER}@${REMOTE_IP} ..."
