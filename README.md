@@ -1,18 +1,17 @@
 ## Docker Compose Setup
-Modify `config.env`, and run Portainer:
+Modify `config.env`, and run Portainer (modify DOCKER_SOCK as needed):
 ```sh
 source config.env
-docker compose -f portainer.yml up --remove-orphans
+DOCKER_SOCK=$XDG_RUNTIME_DIR/docker.sock docker compose -f portainer.yml up --remove-orphans
 ```
 
-To force restart a container:
+Some commonly used docker-compose commands to look up here:
 ```sh
+docker ps --format 'table {{.Names}} \t {{.Status}}'
 docker compose -f my_compose.yml up --force-recreate my_container
-```
-
-To clearly see service status:
-```sh
-docker compose -f my_compose.yml ps --format "table {{.Name}}\t{{.Status}}\t{{.Health}}"
+docker compose -f my_compose.yml build
+docker stack deploy --prune --compose-file my_compose.yml my_project --detach=false
+docker service update --force my_project_my_container
 ```
 
 ## Client Services (Storage Providers)

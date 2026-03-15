@@ -4,11 +4,12 @@ services:
     container_name: portainer
     restart: always
     ports:
-      - "9443:9443"
-      - "8000:8000"
+      - "9443:9443" # HTTPS WebUI
+      #- "8000:8000" # HTTP WebUI
       - "9000:9000"
+    privileged: true
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - ${DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock
       - portainer_data:/data
 
 volumes:
