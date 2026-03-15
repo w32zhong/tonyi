@@ -18,9 +18,12 @@ echo "⏳ establishing wg tunnel to ${REMOTE_USER}@${REMOTE_IP} ..."
 echo "🚃 Using ssh command: $SSH"
 
 LOCAL_PUBKEY=$(docker exec "${LOCAL_CONTAINER}" wg show wg0 public-key)
+LOCAL_IP=$(docker exec "${LOCAL_CONTAINER}" sh -c "ip -4 addr show wg0 | grep -oP '(?<=inet\s)[.\d]+'")
+echo "🗝️ Local: $LOCAL_PUBKEY @ $LOCAL_IP"
+
 REMOTE_PUBKEY=$($SSH "${REMOTE_USER}@${REMOTE_IP}" \
     "docker exec ${REMOTE_CONTAINER} wg show wg0 public-key")
-echo "🔑 Remote pubkey: $REMOTE_PUBKEY"
+echo "🔑 Remote: $REMOTE_PUBKEY @ $REMOTE_IP"
 
 docker exec "${LOCAL_CONTAINER}" wg set wg0 \
     peer "${REMOTE_PUBKEY}" \
@@ -30,7 +33,7 @@ docker exec "${LOCAL_CONTAINER}" wg set wg0 \
 docker exec "${LOCAL_CONTAINER}" bash -c "wg showconf wg0 > /config/wg_confs/wg0.conf"
 
 $SSH "${REMOTE_USER}@${REMOTE_IP}" \
-    "docker exec ${REMOTE_CONTAINER} wg set wg0 peer ${LOCAL_PUBKEY} allowed-ips ${WG_NET}"
+    "docker exec ${REMOTE_CONTAINER} wg set wg0 peer ${LOCAL_PUBKEY} allowed-ips ${LOCAL_IP}/32"
 $SSH "${REMOTE_USER}@${REMOTE_IP}" \
     "docker exec ${REMOTE_CONTAINER} bash -c 'wg showconf wg0 > /config/wg_confs/wg0.conf'"
 
