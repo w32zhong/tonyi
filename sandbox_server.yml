@@ -63,7 +63,8 @@ services:
           juicefs format \
             --storage s3 \
             --bucket ${JFS_S3_ENDPOINT:?}/${JFS_S3_BUCKET_NAME:?} \
-            --access-key any --secret-key any \
+            --access-key ${AWS_ACCESS_KEY_ID} \
+            --secret-key ${AWS_SECRET_ACCESS_KEY} \
             --capacity ${JFS_CAPACITY_GB} \
             redis://redis_srv:6379/1 \
             ${JFS_S3_KEY_NAME}

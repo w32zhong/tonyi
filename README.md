@@ -126,10 +126,12 @@ docker compose -f sandbox_server.yml -p sandbox-51 up --remove-orphans
 Create a `sandbox-52` using 3rd-party S3:
 ```sh
 WG_SERVER_ID=52 \
+AWS_ACCESS_KEY_ID=$S3_ACCESS_KEY_ID \
+AWS_SECRET_ACCESS_KEY=$S3_SECRET_ACCESS_KEY \
 JFS_S3_ENDPOINT=https://XXXXXX.r2.cloudflarestorage.com \
 JFS_S3_BUCKET_NAME=test-bucket \
 JFS_S3_KEY_NAME=sandbox-52 \
-docker compose -f sandbox_server.yml -p sandbox-51 up --remove-orphans
+docker compose -f sandbox_server.yml -p sandbox-52 up --remove-orphans
 ```
 
 We can create sandbox services on demand, but be sure to run `connect.sh` to establish establish WireGuard connections for accessing remote S3. For example:
