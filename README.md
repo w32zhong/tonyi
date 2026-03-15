@@ -73,14 +73,14 @@ $S3 rm --recursive s3://test-bucket
 $S3 rb s3://test-bucket
 ```
 
-## Public Services
+## Sandbox Services
 Public service runs on a publicly hosted server.
 The server requires docker swarm to be installed:
 ```sh
 docker swarm init
 ```
 
-### Proxy-Only Service
+### Proxy-only service
 Create the g-namespace sandbox service with only WireGuard proxy services:
 ```sh
 WG_SERVER_ID=50 \
@@ -109,7 +109,7 @@ docker exec $(docker ps -qf "name=wireguard_server") curl 10.8.0.2:8333   # S3
 docker exec $(docker ps -qf "name=wireguard_server") nc -zv 10.8.0.1 5432 # DB
 ```
 
-### Sandbox Service
+### Full sandbox service
 A sandbox service should be a namespaced combo of multiple containers: file browser, web browser, agent CLI, and a search engine.
 Below are examples to create sandbox services alone.
 
@@ -144,7 +144,7 @@ We can create sandbox services on demand, but be sure to run `connect.sh` to est
     "sudo docker"
 ```
 
-### Swarm Service
+## Swarm Services
 Remove stack:
 ```sh
 docker stack rm demo
@@ -156,6 +156,7 @@ docker-compose -f swarm_service.yml build
 docker stack deploy --prune --compose-file swarm_service.yml demo --detach=false
 ```
 
+### Gateway
 Update a service from source:
 ```sh
 docker-compose -f swarm_service.yml build && docker service update --force demo_gateway
@@ -199,7 +200,7 @@ curl http://localhost/auth/authorization \
 ```
 alternatively, use your browser to visit the test UI interface `http://yourhost/auth-test/private`.
 
-## File Browser
+### File browser
 ```sh
 ROOT=`pwd` PAGE_LIMIT=10 node server.js
 docker run -it --rm -p 9980:9980 -e "extra_params=--o:ssl.enable=false" --name collabora_wopi collabora/code
