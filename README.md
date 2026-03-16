@@ -20,6 +20,14 @@ docker stack deploy --prune --compose-file my_compose.yml my_project --detach=fa
 docker service update --force my_project_my_container
 ```
 
+And logging:
+```sh
+# service level logs
+docker service logs -ft demo_gateway
+# alternative, container level logs:
+docker logs -ft $(docker ps -q --filter "name=gateway")
+```
+
 ## Client Services (Storage Providers)
 Before hosting a client service, double check if an existing one is running.
 All client services will share a host disk mount point at `./mnt`.
@@ -85,6 +93,8 @@ Create the g-namespace sandbox service with only WireGuard proxy services:
 ```sh
 WG_SERVER_ID=50 \
 WG_S3_IP=10.8.0.2 \
+JFS_S3_ENDPOINT=NA \
+JFS_S3_BUCKET_NAME=NA \
 docker compose -f sandbox_server.yml -p g up --remove-orphans \
 wireguard_server proxy
 ```
@@ -145,33 +155,21 @@ We can create sandbox services on demand, but be sure to run `connect.sh` to est
 ```
 
 ## Swarm Services
-Remove stack:
+When `g_proxy_net` is ready, we can start swarm services, e.g., `swarm-1`:
 ```sh
-docker stack rm demo
-```
-
-Declare stack:
-```sh
-docker-compose -f swarm_service.yml build
-docker stack deploy --prune --compose-file swarm_service.yml demo --detach=false
+docker stack rm swarm-1
+docker-compose -f swarm_service.yml build && \
+docker stack deploy --prune --compose-file swarm_service.yml swarm-1 --detach=false
 ```
 
 ### Gateway
-Update a service from source:
+Testing gateway rate limits and permissions:
 ```sh
-docker-compose -f swarm_service.yml build && docker service update --force demo_gateway
-docker service logs -ft demo_gateway
-# alternative, use lower-level docker logs discarding the print prefix:
-docker logs -ft $(docker ps -q --filter "name=gateway")
-```
-
-Testing gateway rate limits:
-```sh
-for i in {1..3}; do curl -sI http://yetiarch/test_conn_limit & done
-for i in {1..3}; do curl -sI http://yetiarch/test_rate_limit & done
-curl -sI http://yetiarch/test_permission/internal/peek
-curl -sI http://yetiarch/test_permission/protected/peek
-curl -sI http://yetiarch/test_permission/private
+for i in {1..3}; do curl -sI http://localhost/test_conn_limit & done
+for i in {1..3}; do curl -sI http://localhost/test_rate_limit & done
+curl -sI http://localhost/test_route_protect/internal/peek
+curl -sI http://localhost/test_route_protect/protected/peek
+curl -sI http://localhost/test_route_protect/private
 ```
 
 Testing CloudFlare-Gateway Spoof:

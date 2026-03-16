@@ -236,8 +236,8 @@ function getPluginsConfig(routePath, labels, forceHttps) {
 
   applyRealIpPlugin(plugins);
   applyRateLimitPlugins(plugins, labels['gateway.limits']);
-  applyUriBlockerPlugin(plugins, labels['gateway.internal']);
-  applyJwtProtectPlugin(plugins, labels['gateway.protect']);
+  applyUriBlockerPlugin(plugins, routePath, labels['gateway.internal']);
+  applyJwtProtectPlugin(plugins, routePath, labels['gateway.protect']);
   return plugins;
 }
 
@@ -290,11 +290,15 @@ function applyRateLimitPlugins(plugins, limitsLabel) {
   }
 }
 
-function applyUriBlockerPlugin(plugins, internalLabel) {
+function applyUriBlockerPlugin(plugins, routePath, internalLabel) {
   if (!internalLabel) return;
   try {
+    const rules = JSON.parse(internalLabel).map(p => {
+      const path = p.startsWith('/') ? p : `/${p}`;
+      return `^/${routePath}${path}(/.*)?$`;
+    });
     plugins['uri-blocker'] = {
-      block_rules: JSON.parse(internalLabel),
+      block_rules: rules,
       rejected_code: 403
     };
   } catch (e) {
@@ -302,10 +306,13 @@ function applyUriBlockerPlugin(plugins, internalLabel) {
   }
 }
 
-function applyJwtProtectPlugin(plugins, protectLabel) {
+function applyJwtProtectPlugin(plugins, routePath, protectLabel) {
   if (!protectLabel) return;
   try {
-    const paths = JSON.parse(protectLabel);
+    const paths = JSON.parse(protectLabel).map(p => {
+      const path = p.startsWith('/') ? p : `/${p}`;
+      return `/${routePath}${path}`;
+    });
     const regex = `^(${paths.join('|')})`;
 
     plugins["jwt-auth"] = {

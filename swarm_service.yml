@@ -172,10 +172,10 @@ services:
     command: "node hello.js echo3"
     deploy:
       labels:
-        gateway.route: test_permission
+        gateway.route: test_route_protect
         gateway.port: 8080
-        gateway.protect: '["/test_permission/protected", "/test_permission/private"]'
-        gateway.internal: '["^/test_permission/internal(/.*)?$$"]'
+        gateway.protect: '["/protected", "/private"]'
+        gateway.internal: '["/internal"]'
 
   auth:
     image: auth:latest
@@ -203,7 +203,7 @@ services:
         gateway.route: auth
         gateway.port: 19721
         gateway.limits: '{"rate": 1, "burst": 10, "conn": 10}'
-        gateway.internal: '["^/auth/secret(/.*)?$$"]'
+        gateway.internal: '["/secret"]'
     networks:
       - gateway_net
       - proxy_net
@@ -257,6 +257,32 @@ services:
     networks:
       - gateway_net
 
+  sandbox_rq_redis:
+    image: redis
+    restart: always
+    # expose Redis port only for testing!
+    #ports:
+    #  - 6379:6379
+    volumes:
+      - ./mnt/redis_dump:/data
+    command: >
+      redis-server
+      --maxmemory ${JFS_REDIS_MAX_MEMORY:-128mb}
+      --maxmemory-policy noeviction
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - proxy_net
+
+  sandbox_rq_redis:
+    image: sandbox:latest
+    build:
+      context: ./app/sandbox
+      dockerfile: Dockerfile
+
 networks:
   gateway_net:
     driver: overlay
@@ -264,7 +290,7 @@ networks:
 
   proxy_net:
     external: true
-    name: ${PROXY_NET_NAME:?}
+    name: g_proxy_net
 
 volumes:
   etcd_data:
