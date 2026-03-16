@@ -162,11 +162,15 @@ docker-compose -f swarm_service.yml build && \
 docker stack deploy --prune --compose-file swarm_service.yml swarm-1 --detach=false
 ```
 
-### Gateway
-Testing gateway rate limits and permissions:
+### Testing
+Testing gateway rate limits:
 ```sh
 for i in {1..3}; do curl -sI http://localhost/test_conn_limit & done
 for i in {1..3}; do curl -sI http://localhost/test_rate_limit & done
+```
+
+Testing login/logout via `http://localhost/auth-test/login`, and test gateway route protection:
+```sh
 curl -sI http://localhost/test_route_protect/internal/peek
 curl -sI http://localhost/test_route_protect/protected/peek
 curl -sI http://localhost/test_route_protect/private
@@ -183,20 +187,6 @@ Test swarm to backend connection:
 docker run --rm --network proxy_net postgres:18 psql \
     postgresql://$DB_USER:$DB_PASS@wireguard_server:5432/backend_db -c "\dt"
 ```
-
-Test authentication:
-```sh
-# login
-curl http://localhost/auth/authentication \
-    -H "Content-Type: application/json" \
-    -d '{"username":"admin","password":"changeme!"}'
-
-# verify
-curl http://localhost/auth/authorization \
-    -H "Content-Type: application/json" \
-    -d '{"token":"xxx"}'
-```
-alternatively, use your browser to visit the test UI interface `http://yourhost/auth-test/private`.
 
 ### File browser
 ```sh
