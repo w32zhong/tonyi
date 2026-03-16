@@ -1,0 +1,28 @@
+#cloud-config
+package_update: true
+packages:
+  - git
+  - tmux
+  - vim
+  - docker.io
+  - docker-compose-v2
+
+write_files:
+  - path: /opt/sandbox/init_agent.sh
+    permissions: '0755'  # 赋予可执行权限 (非常重要！)
+    content: |
+      #!/bin/bash
+      echo "开始配置 Agent 沙盒..."
+      mkdir -p /opt/sandbox/data
+      # 这里可以写几十行你需要的脚本逻辑
+      docker run -d -p 3000:3000 --name webtop lscr.io/linuxserver/webtop:ubuntu-kasmVNC --no-first-run
+      echo "沙盒启动成功！" > /opt/sandbox/status.txt
+
+  - path: /opt/sandbox/init.sh
+    permissions: '0755'
+    encoding: b64
+    content: YOUR_SH_SCRIPT_B64
+
+runcmd:
+  - mkdir -p /opt/sandbox
+  - touch /opt/sandbox/hello

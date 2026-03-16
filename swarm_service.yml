@@ -257,7 +257,7 @@ services:
     networks:
       - gateway_net
 
-  sandbox_rq_redis:
+  rq_redis:
     image: redis
     restart: always
     # expose Redis port only for testing!
@@ -277,7 +277,7 @@ services:
     networks:
       - proxy_net
 
-  sandbox_rq_redis:
+  rq_api:
     image: sandbox:latest
     build:
       context: ./app/sandbox
